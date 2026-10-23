@@ -191,7 +191,7 @@ const actions = {
     if (players.length < MIN_PLAYERS) return;
     const j = players[Math.floor(Math.random() * players.length)].id;
     busy = true;
-    await sb.from("rooms").update({ phase: "draw", round: 1, judge: j, card: null, winner: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
+    await sb.from("rooms").update({ phase: "draw", round: room.round + 1, judge: j, card: null, winner: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
     busy = false; scheduleRefresh();
   },
   async draw(){

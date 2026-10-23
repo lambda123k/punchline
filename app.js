@@ -122,7 +122,7 @@ function subscribe(c){
     .on("postgres_changes", { event: "*", schema: "public", table: "players", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "answers", filter: "room=eq." + c }, scheduleRefresh)
     .subscribe();
-  pollTimer = setInterval(refresh, 4000); // filet de sécurité si le temps réel décroche
+  pollTimer = setInterval(refresh, 3000); // filet de sécurité si le temps réel décroche
 }
 function unsubscribe(){
   if (channel){ sb.removeChannel(channel); channel = null; }

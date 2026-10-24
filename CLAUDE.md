@@ -9,7 +9,7 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 ## Fichiers
 - `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N` et `cards.js?v=N` : monter N à chaque mise en ligne (cache).
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
-- `cards.js` — `window.CARD_DECK` : cartes rangées par type (famille, couple, medias, societe, quotidien, absurde ; libellés dans `CARD_TYPES`). En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou ; carte sans trou = question.
+- `cards.js` — `window.CARD_DECK` : 300 cartes rangées par type : thèmes d'origine (famille, couple, medias, societe, quotidien, absurde) + 3 styles ajoutés le 24/10 sur choix de Naim (vecu = moments vécus, formats = faux formats SMS/bios/notices, trash = trash assumé adultes) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou ; carte sans trou = question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône choisie par Naim : PUNCH / LINE en blanc très gras, P et L en jaune, fond bleu de l'appli. Ne pas changer sans lui montrer des options d'abord.
 - `tests/` — faux backend local + partie complète Playwright (voir Tests).
 
@@ -46,7 +46,7 @@ NODE_PATH=/opt/npm-tools/node_modules node tests/test.js
 (Le test remplace supabase-js par `tests/mock-client.js` et le QR par un carré. Un serveur garde son état : en relancer un neuf pour chaque passage. Penser à garder `mock-server.js` aligné avec le SQL.) La logique SQL se teste avec `execute_sql` dans une transaction annulée : insertions en rôle postgres, puis `set local role anon` pour appeler les fonctions.
 
 ## Fait le 24/10/2026
-Améliorations 1 à 6 de la liste ci-dessous en ligne (version v=4).
+Améliorations 1 à 6 en ligne (v=4), puis 100 nouvelles cartes (v=5). Naim trouvait les cartes d'origine nulles : il a choisi les styles « moments vécus », « faux formats » et « trash assumé » (pas « sobre comme avant »). Suivre la page des notes pour voir quel style gagne et écrire davantage dans celui-là.
 
 ## Prochaines étapes choisies par Naim (24/10/2026)
 1. ✅ Vote « coup de cœur » du public
@@ -55,7 +55,7 @@ Améliorations 1 à 6 de la liste ci-dessous en ligne (version v=4).
 4. ✅ Notation des cartes + types de cartes + page de stats
 5. ✅ Mode grand écran
 6. ✅ Retrait automatique d'un joueur parti
-7. Ajouter beaucoup plus de cartes, en choisissant le style ensemble (à faire : lui proposer des tons avec exemples, il choisit, puis écrire par types dans `CARD_DECK`)
+7. ✅ 100 cartes ajoutées dans les 3 styles choisis. Suite possible : selon les notes, en écrire plus dans le style gagnant et retirer les cartes d'origine mal notées.
 Écarté : le best-of de fin de soirée.
 
 ## Façon de travailler avec Naim

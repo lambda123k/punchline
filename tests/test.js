@@ -108,7 +108,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   await W.click("[data-a=draw]");
   const leaderPage = A;
   await hasText(leaderPage, "Parti");
-  check((await txt(W)).includes("0/1") || (await txt(W)).includes("0/"), "le juge n'attend que les joueurs présents : " + (await W.locator(".counter").innerText()));
+  check(await until(W, async () => (await W.locator(".counter").innerText()) === "0/1", "compteur 0/1"), "le juge n'attend que les joueurs présents (0/1)");
   const writer = Object.keys(byName).find(n => n !== winner && n !== gone);
   await byName[writer].fill("#ans", "seul réponse"); await byName[writer].click("#send");
   check(await hasText(W, "Retourne les cartes"), "la manche avance sans attendre l'absent");

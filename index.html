@@ -112,6 +112,62 @@ mark{background:none;color:var(--hot);font-weight:800}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:12px 18px;border-radius:12px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .foot{margin-top:auto;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding-top:8px}
 .counter{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.hr{display:flex;align-items:center;gap:8px}
+.snd{background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px;font-size:15px;line-height:1}
+.hint{font-size:13px;opacity:.75}
+.row.wrap{flex-wrap:wrap}.row.wrap>*{flex:1;min-width:150px}
+.pill.gone{background:rgba(0,0,0,.25);color:rgba(255,247,232,.8)}
+.pl.away{opacity:.55}
+/* Coup de cœur */
+.heart{display:block;margin-top:12px;background:#fff;border:2px solid var(--line);color:var(--ink);font-family:var(--body);font-size:14px;padding:8px 12px;border-radius:999px}
+.heart.on{background:#ffe1ea;border-color:#e8436b;color:#a3173b}
+.answer.voted{border-color:#e8436b}
+.answer .mine{display:block;margin-top:10px;font-family:var(--body);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fav{display:flex;flex-direction:column;gap:8px}
+.answer.heartwin{border-color:#e8436b;background:#ffe9ef}
+.answer.heartwin .by{color:#a3173b}
+/* Notation des cartes */
+.rate{display:flex;flex-direction:column;gap:8px}
+.ghost.on{background:rgba(255,200,61,.25);border-color:var(--gold)}
+/* Réactions */
+.reacts{display:flex;gap:10px;justify-content:center}
+.reacts button{background:rgba(255,255,255,.14);font-size:28px;padding:8px 18px;border-radius:999px;line-height:1}
+.fly{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:30;pointer-events:none;display:flex;flex-direction:column;align-items:center;animation:fly 2.6s ease-out forwards}
+.fly .em{font-size:44px;line-height:1}
+.fly .who{font-size:12px;font-weight:700;background:rgba(0,0,0,.35);padding:2px 8px;border-radius:999px;margin-top:2px;white-space:nowrap}
+@keyframes fly{0%{transform:translateY(0) scale(.6);opacity:0}12%{transform:translateY(-30px) scale(1.1);opacity:1}100%{transform:translateY(-55vh) scale(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){@keyframes fly{0%{opacity:0}15%{opacity:1}100%{opacity:0}}}
+/* Statistiques des cartes */
+.srow{display:flex;justify-content:space-between;gap:12px;background:rgba(255,255,255,.09);border-radius:12px;padding:10px 14px;font-size:15px}
+.srow b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.srow mark,.srow .blank{color:var(--gold)}
+.tbar{display:flex;flex-direction:column;gap:5px}
+.tbar .tl{display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.tbar .bar{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.tbar .bar i{display:block;height:100%;background:var(--gold)}
+/* Grand écran */
+body.tv .app{max-width:1500px;padding:28px 40px;gap:24px}
+body.tv{font-size:20px}
+body.tv .logo{font-size:40px}
+.tvgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:36px;align-items:start;flex:1}
+.tvmain{gap:22px}
+.side{display:flex;flex-direction:column;gap:12px;background:rgba(0,0,0,.14);border-radius:20px;padding:18px}
+.joinmini{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:16px}
+.qr.small{width:96px;padding:6px;border-radius:10px;margin:0}
+.qr.big{width:min(380px,40vh)}
+body.tv .black{font-size:clamp(34px,3.6vw,58px);min-height:240px;padding:34px 36px 26px}
+body.tv .black.slim{font-size:clamp(24px,2.2vw,34px);min-height:0;padding:20px 26px}
+body.tv .big-name{font-size:clamp(60px,7vw,110px)}
+body.tv .answer{font-size:clamp(22px,1.8vw,30px)}
+.tvans{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+body.tv .timer .tnum{font-size:54px}
+body.tv .timer .bar{height:16px}
+body.tv .counter{font-size:64px}
+body.tv .fly .em{font-size:80px}
+.tvlobby{display:grid;grid-template-columns:1fr auto 1fr;gap:40px;align-items:center;flex:1}
+body.tv .codebig{font-size:clamp(90px,10vw,160px)}
+.tvstart{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;flex:1;text-align:center}
+@media (max-width:900px){.tvgrid,.tvlobby{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){.pop{animation:pop .35s cubic-bezier(.2,1.4,.4,1)}@keyframes pop{from{transform:scale(.95) rotate(-1deg);opacity:.4}}}
 @media (prefers-reduced-motion:reduce){.dots span{animation:none;opacity:.7}}
 </style>
@@ -120,7 +176,7 @@ mark{background:none;color:var(--hot);font-weight:800}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js"></script>
-<script src="app.js"></script>
+<script src="cards.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

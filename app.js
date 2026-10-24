@@ -55,7 +55,7 @@ const joinUrl = c => location.origin + location.pathname + "?c=" + c;
 /* ---------- dérivés ---------- */
 const byId = id => players.find(p => p.id === id);
 const nameOf = id => (byId(id) || {}).name || "Quelqu'un";
-const leader = () => players.slice().sort((a, b) => a.seat - b.seat)[0];
+const leader = () => players.filter(p => !isBot(p.id)).sort((a, b) => a.seat - b.seat)[0];
 const isLeader = () => !!leader() && leader().id === me.id;
 const isJudge = () => room && room.judge === me.id;
 const roundAnswers = () => room ? answers.filter(a => a.round === room.round && byId(a.player)) : [];
@@ -88,10 +88,60 @@ async function refresh(){
   autoActions();
 }
 
+/* ---------- joueurs robots (pour tester seul) ---------- */
+const BOT_PREFIX = "b07b07b0-";
+const isBot = id => String(id || "").startsWith(BOT_PREFIX);
+const BOT_NAMES = ["Robot Gégé", "Robot Josiane", "Robot Kévin", "Robot Monique", "Robot Jean-Mi", "Robot Brenda"];
+const BOT_ANSWERS = [
+  "un raton laveur en colère", "ma grand-mère en string", "une raclette à 3 h du matin", "le Wi-Fi de la SNCF",
+  "un PowerPoint de 80 diapos", "Jul en featuring avec Mozart", "une chaussette mouillée", "le prof de SVT tout nu",
+  "un kebab sans sauce", "les impôts", "un pigeon qui a tout vu", "mon ex, encore", "trois mamies en trottinette",
+  "un câlin trop long", "la belle-mère de Booba", "un pet en plein silence", "une soirée Tupperware qui dégénère",
+  "le chat de la voisine", "Didier Deschamps en colère", "un coloc qui ne paie jamais", "une tartiflette tiède",
+  "un message vocal de 12 minutes", "le pain au chocolat (pas la chocolatine)", "un huissier très gentil",
+  "une danse du ventre ratée", "mon compte en banque", "un nain de jardin possédé", "le slip de Jean-Pierre Pernaut",
+  "des chaussettes avec des sandales", "une perruque en promo", "un goûter d'anniversaire qui tourne mal",
+  "Patrick Sébastien en string", "une moustache de 3 jours", "le dernier Ricard de tonton", "un DM Instagram à 4 h du mat"
+];
+const botTimers = new Set();
+function botOnce(key, delay, fn){
+  if (botTimers.has(key)) return;
+  botTimers.add(key);
+  setTimeout(async () => { try { await fn(); } catch(e){} scheduleRefresh(); }, delay);
+}
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a));
+
+function botActions(){
+  // Seul le premier vrai joueur (l'hôte) fait jouer les robots
+  if (!isLeader() || !players.some(p => isBot(p.id))) return;
+  const r = room.round, c = code;
+  const still = () => room && code === c && room.round === r;
+  if (room.phase === "draw" && isBot(room.judge)){
+    botOnce(`${r}:draw`, rand(1500, 2500), () => { if (still() && room.phase === "draw") return actions.draw(); });
+  }
+  if (room.phase === "writing"){
+    writers().filter(p => isBot(p.id) && !roundAnswers().some(a => a.player === p.id)).forEach(p => {
+      botOnce(`${r}:ans:${p.id}`, rand(2000, 6000), () => {
+        if (!still() || room.phase !== "writing") return;
+        const txt = BOT_ANSWERS[Math.floor(Math.random() * BOT_ANSWERS.length)];
+        return sb.from("answers").upsert({ room: c, round: r, player: p.id, text: txt }, { onConflict: "room,round,player" });
+      });
+    });
+  }
+  if (room.phase === "judging" && isBot(room.judge)){
+    botOnce(`${r}:pick`, rand(3500, 5000), () => {
+      const list = roundAnswers();
+      if (!still() || room.phase !== "judging" || !list.length) return;
+      return sb.rpc("pick_winner", { p_code: c, p_answer: list[Math.floor(Math.random() * list.length)].id });
+    });
+  }
+}
+
 async function autoActions(){
   if (!room || busy) return;
-  // Le juge révèle dès que tout le monde a écrit
-  if (room.phase === "writing" && isJudge()){
+  botActions();
+  // Le juge révèle dès que tout le monde a écrit (l'hôte le fait si le juge est un robot)
+  if (room.phase === "writing" && (isJudge() || (isBot(room.judge) && isLeader()))){
     const w = writers().length, n = roundAnswers().length;
     if (w > 0 && n >= w) await setPhase("judging", "writing");
   }
@@ -185,6 +235,13 @@ const actions = {
       if (navigator.share){ await navigator.share({ title: "Punchline", text: `Rejoins ma partie de Punchline, code ${code}`, url }); return; }
     } catch(e){ if (e && e.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(url); toast("Lien copié"); } catch(e){ toast(url); }
+  },
+  async addBot(){
+    const taken = new Set(players.map(p => p.name));
+    const name = BOT_NAMES.find(n => !taken.has(n));
+    if (!name){ toast("Il y a déjà assez de robots."); return; }
+    const id = BOT_PREFIX + uuid().slice(BOT_PREFIX.length);
+    await rpc("join_room", { p_code: code, p_player: id, p_name: name });
   },
   async kick(id){ await sb.from("players").delete().eq("id", id).eq("room", code); scheduleRefresh(); },
   async start(){
@@ -333,6 +390,8 @@ const views = {
       ? `<button class="btn" data-a="start" ${missing ? "disabled" : ""}>Lancer la partie</button>
          ${missing ? `<p class="center" style="font-size:14px;opacity:.85">Encore ${missing} joueur${missing > 1 ? "s" : ""} pour lancer.</p>` : ""}`
       : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
+    ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un joueur robot</button>
+      <p class="center" style="font-size:13px;opacity:.75">Pour tester seul : les robots répondent et jugent au hasard.</p>` : ""}
     ${footer()}`;
   },
 
@@ -401,6 +460,7 @@ const views = {
       <p class="lead">Gagnant de la manche</p>
       <div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
+      ${win && !over ? `<p class="lead">${win.player === me.id ? "Tu deviens" : esc(nameOf(win.player)) + " devient"} juge pour la prochaine manche.</p>` : ""}
       ${scoreList()}
       ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
       ${others.length ? `<div class="stack"><span class="label light">Les autres cartes</span><div class="answers">${others.map(a => `<div class="answer" style="font-size:18px">${fill(room.card, a.text)}<span class="by">${esc(nameOf(a.player))}</span></div>`).join("")}</div></div>` : ""}

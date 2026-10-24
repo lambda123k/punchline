@@ -32,9 +32,11 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - Réponses face cachée, le juge les retourne une par une, choix possible seulement quand tout est retourné
 - Coup de cœur : pendant la lecture, les autres votent (pas pour leur propre réponse) ; affiché au résultat
 - Réactions 😂 💀 🔥 dès la 1re carte retournée et au résultat, sur tous les écrans
-- Sons (Web Audio, bouton 🔊/🔇 en haut, mémorisé) et vibrations (Android ; l'iPhone ne vibre pas depuis le web) : nouvelle carte, retournement, 5 dernières secondes, victoire
-- Notation des cartes au résultat (👎 Nulle / 👍 Top) ; à la pioche, poids = (top+1)/(nulle+1) borné entre 0,15 et 4. Page « Quelles cartes plaisent ? » depuis l'accueil : % top par type, meilleures / pires cartes.
-- Grand écran : accueil → « Grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
+- Pas d'emojis dans l'interface (Naim n'aime pas), sauf les réactions 😂 💀 🔥 ; icônes dessinées en SVG (`ICON` dans app.js)
+- Accueil : roue crantée en haut à droite → Paramètres (son, afficher sur un grand écran, notes des cartes), choisie par Naim plutôt que des boutons sur l'accueil
+- Sons (Web Audio, interrupteur dans Paramètres et icône haut-parleur en haut pendant la partie, mémorisé) et vibrations (Android ; l'iPhone ne vibre pas depuis le web) : nouvelle carte, retournement, 5 dernières secondes, victoire
+- Notation des cartes au résultat (👎 Nulle / 👍 Top) ; à la pioche, poids = (top+1)/(nulle+1) borné entre 0,15 et 4. Page « Notes des cartes » depuis Paramètres : % top par type, meilleures / pires cartes.
+- Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
 - Absents : sans ping depuis 45 s → « Parti », on ne l'attend plus pour écrire ; s'il est juge, l'hôte relance une manche avec un autre juge ; retiré de la partie après 5 min. Revient dès qu'il rouvre l'appli (avant 5 min).
 
 ## Tests

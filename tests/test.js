@@ -45,7 +45,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   check((await txt(A)).includes("Grand écran"), "l'hôte voit l'astuce grand écran");
 
   console.log("Grand écran");
-  await TV.goto(BASE); await TV.click("text=Grand écran"); await TV.fill("#code", code); await TV.click("[data-a=watch]");
+  await TV.goto(BASE); await TV.click("[data-a=menu]"); await TV.click("[data-a=showTv]"); await TV.fill("#code", code); await TV.click("[data-a=watch]");
   await hasText(TV, "Lancer l'affichage"); await TV.click("[data-a=tvGo]");
   await hasText(TV, "Sortez vos téléphones");
   check((await txt(TV)).includes("Léa") && (await txt(TV)).includes("Tom"), "le grand écran liste les joueurs");
@@ -87,13 +87,14 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   await hasText(P1, "Gagnant de la manche");
   const scores = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
   check(scores[others[0]] === 1 && scores[others[1]] === 1, `gagnant +1 et coup de cœur +1 (${JSON.stringify(scores)})`);
-  check((await txt(P2)).includes("Coup de cœur du public"), "le coup de cœur s'affiche au résultat");
-  check((await txt(TV)).includes("Coup de cœur du public"), "… et sur le grand écran");
+  check(await hasText(P2, "Coup de cœur du public"), "le coup de cœur s'affiche au résultat");
+  check(await hasText(TV, "Coup de cœur du public"), "… et sur le grand écran");
   await TV.screenshot({ path: S + "/tv-result.png" });
 
   console.log("Notation de la carte");
   await P2.click("[data-a=rate][data-v='1']"); await J.click("[data-a=rate][data-v='-1']"); await P1.click("[data-a=rate][data-v='1']");
   await until(P2, () => P2.locator(".rate .on").count().then(n => n === 1), "note affichée");
+  await until(A, async () => (await admin(`return db.card_ratings.length`)) === 3, "3 notes");
   check(await admin(`return db.card_ratings.length`) === 3, "3 notes enregistrées avec le type " + await admin(`return db.card_ratings[0].type`));
   await P2.screenshot({ path: S + "/phone-result.png", fullPage: true });
 
@@ -103,7 +104,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   const Gp = byName[gone];
   await Gp.context().setOffline(true);
   await admin(`db.players.find(p=>p.name===${JSON.stringify(gone)}).last_seen=new Date(Date.now()-60000).toISOString()`);
-  await W.click("[data-a=next]");
+  for (const p of [A, B, C]) if (p !== Gp && await p.locator("[data-a=next]").count()){ await p.click("[data-a=next]"); break; }
   await hasText(W, "À toi de piocher");
   await W.click("[data-a=draw]");
   const leaderPage = A;
@@ -133,7 +134,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   check(seenOk, "le joueur qui revient redevient présent");
 
   console.log("Page des notes");
-  const S1 = await phone(browser, "Stats"); await S1.goto(BASE); await S1.click("[data-a=stats]");
+  const S1 = await phone(browser, "Stats"); await S1.goto(BASE); await S1.click("[data-a=menu]"); await S1.click("[data-a=stats]");
   await hasText(S1, "% top");
   check((await txt(S1)).includes("3 notes"), "la page affiche les notes par type");
   await S1.screenshot({ path: S + "/stats.png", fullPage: true });

@@ -388,7 +388,8 @@ const actions = {
     await enterRoom(c);
   },
   showCreate(){ ui.creating = !ui.creating; ui.tvAsk = false; ui.err = ""; render(); },
-  showTv(){ ui.tvAsk = !ui.tvAsk; ui.creating = false; ui.err = ""; render(); },
+  showTv(){ ui.tvAsk = !ui.tvAsk; ui.menu = false; ui.creating = false; ui.err = ""; render(); },
+  menu(){ ui.menu = !ui.menu; ui.tvAsk = false; ui.creating = false; ui.err = ""; render(); },
   async watch(){
     const c = (ui.codeInput || "").replace(/\D/g, "");
     if (c.length !== 4){ ui.err = "Le code fait 4 chiffres."; render(); return; }
@@ -403,7 +404,7 @@ const actions = {
     render();
   },
   async stats(){
-    ui.page = "stats"; ui.stats = null; render();
+    ui.menu = false; ui.page = "stats"; ui.stats = null; render();
     const { data, error } = await sb.from("card_scores").select("*");
     ui.stats = error ? { error: true } : { rows: data || [] };
     render();
@@ -515,12 +516,19 @@ const actions = {
 };
 
 /* ---------- vues ---------- */
+const ICON = {
+  sndOn: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  sndOff: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  heart: on => `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`
+};
+const sndBtn = () => `<button class="snd" data-a="sound" aria-label="${ui.sound ? "Couper le son" : "Activer le son"}" title="${ui.sound ? "Son activé" : "Son coupé"}">${ui.sound ? ICON.sndOn : ICON.sndOff}</button>`;
 function head(){
   let tag = "";
   if (room){
     tag = room.phase === "lobby" ? `Partie ${esc(code)}` : room.phase === "end" ? "Fin de partie" : `Manche ${room.round} · ${esc(code)}`;
   }
-  const snd = `<button class="snd" data-a="sound" aria-label="${ui.sound ? "Couper le son" : "Activer le son"}" title="${ui.sound ? "Son activé" : "Son coupé"}">${ui.sound ? "🔊" : "🔇"}</button>`;
+  const snd = room ? sndBtn() : `<button class="snd" data-a="menu" aria-label="Paramètres" title="Paramètres">${ICON.gear}</button>`;
   return `<header><div class="logo">Punch<span>line</span></div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
 }
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
@@ -570,13 +578,13 @@ function favBlock(){
   const a = answers.find(x => x.id === room.fav);
   if (!a) return "";
   const n = counts[a.id] || 0;
-  return `<div class="fav pop"><span class="label light">❤ Coup de cœur du public · ${n} vote${n > 1 ? "s" : ""}</span>
+  return `<div class="fav pop"><span class="label light">Coup de cœur du public · ${n} vote${n > 1 ? "s" : ""}</span>
     <div class="answer heartwin">${fill(room.card, a.text)}<span class="by">${esc(nameOf(a.player))} · +1 point bonus</span></div></div>`;
 }
 function rateBlock(){
   const cur = ui.ratings[room.card];
   return `<div class="rate"><span class="label light">Cette carte, vous l'avez trouvée…</span>
-    <div class="row"><button class="ghost small ${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">👎 Nulle</button><button class="ghost small ${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">👍 Top</button></div>
+    <div class="row"><button class="ghost small ${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">Nulle</button><button class="ghost small ${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">Top</button></div>
     ${cur != null ? `<p class="hint">Merci ! Les cartes bien notées sortiront plus souvent.</p>` : ""}</div>`;
 }
 
@@ -588,7 +596,13 @@ const views = {
     <h1>Le jeu où c'est vous qui écrivez la chute.</h1>
     <p class="lead">Une carte à trous s'affiche sur tous les téléphones. Chacun la complète avec la réponse la plus drôle possible, et le juge choisit la meilleure.</p>
     ${errBox()}
-    ${ui.tvAsk ? `
+    ${ui.menu ? `
+    <div class="card menu pop">
+      <div class="mhead"><h2>Paramètres</h2><button class="ghost dark small" data-a="menu">Fermer</button></div>
+      <button class="mrow" data-a="sound" role="switch" aria-checked="${ui.sound}"><span><b>Son</b><small>Chrono, retournement des cartes, victoire</small></span><span class="sw ${ui.sound ? "on" : ""}"></span></button>
+      <button class="mrow" data-a="showTv"><span><b>Afficher sur un grand écran</b><small>La télé ou l'ordi montre la carte et les réponses, chacun écrit sur son téléphone</small></span><span class="chev">›</span></button>
+      <button class="mrow" data-a="stats"><span><b>Notes des cartes</b><small>Quels styles de cartes vous font rire</small></span><span class="chev">›</span></button>
+    </div>` : ui.tvAsk ? `
     <div class="card stack pop">
       <h2>Grand écran</h2>
       <p style="color:var(--muted)">Cet écran (télé, ordi) affichera la carte, le compte à rebours et les réponses pour tout le monde. Il ne joue pas : chacun écrit sur son téléphone.</p>
@@ -615,10 +629,6 @@ const views = {
       <button class="btn" data-a="create">Créer la partie</button>
       <button class="ghost dark small" data-a="showCreate">Annuler</button>
     </div>` : `<button class="ghost" data-a="showCreate">Créer une partie</button>`}`}
-    <div class="row wrap">
-      ${ui.tvAsk ? "" : `<button class="ghost small" data-a="showTv">📺 Grand écran</button>`}
-      <button class="ghost small" data-a="stats">📊 Quelles cartes plaisent ?</button>
-    </div>
     <div class="stack" style="gap:6px;opacity:.85;font-size:14px">
       <span class="label light">Comment on joue</span>
       <p>1. Quelqu'un crée la partie, les autres scannent le QR code ou tapent le code.</p>
@@ -644,12 +654,12 @@ const views = {
       const score = r => (r.up - r.down) * 10 + r.up;
       const best = rows.filter(r => r.up > r.down).sort((a, b) => score(b) - score(a)).slice(0, 5);
       const worst = rows.filter(r => r.down > r.up).sort((a, b) => score(a) - score(b)).slice(0, 5);
-      const line = r => `<div class="srow"><span>${fill(r.card)}</span><b>👍 ${r.up} · 👎 ${r.down}</b></div>`;
-      body = !votesTotal ? `<p class="lead">Aucune note pour l'instant. À la fin de chaque manche, touchez « 👎 Nulle » ou « 👍 Top » sous la carte : les cartes bien notées sortiront plus souvent, et cette page montrera quel genre vous fait rire.</p>`
+      const line = r => `<div class="srow"><span>${fill(r.card)}</span><b>top ${r.up} · nulle ${r.down}</b></div>`;
+      body = !votesTotal ? `<p class="lead">Aucune note pour l'instant. À la fin de chaque manche, touchez « Nulle » ou « Top » sous la carte : les cartes bien notées sortiront plus souvent, et cette page montrera quel genre vous fait rire.</p>`
       : `<p class="lead">${votesTotal} note${votesTotal > 1 ? "s" : ""} sur ${rows.length} carte${rows.length > 1 ? "s" : ""}. Les cartes bien notées sortent plus souvent, les mal notées plus rarement.</p>
         <div class="stack"><span class="label light">Par type de carte</span>
         ${types.map(t => `<div class="tbar"><div class="tl"><span>${esc(t.label)}</span><b>${t.pct == null ? "pas encore noté" : t.pct + " % top"}</b></div>
-          <div class="bar"><i style="width:${t.pct || 0}%"></i></div><span class="hint">${t.n}/${t.size} cartes notées · 👍 ${t.up} · 👎 ${t.down}</span></div>`).join("")}</div>
+          <div class="bar"><i style="width:${t.pct || 0}%"></i></div><span class="hint">${t.n}/${t.size} cartes notées · top ${t.up} · nulle ${t.down}</span></div>`).join("")}</div>
         ${best.length ? `<div class="stack"><span class="label light">Les cartes préférées</span>${best.map(line).join("")}</div>` : ""}
         ${worst.length ? `<div class="stack"><span class="label light">Les cartes les moins aimées</span>${worst.map(line).join("")}</div>` : ""}`;
     }
@@ -678,7 +688,7 @@ const views = {
       : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
     ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un joueur robot</button>
       <p class="center" style="font-size:13px;opacity:.75">Pour tester seul : les robots répondent, votent et jugent au hasard.</p>
-      <p class="center hint">📺 Une télé ou un ordi ? Ouvre ${esc(shortUrl())} dessus, touche « Grand écran » et tape ${esc(code)}.</p>` : ""}
+      <p class="center hint">Une télé ou un ordi ? Ouvre ${esc(shortUrl())} dessus, va dans « Grand écran » et tape ${esc(code)}.</p>` : ""}
     ${footer()}`;
   },
 
@@ -745,7 +755,7 @@ const views = {
       if (judge) return `<button class="answer ${ui.sel === a.id ? "sel" : ""} ${pop}" data-a="pick" data-v="${a.id}" ${all ? "" : "disabled style=\"opacity:1;cursor:default\""}><span class="num">Carte ${k + 1}</span>${fill(room.card, a.text)}</button>`;
       const mine = a.player === me.id, on = mv && mv.answer === a.id;
       const heart = mine ? `<span class="mine">Ta réponse</span>`
-        : `<button class="heart ${on ? "on" : ""}" data-a="vote" data-v="${a.id}" aria-pressed="${on}">${on ? "❤ Ton coup de cœur" : "♡ Coup de cœur"}</button>`;
+        : `<button class="heart ${on ? "on" : ""}" data-a="vote" data-v="${a.id}" aria-pressed="${on}">${ICON.heart(on)}<span>${on ? "Ton coup de cœur" : "Coup de cœur"}</span></button>`;
       return `<div class="answer ${on ? "voted" : ""} ${pop}"><span class="num">Carte ${k + 1}</span>${fill(room.card, a.text)}${heart}</div>`;
     }).join("");
     let top, bottom;
@@ -803,7 +813,7 @@ const views = {
 
 /* ---------- vues grand écran (télé / ordi) ---------- */
 const tvHead = () => `<header><div class="logo">Punch<span>line</span></div><div class="hr"><div class="tag">${room.phase === "lobby" ? "Grand écran" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round}`} · code ${esc(code)}</div>
-  <button class="snd" data-a="sound" aria-label="${ui.sound ? "Couper le son" : "Activer le son"}">${ui.sound ? "🔊" : "🔇"}</button><button class="link" data-a="leave">Quitter</button></div></header>`;
+  ${sndBtn()}<button class="link" data-a="leave">Quitter</button></div></header>`;
 const tvSide = () => `<aside class="side"><span class="label light">Scores · partie en ${room.target}</span>${scoreList()}<div class="joinmini"><div class="qr small">${qrSvg(joinUrl(code))}</div><span>Rejoindre : <b>${esc(code)}</b></span></div></aside>`;
 const tvViews = {
   start(){
@@ -839,7 +849,7 @@ const tvViews = {
       <h2>${!n ? "Personne n'a répondu à temps" : all ? `${esc(nameOf(room.judge))} choisit la meilleure` : `${esc(nameOf(room.judge))} lit les cartes · ${shown}/${n}`}</h2>
       <div class="black slim"><div>${fill(room.card)}</div></div>
       <div class="answers tvans">${cards}</div>
-      ${n ? `<p class="lead">Sur vos téléphones : votez pour votre coup de cœur et réagissez 😂 💀 🔥</p>` : ""}</main>${tvSide()}</div>`;
+      ${n ? `<p class="lead">Sur vos téléphones : votez pour votre coup de cœur et réagissez</p>` : ""}</main>${tvSide()}</div>`;
   },
   result(){
     const win = answers.find(a => a.id === room.winner);

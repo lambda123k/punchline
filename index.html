@@ -113,13 +113,23 @@ mark{background:none;color:var(--hot);font-weight:800}
 .foot{margin-top:auto;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding-top:8px}
 .counter{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
 .hr{display:flex;align-items:center;gap:8px}
-.snd{background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px;font-size:15px;line-height:1}
+.snd{background:rgba(255,255,255,.12);padding:7px;border-radius:999px;line-height:0;display:inline-flex}
+.menu{display:flex;flex-direction:column;gap:2px;padding:14px 16px}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.mhead .ghost{width:auto}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:14px;background:none;color:var(--ink);text-align:left;padding:12px 2px;border-radius:0;border-top:1px solid var(--line);font-weight:600}
+.mrow b{display:block;font-size:16px}
+.mrow small{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.mrow .chev{font-size:24px;color:var(--muted);line-height:1}
+.sw{flex-shrink:0;width:44px;height:26px;border-radius:999px;background:var(--line);position:relative;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.sw.on{background:var(--hot)}.sw.on::after{left:21px}
 .hint{font-size:13px;opacity:.75}
 .row.wrap{flex-wrap:wrap}.row.wrap>*{flex:1;min-width:150px}
 .pill.gone{background:rgba(0,0,0,.25);color:rgba(255,247,232,.8)}
 .pl.away{opacity:.55}
 /* Coup de cœur */
-.heart{display:block;margin-top:12px;background:#fff;border:2px solid var(--line);color:var(--ink);font-family:var(--body);font-size:14px;padding:8px 12px;border-radius:999px}
+.heart{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:#fff;border:2px solid var(--line);color:var(--ink);font-family:var(--body);font-size:14px;padding:8px 12px;border-radius:999px}
 .heart.on{background:#ffe1ea;border-color:#e8436b;color:#a3173b}
 .answer.voted{border-color:#e8436b}
 .answer .mine{display:block;margin-top:10px;font-family:var(--body);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -176,7 +186,7 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="cards.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

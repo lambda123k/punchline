@@ -27,7 +27,9 @@ const urlCode = (new URLSearchParams(location.search).get("c") || "").replace(/\
 
 let code = null, room = null, players = [], answers = [];
 let channel = null, pollTimer = null, refreshTimer = null, busy = false;
-const ui = { creating: false, target: store.get("target") || 5, mode: store.get("mode") || "mix",
+const savedTimer = store.get("timer");
+const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
+const ui = { creating: false, target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer, mode: store.get("mode") || "mix",
   codeInput: urlCode, err: "", sel: null, editing: false, confirmLeave: false, draft: "" };
 
 /* ---------- outils ---------- */
@@ -129,7 +131,16 @@ function botActions(){
     });
   }
   if (room.phase === "judging" && isBot(room.judge)){
-    botOnce(`${r}:pick`, rand(3500, 5000), () => {
+    const n = roundAnswers().length, shown = room.revealed || 0;
+    if (!n){ botOnce(`${r}:empty`, 2500, () => { if (still() && room.phase === "judging") return sb.rpc("next_round", { p_code: c, p_from: r }); }); return; }
+    if (shown < n){
+      botOnce(`${r}:flip:${shown}`, rand(2200, 3200), () => {
+        if (!still() || room.phase !== "judging" || room.revealed !== shown) return;
+        return sb.from("rooms").update({ revealed: shown + 1 }).eq("code", c).eq("phase", "judging").eq("revealed", shown);
+      });
+      return;
+    }
+    botOnce(`${r}:pick`, rand(3000, 4500), () => {
       const list = roundAnswers();
       if (!still() || room.phase !== "judging" || !list.length) return;
       return sb.rpc("pick_winner", { p_code: c, p_answer: list[Math.floor(Math.random() * list.length)].id });
@@ -212,6 +223,7 @@ const actions = {
     const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: "mix" });
     busy = false;
     if (error || !data){ ui.err = "Impossible de créer la partie. Vérifie ta connexion."; render(); return; }
+    await sb.from("rooms").update({ timer: ui.timer }).eq("code", data);
     await enterRoom(data);
   },
   async join(){
@@ -229,6 +241,16 @@ const actions = {
   showCreate(){ ui.creating = !ui.creating; ui.err = ""; render(); },
   target(v){ ui.target = +v; store.set("target", ui.target); render(); },
   mode(v){ ui.mode = v; store.set("mode", v); render(); },
+  async timer(v){
+    ui.timer = +v; store.set("timer", ui.timer);
+    if (room && isLeader() && room.phase === "lobby"){ await sb.from("rooms").update({ timer: ui.timer }).eq("code", code); scheduleRefresh(); }
+    else render();
+  },
+  async flip(){
+    if (!room || room.phase !== "judging") return;
+    await sb.from("rooms").update({ revealed: room.revealed + 1 }).eq("code", code).eq("phase", "judging").eq("revealed", room.revealed);
+    scheduleRefresh();
+  },
   async share(){
     const url = joinUrl(code);
     try {
@@ -355,6 +377,8 @@ const views = {
       <h2>Nouvelle partie</h2>
       <span class="label">Points pour gagner</span>
       <div class="seg">${[3,5,7,10].map(n => `<button data-a="target" data-v="${n}" class="${ui.target === n ? "on" : ""}">${n}</button>`).join("")}</div>
+      <span class="label">Temps pour répondre</span>
+      ${timerSeg(ui.timer)}
       <button class="btn" data-a="create">Créer la partie</button>
       <button class="ghost dark small" data-a="showCreate">Annuler</button>
     </div>` : `<button class="ghost" data-a="showCreate">Créer une partie</button>`}
@@ -380,7 +404,8 @@ const views = {
     <div class="stack">
       <span class="label light">Joueurs · ${n}</span>
       ${scoreList({ noScore: true, kick: isLeader() })}
-      <p style="font-size:14px;opacity:.8">Partie en ${room.target} points</p>
+      <p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>
+      ${isLeader() ? `<span class="label light">Temps pour répondre</span>${timerSeg(room.timer)}` : ""}
     </div>
     ${isLeader()
       ? `<button class="btn" data-a="start" ${missing ? "disabled" : ""}>Lancer la partie</button>
@@ -411,6 +436,7 @@ const views = {
     const w = writers().length, n = roundAnswers().length;
     if (isJudge()) return `${head()}
       ${blackCard()}
+      ${timerBox()}
       <p class="lead">Lis la carte à voix haute. Les autres écrivent leur réponse.</p>
       <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>réponses reçues</span></div>
       ${scoreList({ status: true, noScore: true })}
@@ -420,29 +446,50 @@ const views = {
     const mine = myAnswer();
     if (mine && !ui.editing) return `${head()}
       ${blackCard(mine.text)}
+      ${timerBox()}
       <div class="stack center"><h2>Réponse envoyée</h2>${wait(`En attente des autres`)}</div>
       <button class="ghost small" data-a="edit">Modifier ma réponse</button>
       ${footer()}`;
     return `${head()}
       ${blackCard()}
+      ${timerBox()}
       <div class="card stack">
         <label for="ans">Ta réponse</label>
         <textarea id="ans" maxlength="120" placeholder="Complète la carte…" enterkeyhint="send"></textarea>
         <p class="preview" id="preview" aria-live="polite"></p>
         <button class="btn" data-a="send" id="send" disabled>Envoyer</button>
       </div>
-      <p style="font-size:14px;opacity:.85">Le juge ne saura pas qui a écrit quoi avant d'avoir choisi.</p>
+      <p style="font-size:14px;opacity:.85">${room.deadline ? "À la fin du temps, ce que tu as écrit part tout seul. " : ""}Le juge ne saura pas qui a écrit quoi avant d'avoir choisi.</p>
       ${footer()}`;
   },
 
   judging(){
     const list = seededShuffle(roundAnswers(), code + ":" + room.round);
-    const judge = isJudge();
+    const judge = isJudge(), n = list.length, shown = Math.min(room.revealed || 0, n), all = shown >= n;
+    const jn = esc(nameOf(room.judge));
+    if (!n) return `${head()}
+      <h2>Personne n'a répondu à temps</h2>
+      ${blackCard()}
+      ${judge || isLeader() ? `<button class="btn" data-a="skip">Manche suivante</button>` : wait(`${jn} passe à la suite`)}
+      ${footer()}`;
+    const cards = list.map((a, k) => k < shown
+      ? `<button class="answer ${ui.sel === a.id ? "sel" : ""} ${k === shown - 1 && !all ? "pop" : ""}" data-a="pick" data-v="${a.id}" ${judge && all ? "" : "disabled style=\"opacity:1;cursor:default\""}><span class="num">Carte ${k + 1}</span>${fill(room.card, a.text)}</button>`
+      : `<div class="answer facedown" aria-label="Carte ${k + 1} face cachée"><span class="num">Carte ${k + 1}</span><span class="back">Punchline</span></div>`).join("");
+    let top, bottom;
+    if (judge && !all){
+      top = `<h2>Retourne les cartes une par une</h2><p class="lead">Lis chaque carte à voix haute avant de passer à la suivante.</p>`;
+      bottom = `<button class="btn gold" data-a="flip">${shown === 0 ? "Retourner la première carte" : `Retourner la carte suivante (${shown + 1}/${n})`}</button>`;
+    } else if (judge){
+      top = `<h2>Choisis la meilleure carte</h2><p class="lead">Touche ta préférée puis valide.</p>`;
+      bottom = `<button class="btn" data-a="confirmPick" ${ui.sel ? "" : "disabled"}>Valider ce choix</button>`;
+    } else {
+      top = `<h2>${all ? `${jn} choisit la meilleure` : `${jn} lit les cartes`}</h2>`;
+      bottom = wait(all ? "Suspense" : `${shown}/${n} cartes retournées`);
+    }
     return `${head()}
-      <h2>${judge ? "Choisis la meilleure carte" : `${esc(nameOf(room.judge))} choisit la meilleure`}</h2>
-      ${judge ? `<p class="lead">Lis-les à voix haute, touche ta préférée puis valide.</p>` : ""}
-      <div class="answers">${list.map((a, k) => `<button class="answer ${ui.sel === a.id ? "sel" : ""}" data-a="pick" data-v="${a.id}" ${judge ? "" : "disabled style=\"opacity:1;cursor:default\""}><span class="num">Carte ${k + 1}</span>${fill(room.card, a.text)}</button>`).join("") || `<p>Personne n'a répondu.</p>`}</div>
-      ${judge ? `<button class="btn" data-a="confirmPick" ${ui.sel ? "" : "disabled"}>Valider ce choix</button>` : wait("Suspense")}
+      ${top}
+      <div class="answers">${cards}</div>
+      ${bottom}
       ${footer()}`;
   },
 
@@ -476,6 +523,31 @@ const views = {
   }
 };
 
+/* ---------- minuteur ---------- */
+const timerLabel = t => t ? (t >= 60 ? `${t / 60} min` : `${t} s`) + " pour répondre" : "temps illimité";
+const timerSeg = cur => `<div class="seg">${TIMERS.map(([v, l]) => `<button data-a="timer" data-v="${v}" class="${cur === v ? "on" : ""}">${l}</button>`).join("")}</div>`;
+const timerBox = () => room && room.deadline ? `<div class="timer" id="timer" role="timer" aria-live="off"></div>` : "";
+const remaining = () => room && room.deadline ? (new Date(room.deadline).getTime() - Date.now()) / 1000 : null;
+const once = new Set();
+function tick(){
+  if (!room || room.phase !== "writing" || !room.deadline) return;
+  const left = remaining(), total = room.timer || 1;
+  const el = $("#timer");
+  if (el){
+    const sec = Math.max(0, Math.ceil(left));
+    const pct = Math.max(0, Math.min(100, left / total * 100));
+    el.className = "timer" + (sec <= 5 ? " urgent" : "");
+    el.innerHTML = `<span class="tnum">${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}</span><span class="bar"><i style="width:${pct}%"></i></span>`;
+  }
+  const key = room.round + ":" + room.card;
+  // à la fin du temps, la réponse en cours part toute seule
+  if (left <= 0.7 && !isJudge() && !myAnswer() && cleanAnswer(ui.draft) && !once.has("send:" + key)){ once.add("send:" + key); actions.send(); }
+  // puis on passe aux cartes
+  const drives = isJudge() || (isLeader() && (isBot(room.judge) || !byId(room.judge)));
+  if (left <= -1 && drives && !once.has("reveal:" + key)){ once.add("reveal:" + key); setPhase("judging", "writing"); }
+}
+setInterval(tick, 250);
+
 /* ---------- QR code ---------- */
 let qrCache = { url: "", svg: "" };
 function qrSvg(url){
@@ -498,6 +570,7 @@ function render(){
   lastHtml = html;
   const ans = $("#ans");
   if (ans){ ans.value = ui.draft; updatePreview(); }
+  tick();
   if (actId){ const el = document.getElementById(actId); if (el){ el.focus({ preventScroll: true }); try { if (s != null) el.setSelectionRange(s, e); } catch(x){} } }
 }
 function updatePreview(){

@@ -74,6 +74,15 @@ mark{background:none;color:var(--hot);font-weight:800}
 .answer{text-align:left;background:var(--card);color:var(--ink);border-radius:18px;padding:18px;font-family:var(--display);font-size:21px;font-weight:500;line-height:1.25;box-shadow:0 8px 0 rgba(0,0,0,.18);border:3px solid transparent;width:100%}
 .answer .num{display:block;font-family:var(--body);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700}
 .answer.sel{border-color:var(--hot)}
+.answer.facedown{display:flex;flex-direction:column;justify-content:space-between;min-height:96px;background:repeating-linear-gradient(135deg,var(--ink) 0 14px,#221e19 14px 28px);color:var(--card)}
+.answer.facedown .num{color:rgba(255,247,232,.6)}
+.answer .back{font-family:var(--display);font-weight:800;font-size:20px;color:var(--gold);letter-spacing:-.01em}
+.timer{display:flex;align-items:center;gap:12px}
+.timer .tnum{font-family:var(--display);font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;min-width:3.2ch}
+.timer .bar{flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.timer .bar i{display:block;height:100%;background:var(--gold);border-radius:999px;transition:width .25s linear}
+.timer.urgent .tnum{color:var(--hot)}
+.timer.urgent .bar i{background:var(--hot)}
 .answer.win{border-color:var(--gold);background:#fff1c7}
 .answer .by{display:block;font-family:var(--body);font-size:14px;font-weight:700;color:var(--hot);margin-top:10px}
 /* Joueurs */

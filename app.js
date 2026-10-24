@@ -209,7 +209,7 @@ const actions = {
   async create(){
     const n = needName(); if (!n) return;
     busy = true;
-    const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: ui.mode });
+    const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: "mix" });
     busy = false;
     if (error || !data){ ui.err = "Impossible de créer la partie. Vérifie ta connexion."; render(); return; }
     await enterRoom(data);
@@ -254,8 +254,7 @@ const actions = {
   async draw(){
     const C = window.CARDS;
     let pool = [];
-    if (room.mode !== "limite") C.soft.forEach((_, i) => pool.push(i));
-    if (room.mode !== "soft") C.limite.forEach((_, i) => pool.push(1000 + i));
+    C.forEach((_, i) => pool.push(i));
     let used = (room.used || []).slice();
     let free = pool.filter(i => !used.includes(i) && cardText(i) !== room.card);
     if (!free.length){ used = []; free = pool.filter(i => cardText(i) !== room.card); }
@@ -296,7 +295,7 @@ const actions = {
     leaveLocal("");
   }
 };
-function cardText(i){ return i >= 1000 ? window.CARDS.limite[i - 1000] : window.CARDS.soft[i]; }
+function cardText(i){ return window.CARDS[i]; }
 
 /* ---------- vues ---------- */
 function head(){
@@ -356,8 +355,6 @@ const views = {
       <h2>Nouvelle partie</h2>
       <span class="label">Points pour gagner</span>
       <div class="seg">${[3,5,7,10].map(n => `<button data-a="target" data-v="${n}" class="${ui.target === n ? "on" : ""}">${n}</button>`).join("")}</div>
-      <span class="label">Ton des cartes</span>
-      <div class="seg">${[["soft","Soft"],["mix","Mélange"],["limite","Limite"]].map(([v,l]) => `<button data-a="mode" data-v="${v}" class="${ui.mode === v ? "on" : ""}">${l}</button>`).join("")}</div>
       <button class="btn" data-a="create">Créer la partie</button>
       <button class="ghost dark small" data-a="showCreate">Annuler</button>
     </div>` : `<button class="ghost" data-a="showCreate">Créer une partie</button>`}
@@ -372,7 +369,6 @@ const views = {
 
   lobby(){
     const n = players.length, missing = Math.max(0, MIN_PLAYERS - n);
-    const modeLabel = { soft: "Soft", mix: "Mélange", limite: "Limite" }[room.mode];
     return `${head()}
     <div class="stack center">
       <span class="label light">Code de la partie</span>
@@ -384,7 +380,7 @@ const views = {
     <div class="stack">
       <span class="label light">Joueurs · ${n}</span>
       ${scoreList({ noScore: true, kick: isLeader() })}
-      <p style="font-size:14px;opacity:.8">Partie en ${room.target} points · Cartes ${modeLabel}</p>
+      <p style="font-size:14px;opacity:.8">Partie en ${room.target} points</p>
     </div>
     ${isLeader()
       ? `<button class="btn" data-a="start" ${missing ? "disabled" : ""}>Lancer la partie</button>

@@ -66,6 +66,12 @@ Améliorations 1 à 6 en ligne (v=4), puis 100 nouvelles cartes (v=5). Naim trou
 7. ✅ 100 cartes ajoutées dans les 3 styles choisis. Suite possible : selon les notes, en écrire plus dans le style gagnant et retirer les cartes d'origine mal notées.
 Écarté : le best-of de fin de soirée.
 
+## Tri des cartes avec Naim (25/10/2026)
+- Page de tri : https://claude.ai/artifact/B2qCzYx9CTuWBhTptKpRmA (base de l'artifact : collection `tri` = 1er tri des 300 cartes, `tri2` = 2e tri de 148 nouvelles cartes + 22 réécrites ; lire avec ArtifactData).
+- 1er tri : 93 gardées sur 300. Ses règles : aucune carte avec deux-points ni question, phrases simples et naturelles ; ton de jeunes adultes (20-30 ans), pas de vocabulaire TikTok d'ado, peu d'anglais ; peu de cartes qui parlent de gens (famille) ; trash côté sexe entre adultes, alcool, ex, soirées.
+- Limite posée par Claude : pas de cartes conçues pour amener des blagues racistes ou homophobes, ni de famille/enfants dans un contexte sexuel. Naim l'a accepté.
+- Prochaine étape : quand il a fini le 2e tri, nouveau `cards.js` = ses 93 gardées (versions réécrites pour les 22 à deux-points) + nouvelles gardées.
+
 ## Façon de travailler avec Naim
 - Pour tout ce qui est visuel (icône, design), montrer plusieurs options et attendre son choix avant de mettre en ligne.
 - Il veut des liens directs cliquables avec quoi faire sur chaque page pour les réglages.

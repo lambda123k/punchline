@@ -1,21 +1,22 @@
 // Faux backend Supabase pour tester Punchline en local (reproduit les fonctions SQL)
 const http = require("http"), fs = require("fs"), path = require("path"), crypto = require("crypto");
 const ROOT = process.argv[2], PORT = +process.argv[3] || 8787;
-const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [] };
+const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [] };
 let version = 0, broadcasts = [];
 const now = () => new Date().toISOString();
 const isBot = id => String(id).startsWith("b07b07b0-");
 const present = p => isBot(p.id) || Date.now() - Date.parse(p.last_seen) < 45000;
-const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"] };
+const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"] };
 const defaults = {
-  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, timer: 0, deadline: null, revealed: 0, created_at: now(), updated_at: now() }),
-  players: () => ({ score: 0, seat: 0, joined_at: now(), last_seen: now() }),
-  answers: () => ({ id: crypto.randomUUID(), created_at: now() }),
+  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, created_at: now(), updated_at: now() }),
+  players: () => ({ ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
+  answers: () => ({ id: crypto.randomUUID(), created_at: now(), won: false, fav: false, judge: null, secs: null, late: false }),
+  reactions: () => ({ id: crypto.randomUUID(), created_at: now() }),
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
   card_ratings: () => ({ updated_at: now() })
 };
 function hook(oldR, r){
-  if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)) r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null;
+  if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)){ r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null; r.writing_at = now(); }
   else if (r.phase !== "writing") r.deadline = null;
   if (r.phase === "judging" && oldR.phase !== "judging") r.revealed = 0;
 }
@@ -46,7 +47,12 @@ const rpc = {
     db.players.push({ ...defaults.players(), id: p_player, room: p_code, name: p_name.trim(), seat: s });
     return "ok";
   },
-  ping({ p_player, p_room }){ const p = db.players.find(x => x.id === p_player && x.room === p_room); if (p) p.last_seen = now(); return now(); },
+  ping({ p_player, p_room }){
+    const p = db.players.find(x => x.id === p_player && x.room === p_room);
+    const r = db.rooms.find(x => x.code === p_room);
+    if (p){ if (Date.now() - Date.parse(p.last_seen) > 45000 && r && !["lobby", "end"].includes(r.phase)) p.ghost = true; p.last_seen = now(); }
+    return now();
+  },
   pick_winner({ p_code, p_answer }){
     const r = db.rooms.find(x => x.code === p_code); if (!r || r.phase !== "judging") return null;
     const a = db.answers.find(x => x.id === p_answer && x.room === p_code && x.round === r.round); if (!a) return null;
@@ -59,6 +65,7 @@ const rpc = {
     const s = Object.entries(n).sort((x, y) => y[1] - x[1]);
     let f = null;
     if (s.length && (s.length === 1 || s[0][1] > s[1][1])){ f = s[0][0]; const fa = db.answers.find(x => x.id === f); const pl = db.players.find(p => p.id === fa.player); if (pl) pl.score++; }
+    db.answers.filter(x => x.room === p_code && x.round === r.round).forEach(x => { x.won = x.id === p_answer; x.fav = x.id === f; x.judge = r.judge; });
     const old = { ...r }; Object.assign(r, { winner: p_answer, fav: f, phase: "result", updated_at: now() }); hook(old, r);
     return null;
   },
@@ -76,7 +83,7 @@ const rpc = {
     return null;
   },
   restart_room({ p_code }){
-    db.players.filter(p => p.room === p_code).forEach(p => p.score = 0);
+    db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
     Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], updated_at: now() }); hook(old, r);
     return null;
@@ -95,11 +102,17 @@ function query(q){
     return null;
   }
   if (q.action === "delete"){ db[t] = db[t].filter(r => !match(r, q.filters)); return null; }
+  const timing = (row, isNew) => {
+    if (t !== "answers") return;
+    const r = db.rooms.find(x => x.code === row.room) || {};
+    if (isNew) row.secs = r.writing_at ? (Date.now() - Date.parse(r.writing_at)) / 1000 : null;
+    row.late = !!r.deadline && Date.now() > Date.parse(r.deadline) - 3000;
+  };
   if (q.action === "upsert" || q.action === "insert"){
     const conf = q.onConflict ? q.onConflict.split(",") : keys[t];
     [].concat(q.values).forEach(v => {
       const ex = db[t].find(r => conf.every(k => String(r[k]) === String(v[k])));
-      if (ex && q.action === "upsert") Object.assign(ex, v); else db[t].push({ ...defaults[t](), ...v });
+      if (ex && q.action === "upsert"){ Object.assign(ex, v); timing(ex, false); } else { const row = { ...defaults[t](), ...v }; timing(row, true); db[t].push(row); }
     });
     return null;
   }

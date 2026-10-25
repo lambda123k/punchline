@@ -32,7 +32,7 @@ const qs = new URLSearchParams(location.search);
 const urlTv = (qs.get("tv") || "").replace(/\D/g, "").slice(0, 4);
 const urlCode = urlTv || (qs.get("c") || "").replace(/\D/g, "").slice(0, 4);
 
-let code = null, room = null, players = [], answers = [], votes = [];
+let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [];
 let channel = null, pollTimer = null, pingTimer = null, refreshTimer = null, busy = false;
 let clock = 0; // décalage horloge serveur - horloge locale (ms)
 const savedTimer = store.get("timer");
@@ -112,7 +112,8 @@ const sfx = {
   card(){ buzz(40); play(() => { tone(392, 0, .18, "sine", .16); tone(587, .09, .25, "sine", .14); }); },
   tick(last){ buzz(last ? 120 : 30); play(() => tone(last ? 660 : 880, 0, last ? .3 : .08, "square", .07)); },
   win(big){ buzz(big ? [80, 60, 80, 60, 200] : 50); play(() => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .1, big ? .45 : .3, "triangle", big ? .2 : .12)); }); },
-  pop(){ play(() => tone(1200, 0, .06, "sine", .06)); }
+  pop(){ play(() => tone(1200, 0, .06, "sine", .06)); },
+  badge(){ buzz([30, 40, 30]); play(() => { tone(988, 0, .12, "triangle", .12); tone(1319, .1, .28, "triangle", .12); }); }
 };
 function play(fn){ if (!ui.sound || !actx || actx.state !== "running") return; try { fn(); } catch(e){} }
 
@@ -122,25 +123,38 @@ function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeou
 async function refresh(){
   if (!code) return;
   const c = code;
-  const [r, p, a, v] = await Promise.all([
+  const [r, p, a, v, x] = await Promise.all([
     sb.from("rooms").select("*").eq("code", c).maybeSingle(),
     sb.from("players").select("*").eq("room", c).order("seat"),
     sb.from("answers").select("*").eq("room", c),
-    sb.from("votes").select("*").eq("room", c)
+    sb.from("votes").select("*").eq("room", c),
+    sb.from("reactions").select("round,answer,player").eq("room", c)
   ]);
   if (c !== code) return;
   if (r.error || p.error || a.error){ return; } // réseau instable : le prochain passage réessaiera
   if (!r.data){ leaveLocal("La partie n'existe plus."); return; }
   const prev = room;
-  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []);
+  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []);
   if (!ui.tv && !byId(me.id)){ leaveLocal("Tu n'es plus dans la partie."); return; }
   if (!prev || prev.round !== room.round || prev.phase !== room.phase){
     ui.sel = null; ui.confirmLeave = false;
     if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; }
   }
   if (prev) soundsFor(prev, room);
+  if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
   render();
   autoActions();
+}
+
+async function loadGameRatings(){
+  const c = code;
+  let q = sb.from("card_ratings").select("player,updated_at").eq("room", c);
+  const { data, error } = await q;
+  if (error || c !== code) return;
+  const since = parseTs(room.started_at) || 0;
+  gameRatings = (data || []).filter(r => (parseTs(r.updated_at) || 0) >= since - 2000);
+  gameRatings.loaded = true;
+  render();
 }
 
 function soundsFor(a, b){
@@ -149,6 +163,7 @@ function soundsFor(a, b){
   if (b.phase === "result" && a.phase !== "result"){
     const w = answers.find(x => x.id === b.winner);
     sfx.win(ui.tv || (w && w.player === me.id));
+    setTimeout(() => { if (room && room.phase === "result" && roundBadges(room.round).length) sfx.badge(); }, 900);
   }
   if (b.phase === "end" && a.phase !== "end") sfx.win(true);
 }
@@ -221,7 +236,7 @@ function botActions(){
       });
     }
     if (shown > 0) players.filter(p => isBot(p.id)).forEach(p => {
-      if (Math.random() < .5) botOnce(`${r}:react:${shown}:${p.id}`, rand(300, 1500), () => { if (still()) sendReaction(pickOne(REACTIONS), p.name); });
+      if (Math.random() < .5) botOnce(`${r}:react:${shown}:${p.id}`, rand(300, 1500), () => { if (still()) sendReaction(pickOne(REACTIONS), p.name, p.id); });
       else botTimers.add(`${r}:react:${shown}:${p.id}`);
     });
   }
@@ -285,9 +300,19 @@ async function rpc(name, args){
 
 /* ---------- réactions en direct ---------- */
 let lastReact = 0;
-function sendReaction(e, name){
+// la réaction vise la carte qu'on est en train de lire (ou la gagnante au résultat)
+function reactTarget(){
+  if (!room) return null;
+  if (room.phase === "result") return room.winner;
+  if (room.phase !== "judging") return null;
+  const list = seededShuffle(roundAnswers(), code + ":" + room.round), k = Math.min(room.revealed || 0, list.length) - 1;
+  return k >= 0 ? list[k].id : null;
+}
+function sendReaction(e, name, who){
   if (!channel) return;
   showReaction(e, name);
+  const target = reactTarget(), a = target && answers.find(x => x.id === target), pid = who || me.id;
+  if (a && a.player !== pid) sb.from("reactions").insert({ room: code, round: room.round, answer: a.id, player: pid, emoji: e }).then(() => {});
   try { channel.send({ type: "broadcast", event: "react", payload: { e, n: name } }); } catch(x){}
 }
 function showReaction(e, name){
@@ -442,7 +467,7 @@ const actions = {
     if (pool.length < MIN_PLAYERS) return;
     const j = pickOne(pool).id;
     busy = true;
-    await sb.from("rooms").update({ phase: "draw", round: room.round + 1, judge: j, card: null, winner: null, fav: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
+    await sb.from("rooms").update({ phase: "draw", round: room.round + 1, start_round: room.round + 1, started_at: new Date().toISOString(), judge: j, card: null, winner: null, fav: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
     busy = false; scheduleRefresh();
   },
   async draw(){
@@ -586,6 +611,95 @@ function rateBlock(){
   return `<div class="rate"><span class="label light">Cette carte, vous l'avez trouvée…</span>
     <div class="row"><button class="ghost small ${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">Nulle</button><button class="ghost small ${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">Top</button></div>
     ${cur != null ? `<p class="hint">Merci ! Les cartes bien notées sortiront plus souvent.</p>` : ""}</div>`;
+}
+
+
+/* ---------- insignes ---------- */
+// Badge : nom, phrase, couleur, dessin (SVG 24x24, trait crème)
+const BADGE_DEF = {
+  double:    ["Doublé", "Manche et coup de cœur avec la même réponse", "#ff5a36", `<circle cx="9" cy="12" r="5" /><circle cx="15" cy="12" r="5" />`],
+  feu:       ["En feu", "3 manches gagnées d'affilée", "#ff7a1a", `<path d="M12 3c1 4 5 6 5 11a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 2 2.5 2 4 1.5-1.5 1-5 1-8z" />`],
+  late:      ["Dernière seconde", "Gagné avec une réponse envoyée à la toute fin", "#7a5cff", `<circle cx="12" cy="13" r="7" /><path d="M12 9v4l2.5 2M10 3h4" />`],
+  court:     ["Droit au but", "Gagné avec 1 ou 2 mots", "#16a37f", `<path d="M4 12h14M13 6l6 6-6 6" />`],
+  juge:      ["Juge en or", "A choisi le coup de cœur du public", "#c99a00", `<path d="M4 17h16l-1.5-9-4.5 4-2-6-2 6-4.5-4z" />`],
+  chouchou:  ["Chouchou du public", "Le plus de coups de cœur reçus", "#e8436b", `<path d="M12 19s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 9c0 5.6-7 10-7 10z" />`],
+  incompris: ["Incompris", "Aimé du public, jamais choisi par le juge", "#5d7899", `<path d="M9 9a3 3 0 1 1 4 2.8c-.8.4-1 1-1 2.2M12 17.5v.5" />`],
+  gachette:  ["Gâchette rapide", "Les réponses les plus rapides", "#1f8fff", `<path d="M13 3L6 13h5l-1 8 7-10h-5z" />`],
+  romancier: ["Le romancier", "La réponse gagnante la plus longue", "#8a6a4a", `<path d="M5 6h14M5 10h14M5 14h14M5 18h8" />`],
+  rires:     ["Faiseur de rires", "Le plus de réactions reçues", "#ffb000", `<circle cx="12" cy="12" r="8" /><path d="M8.5 13.5a4 4 0 0 0 7 0M9 9.5v.5M15 9.5v.5" />`],
+  critique:  ["Le critique", "A noté le plus de cartes", "#2b2b8a", `<path d="M12 4l2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7 5.4-.6z" />`],
+  fantome:   ["Le fantôme", "Parti en pleine partie", "#7d7d8f", `<path d="M6 20V11a6 6 0 0 1 12 0v9l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5z" /><path d="M10 11v.5M14 11v.5" />`]
+};
+function badgeArt(k, size){
+  const d = BADGE_DEF[k];
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="#fff7e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d[3]}</svg>`;
+}
+function badgeChip(k, n, who){
+  const d = BADGE_DEF[k];
+  const cnt = n > 1 ? `<span class="bx">×${n}</span>` : "";
+  return `<span class="bmed" style="--bc:${d[2]}" title="${esc(d[1])}"><span class="disc">${badgeArt(k, 26)}${cnt}</span><span class="bn">${esc(d[0])}</span>${who ? `<span class="bw">${esc(who)}</span>` : ""}</span>`;
+}
+const words = t => cleanAnswer(t).split(" ").filter(Boolean).length;
+// Réponses de la partie en cours
+const gameAnswers = () => room ? answers.filter(a => a.round >= (room.start_round || 1)) : [];
+// Insignes gagnés pendant une manche donnée : [{k, player}]
+function roundBadges(round){
+  const list = gameAnswers().filter(a => a.round === round), out = [];
+  const w = list.find(a => a.won);
+  if (!w) return out;
+  if (w.fav){ out.push({ k: "double", player: w.player }); if (w.judge) out.push({ k: "juge", player: w.judge }); }
+  if (w.late) out.push({ k: "late", player: w.player });
+  if (words(w.text) <= 2) out.push({ k: "court", player: w.player });
+  // série : manches gagnées d'affilée jusqu'à celle-ci
+  const winners = {}; gameAnswers().filter(a => a.won).forEach(a => { winners[a.round] = a.player; });
+  const rounds = Object.keys(winners).map(Number).filter(r => r <= round).sort((a, b) => a - b);
+  let streak = 0;
+  for (let i = rounds.length - 1; i >= 0 && winners[rounds[i]] === w.player; i--) streak++;
+  if (streak >= 3 && streak % 3 === 0) out.push({ k: "feu", player: w.player });
+  return out;
+}
+// Tous les insignes de la partie, par joueur : { id: {k: n} }
+function gameBadges(){
+  const res = {}, add = (id, k) => { if (!id || !byId(id)) return; (res[id] = res[id] || {})[k] = (res[id][k] || 0) + 1; };
+  const G = gameAnswers();
+  [...new Set(G.map(a => a.round))].forEach(r => roundBadges(r).forEach(b => add(b.player, b.k)));
+  const best = (scores, k, min) => {
+    const vals = Object.values(scores); if (!vals.length) return;
+    const top = k === "gachette" ? Math.min(...vals) : Math.max(...vals);
+    if (k !== "gachette" && top < (min || 1)) return;
+    Object.keys(scores).filter(id => scores[id] === top).forEach(id => add(id, k));
+  };
+  // coups de cœur reçus (votes valides)
+  const favs = {}, ansById = {}; G.forEach(a => { ansById[a.id] = a; });
+  votes.forEach(v => { const a = ansById[v.answer]; if (a && a.player !== v.voter && v.voter !== a.judge && a.round === v.round) favs[a.player] = (favs[a.player] || 0) + 1; });
+  best(favs, "chouchou");
+  const wins = {}; G.filter(a => a.won).forEach(a => { wins[a.player] = 1; });
+  Object.keys(favs).filter(id => !wins[id]).forEach(id => add(id, "incompris"));
+  const t = {}; G.filter(a => a.secs != null).forEach(a => { (t[a.player] = t[a.player] || []).push(+a.secs); });
+  const avg = {}; Object.keys(t).filter(id => t[id].length >= 2).forEach(id => { avg[id] = Math.round(t[id].reduce((x, y) => x + y, 0) / t[id].length * 10) / 10; });
+  best(avg, "gachette");
+  const wonList = G.filter(a => a.won); if (wonList.length){ const L = Math.max(...wonList.map(a => cleanAnswer(a.text).length)); wonList.filter(a => cleanAnswer(a.text).length === L).forEach(a => add(a.player, "romancier")); }
+  const rr = {}; reacts.forEach(x => { const a = ansById[x.answer]; if (a && a.player !== x.player) rr[a.player] = (rr[a.player] || 0) + 1; });
+  best(rr, "rires");
+  const cr = {}; gameRatings.forEach(x => { cr[x.player] = (cr[x.player] || 0) + 1; });
+  best(cr, "critique");
+  players.filter(p => !isBot(p.id) && (p.ghost || !present(p))).forEach(p => add(p.id, "fantome"));
+  return res;
+}
+function roundBadgeBlock(){
+  const list = roundBadges(room.round);
+  if (!list.length) return "";
+  return `<div class="badges-now pop"><span class="label light">Insigne${list.length > 1 ? "s" : ""} débloqué${list.length > 1 ? "s" : ""}</span>
+    <div class="bgrid">${list.map(b => badgeChip(b.k, 1, nameOf(b.player))).join("")}</div></div>`;
+}
+function endBadgeBlock(){
+  const all = gameBadges();
+  const rows = players.filter(p => all[p.id]).map(p => {
+    const ks = Object.keys(BADGE_DEF).filter(k => all[p.id][k]);
+    return `<div class="brow"><span class="nm">${esc(p.name)}${p.id === me.id && !ui.tv ? " (toi)" : ""}</span><div class="bgrid">${ks.map(k => badgeChip(k, all[p.id][k])).join("")}</div></div>`;
+  });
+  if (!rows.length) return "";
+  return `<div class="stack"><span class="label light">Les insignes de la partie</span>${rows.join("")}</div>`;
 }
 
 const views = {
@@ -790,6 +904,7 @@ const views = {
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
       ${win && !over ? `<p class="lead">${win.player === me.id ? "Tu deviens" : esc(nameOf(win.player)) + " devient"} juge pour la prochaine manche.</p>` : ""}
       ${favBlock()}
+      ${roundBadgeBlock()}
       ${reactBar()}
       ${scoreList()}
       ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
@@ -806,6 +921,7 @@ const views = {
       <div class="big-name pop">${champs.map(p => esc(p.name)).join(" & ")}</div>
       <p class="lead">${top} point${top > 1 ? "s" : ""}.</p>
       ${scoreList()}
+      ${endBadgeBlock()}
       ${isLeader() ? `<button class="btn" data-a="restart">Rejouer avec les mêmes</button>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
       <button class="ghost" data-a="leave">Quitter</button>`;
   }
@@ -856,13 +972,13 @@ const tvViews = {
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
       <p class="lead">Gagnant de la manche</p><div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
-      ${favBlock()}</main>${tvSide()}</div>`;
+      ${favBlock()}${roundBadgeBlock()}</main>${tvSide()}</div>`;
   },
   end(){
     const top = maxScore(), champs = players.filter(p => p.score === top);
     return `${tvHead()}<div class="tvgrid"><main class="stack center tvmain">
       <p class="lead">Champion${champs.length > 1 ? "s" : ""} de la soirée</p>
-      <div class="big-name pop">${champs.map(p => esc(p.name)).join(" & ")}</div><p class="lead">${top} point${top > 1 ? "s" : ""}</p></main>${tvSide()}</div>`;
+      <div class="big-name pop">${champs.map(p => esc(p.name)).join(" & ")}</div><p class="lead">${top} point${top > 1 ? "s" : ""}</p>${endBadgeBlock()}</main>${tvSide()}</div>`;
   }
 };
 

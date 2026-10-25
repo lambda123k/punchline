@@ -39,6 +39,11 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
 - Absents : sans ping depuis 45 s → « Parti », on ne l'attend plus pour écrire ; s'il est juge, l'hôte relance une manche avec un autre juge ; retiré de la partie après 5 min. Revient dès qu'il rouvre l'appli (avant 5 min).
 
+## Insignes (25/10/2026, choisis par Naim)
+- 12 insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
+- Annoncés en fin de manche sur tous les écrans (Doublé, Juge en or, Dernière seconde, Droit au but, En feu = 3 manches d'affilée) + récap par joueur au classement final (en plus : Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le critique, Le fantôme)
+- Données : `answers.won/fav/judge` (remplis par `pick_winner`), `answers.secs/late` (trigger `answers_timing`, depuis `rooms.writing_at`), table `reactions` (réactions liées à la carte lue), `players.ghost` (posé par `ping` au retour d'un absent), `rooms.start_round/started_at` (début de la partie en cours)
+
 ## Tests
 Le bac à sable n'atteint ni Supabase ni GitHub Pages, et npm ne peut rien installer. Partie complète (3 téléphones + grand écran) contre un faux backend qui reproduit les fonctions SQL :
 ```

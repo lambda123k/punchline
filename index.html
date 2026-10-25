@@ -136,6 +136,18 @@ mark{background:none;color:var(--hot);font-weight:800}
 .fav{display:flex;flex-direction:column;gap:8px}
 .answer.heartwin{border-color:#e8436b;background:#ffe9ef}
 .answer.heartwin .by{color:#a3173b}
+/* Insignes */
+.badges-now{display:flex;flex-direction:column;gap:10px}
+.bgrid{display:flex;flex-wrap:wrap;gap:12px}
+.bx{background:var(--card);color:var(--ink);font-size:11px;font-weight:800;border-radius:999px;padding:2px 5px;font-variant-numeric:tabular-nums}
+.bmed{display:flex;flex-direction:column;align-items:center;gap:5px;width:88px;text-align:center}
+.bmed .disc{position:relative;width:58px;height:58px;border-radius:50%;background:var(--bc);display:grid;place-items:center;box-shadow:0 0 0 3px rgba(255,247,232,.9),0 5px 0 rgba(0,0,0,.25)}
+.bmed .bn{font-size:12px;font-weight:700;line-height:1.15}
+.bmed .bw{font-size:12px;opacity:.75;line-height:1.1}
+.bmed .bx{position:absolute;right:-6px;top:-6px}
+body.tv .bmed{width:110px}body.tv .bmed .disc{width:74px;height:74px}body.tv .bmed .bn,body.tv .bmed .bw{font-size:15px}
+.brow{display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.09);border-radius:14px;padding:12px 14px}
+.brow .nm{font-weight:700}
 /* Notation des cartes */
 .rate{display:flex;flex-direction:column;gap:8px}
 .ghost.on{background:rgba(255,200,61,.25);border-color:var(--gold)}
@@ -186,7 +198,7 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="cards.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

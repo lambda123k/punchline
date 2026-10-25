@@ -7,7 +7,8 @@ window.CARD_TYPES = {
   "boulot": "Boulot & argent",
   "quotidien": "Vie quotidienne",
   "famille": "Famille",
-  "absurde": "Absurde & société"
+  "absurde": "Absurde & société",
+  "souvenirs": "Souvenirs & délires"
 };
 window.CARD_DECK = {
 soiree: [
@@ -260,6 +261,38 @@ absurde: [
 "____ a gâché mes plus belles années.",
 "____, et mon voisin a appelé les pompiers.",
 "____, c'est le début de la fin."
+],
+souvenirs: [
+"Cette soirée, c'était une catastrophe, presque autant que la fois où ____.",
+"Rien ne battra jamais la fois où ____.",
+"Depuis la fois où ____, je ne bois plus de rosé.",
+"Ça me rappelle la fois où ____.",
+"J'en rigole encore, de la fois où ____.",
+"Le jour où ____, j'ai compris que ma vie avait pris un tournant.",
+"C'était presque aussi gênant que la fois où ____.",
+"La légende raconte qu'une nuit, ____.",
+"Si je pouvais revivre un seul moment de ma vie, ce serait quand ____.",
+"Mon plus grand regret reste la fois où ____.",
+"Je n'ai jamais été aussi fier que le jour où ____.",
+"Dans vingt ans, on parlera encore de la fois où ____.",
+"Ce soir-là, tout a dérapé quand ____.",
+"C'était le plus beau jour de ma vie, jusqu'à ce que ____.",
+"Tout allait bien, jusqu'au moment où ____.",
+"Il paraît que ____, mais je n'étais pas là.",
+"J'ai encore les photos de la fois où ____, et je compte bien m'en servir.",
+"Je n'ai jamais raconté à personne la fois où ____.",
+"Si les murs pouvaient parler, ils raconteraient surtout la fois où ____.",
+"Ce n'est pas la pire chose que j'ai vue, il y a eu la fois où ____.",
+"Ça a commencé quand ____ et ça a fini en garde à vue.",
+"Personne ne me croit quand je raconte la fois où ____.",
+"Je pensais avoir tout vu, et puis ____.",
+"Ma vie a basculé le jour où ____.",
+"Dans le film de ma vie, la scène culte, c'est quand ____.",
+"Ce n'était pas censé finir avec ____.",
+"La prochaine fois, on évitera ____.",
+"J'ai juré de ne plus jamais parler de la fois où ____.",
+"Même ma mère n'est pas au courant de la fois où ____.",
+"Au début, c'était une soirée tranquille, et puis ____."
 ],
 };
 // Liste à plat + type de chaque carte

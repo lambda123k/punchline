@@ -382,6 +382,27 @@ function weightedPick(list, w){
   return list[list.length - 1];
 }
 
+async function pickCard(skip){
+  const C = window.CARDS, pool = C.map((_, i) => i);
+  const used = (room.used || []).filter(i => i < C.length);
+  let free = pool.filter(i => !used.includes(i) && !skip.includes(i) && C[i] !== room.card);
+  if (!free.length) free = pool.filter(i => !skip.includes(i) && C[i] !== room.card);
+  if (!free.length) free = pool;
+  return weightedPick(free, await cardWeights());
+}
+async function commitCard(idx){
+  const C = window.CARDS;
+  let used = (room.used || []).filter(i => i < C.length);
+  if (used.length >= C.length - 1) used = [];
+  used.push(idx);
+  busy = true;
+  const { error } = await sb.from("rooms").update({ card: C[idx], used, phase: "writing", updated_at: new Date().toISOString() })
+    .eq("code", code).eq("round", room.round).in("phase", ["draw", "writing"]);
+  busy = false;
+  if (error) toast("Connexion perdue, réessaie.");
+  scheduleRefresh();
+}
+
 /* ---------- actions ---------- */
 function needName(){
   const n = (me.name || "").trim();
@@ -469,20 +490,23 @@ const actions = {
     await sb.from("rooms").update({ phase: "draw", round: room.round + 1, start_round: room.round + 1, started_at: new Date().toISOString(), judge: j, card: null, winner: null, fav: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
     busy = false; scheduleRefresh();
   },
-  async draw(){
-    const C = window.CARDS;
-    const pool = C.map((_, i) => i);
-    let used = (room.used || []).filter(i => i < C.length);
-    let free = pool.filter(i => !used.includes(i) && C[i] !== room.card);
-    if (!free.length){ used = []; free = pool.filter(i => C[i] !== room.card); }
-    const idx = weightedPick(free, await cardWeights());
-    used.push(idx);
-    busy = true;
-    const { error } = await sb.from("rooms").update({ card: C[idx], used, phase: "writing", updated_at: new Date().toISOString() })
-      .eq("code", code).eq("round", room.round).in("phase", ["draw", "writing"]);
-    busy = false;
-    if (error) toast("Connexion perdue, réessaie.");
-    scheduleRefresh();
+  // Le juge voit d'abord la carte seul sur son téléphone, peut en piocher une autre, puis la garde
+  async peek(){
+    if (!room || room.phase !== "draw" || !isJudge()) return;
+    const prev = ui.preview && ui.preview.round === room.round ? ui.preview : { round: room.round, skipped: [] };
+    if (prev.idx != null) prev.skipped.push(prev.idx);
+    prev.idx = await pickCard(prev.skipped);
+    ui.preview = prev;
+    render();
+  },
+  async keep(){
+    if (!ui.preview || ui.preview.round !== room.round || ui.preview.idx == null) return;
+    const idx = ui.preview.idx;
+    ui.preview = null;
+    await commitCard(idx);
+  },
+  async draw(idx){
+    await commitCard(typeof idx === "number" ? idx : await pickCard([]));
   },
   async send(){
     const t = cleanAnswer(ui.draft);
@@ -803,13 +827,22 @@ const views = {
   },
 
   draw(){
-    if (isJudge()) return `${head()}
+    if (isJudge()){
+      const pv = ui.preview && ui.preview.round === room.round && ui.preview.idx != null ? window.CARDS[ui.preview.idx] : null;
+      if (pv) return `${head()}
+      <p class="lead">Seulement sur ton téléphone pour l'instant.</p>
+      <div class="black pop"><div>${fill(pv)}</div><div class="brand">Punchline</div></div>
+      <button class="btn gold" data-a="keep">Garder cette carte</button>
+      <button class="ghost" data-a="peek">Piocher une autre carte</button>
+      ${footer()}`;
+      return `${head()}
       <p class="lead">Cette manche, c'est toi le juge.</p>
       <div class="big-name pop">À toi de piocher</div>
-      <button class="btn gold" data-a="draw">Piocher une carte</button>
-      <p style="font-size:14px;opacity:.85">La carte s'affichera sur tous les téléphones. Lis-la à voix haute.</p>
+      <button class="btn gold" data-a="peek">Piocher une carte</button>
+      <p style="font-size:14px;opacity:.85">Tu la vois d'abord seul. Si elle ne te plaît pas, pioches-en une autre. Une fois gardée, elle s'affiche chez tout le monde.</p>
       ${scoreList()}
       ${footer()}`;
+    }
     return `${head()}
       <p class="lead">Le juge de cette manche</p>
       <div class="big-name pop">${esc(nameOf(room.judge))}</div>
@@ -826,7 +859,6 @@ const views = {
       <p class="lead">Lis la carte à voix haute. Les autres écrivent leur réponse.</p>
       <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>réponses reçues</span></div>
       ${scoreList({ status: true, noScore: true })}
-      ${roundAnswers().length === 0 ? `<button class="ghost small" data-a="draw">Changer de carte</button>` : ""}
       ${n > 0 && n < w ? `<button class="ghost small" data-a="reveal">Révéler sans attendre</button>` : ""}
       ${footer()}`;
     const mine = myAnswer();

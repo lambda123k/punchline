@@ -9,7 +9,7 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 ## Fichiers
 - `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N` et `cards.js?v=N` : monter N à chaque mise en ligne (cache).
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
-- `cards.js` — `window.CARD_DECK` : 237 cartes triées par Naim le 25/10 (2 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
+- `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône choisie par Naim : PUNCH / LINE en blanc très gras, P et L en jaune, fond bleu de l'appli. Ne pas changer sans lui montrer des options d'abord.
 - `tests/` — faux backend local + partie complète Playwright (voir Tests).
 
@@ -30,6 +30,7 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - 3 joueurs présents minimum ; robots (`id` commençant par `b07b07b0-`) ajoutables par l'hôte pour tester seul, pilotés par le téléphone de l'hôte (ils répondent, votent, réagissent, jugent)
 - « Hôte » = premier vrai joueur présent (par ordre d'arrivée) : si l'hôte part, le suivant prend le relais
 - Temps de réponse : 15 s / 30 s / 1 min / sans limite ; à zéro la réponse en cours part seule. Horloge calée sur le serveur via `ping`.
+- Pioche : le juge voit d'abord la carte seul sur son téléphone, peut « Piocher une autre carte » autant qu'il veut, puis « Garder cette carte » l'affiche chez tout le monde et lance le temps (demande de Naim, 25/10). Les robots juges piochent directement.
 - Réponses face cachée, le juge les retourne une par une, choix possible seulement quand tout est retourné
 - Coup de cœur : pendant la lecture, les autres votent (pas pour leur propre réponse) ; affiché au résultat
 - Réactions 😂 💀 🔥 dès la 1re carte retournée et au résultat, sur tous les écrans
@@ -71,7 +72,8 @@ Améliorations 1 à 6 en ligne (v=4), puis 100 nouvelles cartes (v=5). Naim trou
 - 1er tri : 93 gardées sur 300. Ses règles : aucune carte avec deux-points ni question, phrases simples et naturelles ; ton de jeunes adultes (20-30 ans), pas de vocabulaire TikTok d'ado, peu d'anglais ; peu de cartes qui parlent de gens (famille) ; trash côté sexe entre adultes, alcool, ex, soirées.
 - Limite posée par Claude : pas de cartes conçues pour amener des blagues racistes ou homophobes, ni de famille/enfants dans un contexte sexuel. Naim l'a accepté.
 - 2e tri : 138 gardées, 4 jetées, 28 non triées (incluses). Paquet de 237 cartes en ligne (v=9).
-- 3e tri (`tri3`) : 30 cartes « entre potes » où le trou appelle un prénom ou une référence du groupe (type `potes` à ajouter au paquet après tri).
+- 3e tri (`tri3`) : 30 cartes « entre potes » (prénom dans le trou, clichés de groupe) toutes refusées. Naim : les prénoms seuls c'est nul, et les joueurs ne forment pas forcément un groupe (il peut jouer avec son père).
+- 4e tri (`tri4`) : 30 cartes « souvenirs et délires » (« comme la fois où ____ », « et puis ____ ») : toutes gardées, type `souvenirs`, en ligne (v=10). Il accepte que ces cartes se ressemblent un peu, diluées dans le paquet.
 
 ## Façon de travailler avec Naim
 - Pour tout ce qui est visuel (icône, design), montrer plusieurs options et attendre son choix avant de mettre en ligne.

@@ -61,7 +61,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   let jName = Object.keys(ids).find(k => ids[k] === jid), J = byName[jName];
   const others = Object.keys(byName).filter(n => n !== jName);
   console.log("  juge : " + jName);
-  await hasText(J, "Piocher une carte"); await J.click("[data-a=draw]");
+  await hasText(J, "Piocher une carte"); await J.click("[data-a=peek]"); await J.waitForSelector("[data-a=keep]"); await J.click("[data-a=peek]"); await J.click("[data-a=keep]");
   await hasText(TV, "réponses reçues");
   await TV.screenshot({ path: S + "/tv-writing.png" });
   for (const n of others){ const p = byName[n]; await until(p, () => p.locator("#ans").isVisible(), "zone réponse"); await p.fill("#ans", "réponse de " + n); await p.click("#send"); }
@@ -109,7 +109,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   await admin(`db.players.find(p=>p.name===${JSON.stringify(gone)}).last_seen=new Date(Date.now()-60000).toISOString()`);
   for (const p of [A, B, C]) if (p !== Gp && await p.locator("[data-a=next]").count()){ await p.click("[data-a=next]"); break; }
   await hasText(W, "À toi de piocher");
-  await W.click("[data-a=draw]");
+  await W.click("[data-a=peek]"); await W.waitForSelector("[data-a=keep]"); await W.click("[data-a=keep]");
   const leaderPage = A;
   await hasText(leaderPage, "Parti");
   check(await until(W, async () => (await W.locator(".counter").innerText()) === "0/1", "compteur 0/1"), "le juge n'attend que les joueurs présents (0/1)");

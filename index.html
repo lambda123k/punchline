@@ -149,7 +149,9 @@ body.tv .bmed{width:110px}body.tv .bmed .disc{width:74px;height:74px}body.tv .bm
 .brow{display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.09);border-radius:14px;padding:12px 14px}
 .brow .nm{font-weight:700}
 /* Notation des cartes */
-.rate{display:flex;flex-direction:column;gap:8px}
+.rate{display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;color:rgba(255,247,232,.55);margin-top:8px}
+.rate button{background:none;border:0;padding:6px 8px;font:inherit;font-weight:600;color:rgba(255,247,232,.7);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.rate button.on{color:var(--gold);text-decoration:none}
 .ghost.on{background:rgba(255,200,61,.25);border-color:var(--gold)}
 /* Réactions */
 .reacts{display:flex;gap:10px;justify-content:center}
@@ -198,7 +200,7 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="cards.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

@@ -163,7 +163,6 @@ function soundsFor(a, b){
   if (b.phase === "result" && a.phase !== "result"){
     const w = answers.find(x => x.id === b.winner);
     sfx.win(ui.tv || (w && w.player === me.id));
-    setTimeout(() => { if (room && room.phase === "result" && roundBadges(room.round).length) sfx.badge(); }, 900);
   }
   if (b.phase === "end" && a.phase !== "end") sfx.win(true);
 }
@@ -606,11 +605,11 @@ function favBlock(){
   return `<div class="fav pop"><span class="label light">Coup de cœur du public · ${n} vote${n > 1 ? "s" : ""}</span>
     <div class="answer heartwin">${fill(room.card, a.text)}<span class="by">${esc(nameOf(a.player))} · +1 point bonus</span></div></div>`;
 }
+// Notation discrète, réservée à l'hôte (sert à améliorer le paquet)
 function rateBlock(){
+  if (!isLeader()) return "";
   const cur = ui.ratings[room.card];
-  return `<div class="rate"><span class="label light">Cette carte, vous l'avez trouvée…</span>
-    <div class="row"><button class="ghost small ${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">Nulle</button><button class="ghost small ${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">Top</button></div>
-    ${cur != null ? `<p class="hint">Merci ! Les cartes bien notées sortiront plus souvent.</p>` : ""}</div>`;
+  return `<div class="rate"><span>Cette carte :</span><button class="${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">nulle</button><button class="${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">top</button></div>`;
 }
 
 
@@ -627,7 +626,6 @@ const BADGE_DEF = {
   gachette:  ["Gâchette rapide", "Les réponses les plus rapides", "#1f8fff", `<path d="M13 3L6 13h5l-1 8 7-10h-5z" />`],
   romancier: ["Le romancier", "La réponse gagnante la plus longue", "#8a6a4a", `<path d="M5 6h14M5 10h14M5 14h14M5 18h8" />`],
   rires:     ["Faiseur de rires", "Le plus de réactions reçues", "#ffb000", `<circle cx="12" cy="12" r="8" /><path d="M8.5 13.5a4 4 0 0 0 7 0M9 9.5v.5M15 9.5v.5" />`],
-  critique:  ["Le critique", "A noté le plus de cartes", "#2b2b8a", `<path d="M12 4l2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7 5.4-.6z" />`],
   fantome:   ["Le fantôme", "Parti en pleine partie", "#7d7d8f", `<path d="M6 20V11a6 6 0 0 1 12 0v9l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5z" /><path d="M10 11v.5M14 11v.5" />`]
 };
 function badgeArt(k, size){
@@ -681,8 +679,6 @@ function gameBadges(){
   const wonList = G.filter(a => a.won); if (wonList.length){ const L = Math.max(...wonList.map(a => cleanAnswer(a.text).length)); wonList.filter(a => cleanAnswer(a.text).length === L).forEach(a => add(a.player, "romancier")); }
   const rr = {}; reacts.forEach(x => { const a = ansById[x.answer]; if (a && a.player !== x.player) rr[a.player] = (rr[a.player] || 0) + 1; });
   best(rr, "rires");
-  const cr = {}; gameRatings.forEach(x => { cr[x.player] = (cr[x.player] || 0) + 1; });
-  best(cr, "critique");
   players.filter(p => !isBot(p.id) && (p.ghost || !present(p))).forEach(p => add(p.id, "fantome"));
   return res;
 }
@@ -895,7 +891,7 @@ const views = {
   result(){
     const list = seededShuffle(roundAnswers(), code + ":" + room.round);
     const win = list.find(a => a.id === room.winner);
-    const others = list.filter(a => a.id !== room.winner);
+    const others = list.filter(a => a.id !== room.winner && a.id !== room.fav);  // le coup de cœur est déjà affiché au-dessus
     const over = maxScore() >= room.target;
     const canNext = isJudge() || isLeader() || judgeGone();
     return `${head()}
@@ -904,12 +900,11 @@ const views = {
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
       ${win && !over ? `<p class="lead">${win.player === me.id ? "Tu deviens" : esc(nameOf(win.player)) + " devient"} juge pour la prochaine manche.</p>` : ""}
       ${favBlock()}
-      ${roundBadgeBlock()}
       ${reactBar()}
       ${scoreList()}
       ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
-      ${rateBlock()}
       ${others.length ? `<div class="stack"><span class="label light">Les autres cartes</span><div class="answers">${others.map(a => `<div class="answer" style="font-size:18px">${fill(room.card, a.text)}<span class="by">${esc(nameOf(a.player))}</span></div>`).join("")}</div></div>` : ""}
+      ${rateBlock()}
       ${footer()}`;
   },
 
@@ -972,7 +967,7 @@ const tvViews = {
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
       <p class="lead">Gagnant de la manche</p><div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
-      ${favBlock()}${roundBadgeBlock()}</main>${tvSide()}</div>`;
+      ${favBlock()}</main>${tvSide()}</div>`;
   },
   end(){
     const top = maxScore(), champs = players.filter(p => p.score === top);

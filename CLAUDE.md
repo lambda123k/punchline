@@ -36,13 +36,13 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - Pas d'emojis dans l'interface (Naim n'aime pas), sauf les réactions 😂 💀 🔥 ; icônes dessinées en SVG (`ICON` dans app.js)
 - Accueil : roue crantée en haut à droite → Paramètres (son, afficher sur un grand écran, notes des cartes), choisie par Naim plutôt que des boutons sur l'accueil
 - Sons (Web Audio, interrupteur dans Paramètres et icône haut-parleur en haut pendant la partie, mémorisé) et vibrations (Android ; l'iPhone ne vibre pas depuis le web) : nouvelle carte, retournement, 5 dernières secondes, victoire
-- Notation des cartes au résultat (👎 Nulle / 👍 Top) ; à la pioche, poids = (top+1)/(nulle+1) borné entre 0,15 et 4. Page « Notes des cartes » depuis Paramètres : % top par type, meilleures / pires cartes.
+- Notation des cartes au résultat : discrète (petits liens « nulle / top » en bas), visible seulement par l'hôte (Naim : « c'est plus pour moi ») ; à la pioche, poids = (top+1)/(nulle+1) borné entre 0,15 et 4. Page « Notes des cartes » depuis Paramètres : % top par type, meilleures / pires cartes.
 - Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
 - Absents : sans ping depuis 45 s → « Parti », on ne l'attend plus pour écrire ; s'il est juge, l'hôte relance une manche avec un autre juge ; retiré de la partie après 5 min. Revient dès qu'il rouvre l'appli (avant 5 min).
 
 ## Insignes (25/10/2026, choisis par Naim)
-- 12 insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
-- Annoncés en fin de manche sur tous les écrans (Doublé, Juge en or, Dernière seconde, Droit au but, En feu = 3 manches d'affilée) + récap par joueur au classement final (en plus : Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le critique, Le fantôme)
+- Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
+- Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.
 - Données : `answers.won/fav/judge` (remplis par `pick_winner`), `answers.secs/late` (trigger `answers_timing`, depuis `rooms.writing_at`), table `reactions` (réactions liées à la carte lue), `players.ghost` (posé par `ping` au retour d'un absent), `rooms.start_round/started_at` (début de la partie en cours)
 
 ## Tests

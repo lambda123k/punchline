@@ -92,10 +92,13 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   await TV.screenshot({ path: S + "/tv-result.png" });
 
   console.log("Notation de la carte");
-  await P2.click("[data-a=rate][data-v='1']"); await J.click("[data-a=rate][data-v='-1']"); await P1.click("[data-a=rate][data-v='1']");
-  await until(P2, () => P2.locator(".rate .on").count().then(n => n === 1), "note affichée");
-  await until(A, async () => (await admin(`return db.card_ratings.length`)) === 3, "3 notes");
-  check(await admin(`return db.card_ratings.length`) === 3, "3 notes enregistrées avec le type " + await admin(`return db.card_ratings[0].type`));
+  const nonHost = [B, C].find(p => p);
+  check(await nonHost.locator("[data-a=rate]").count() === 0, "la notation n'apparaît pas chez les autres joueurs");
+  check(await B.locator(".badges-now").count() === 0, "pas d'insigne annoncé en fin de manche");
+  await A.click("[data-a=rate][data-v='1']");
+  await until(A, () => A.locator(".rate .on").count().then(n => n === 1), "note affichée");
+  await until(A, async () => (await admin(`return db.card_ratings.length`)) === 1, "1 note");
+  check(await admin(`return db.card_ratings.length`) === 1, "l'hôte note discrètement la carte (type " + await admin(`return db.card_ratings[0].type`) + ")");
   await P2.screenshot({ path: S + "/phone-result.png", fullPage: true });
 
   console.log("Absence d'un joueur");
@@ -136,7 +139,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   console.log("Page des notes");
   const S1 = await phone(browser, "Stats"); await S1.goto(BASE); await S1.click("[data-a=menu]"); await S1.click("[data-a=stats]");
   await hasText(S1, "% top");
-  check((await txt(S1)).includes("3 notes"), "la page affiche les notes par type");
+  check((await txt(S1)).includes("1 note"), "la page affiche les notes par type");
   await S1.screenshot({ path: S + "/stats.png", fullPage: true });
 
   console.log("Pioche pondérée");

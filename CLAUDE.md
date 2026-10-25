@@ -21,7 +21,8 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - `card_ratings` (card texte, player, rating -1|1, type, room) PK (card, player) ; vue `card_scores` (card, type, up, down)
 - RLS ouverte à anon (jeu sans compte) : lecture, update rooms, insert/update answers/votes/card_ratings, delete players
 - Fonctions : `create_room`, `join_room`, `pick_winner` (+1 au gagnant, +1 bonus à la réponse la plus votée s'il n'y a pas d'ex aequo ; votes du juge et pour soi ignorés), `next_round` (le gagnant devient juge s'il est présent, sinon joueur présent suivant), `restart_room`, `ping(p_player, p_room)` (met à jour last_seen, renvoie l'heure serveur), `is_present(players)` (robot ou vu il y a < 45 s)
-- Trigger `rooms_phase_hook` : fixe `deadline` côté serveur à l'entrée en phase writing, remet `revealed` à 0 en judging
+- Trigger `rooms_phase_hook` : fixe `deadline` et `writing_at` côté serveur à l'entrée en phase writing, remet `revealed` à 0 en judging, et efface le texte des réponses (→ « — ») au retour en `lobby` (Rejouer). Pas à `end` : le récap des insignes a besoin du texte.
+- `create_room` efface le texte des réponses des parties inactives depuis 12 h. Demande de Naim : rien ne doit rester stocké. Toute nouvelle migration qui redéfinit `rooms_phase_hook` ou `create_room` doit garder ces effacements.
 - Temps réel : postgres_changes sur rooms/players/answers/votes + broadcast `react` (réactions, rien en base) + rafraîchissement de secours toutes les 3 s. Les mises à jour de `last_seen` seules sont appliquées sans recharger.
 - Les migrations contenant `delete` sont annulées par l'outil Supabase (confirmation non reçue) : écrire du SQL sans DELETE, ou demander à Naim de le passer dans l'éditeur SQL. Salle de test « 7209 » restée en base.
 

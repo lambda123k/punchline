@@ -1,6 +1,6 @@
 // Questions du jeu « Qui de nous » (26/10/2026). Chaque manche : une vraie question + 3 leurres d'autres types.
 // Tri de Naim le 26/10 : 89 gardées, 7 jetées. Les questions sur un acte passent en « est le plus susceptible de… »
-// (personne ne l'a peut-être jamais fait), et une série « dingueries » pour pouvoir dire des énormités.
+// (personne ne l'a peut-être jamais fait), et une série « dingueries » pour pouvoir dire des énormités (32, toutes gardées au tri).
 window.QUI_TYPES = {
   "qsoiree": "Qui de nous · soirées",
   "qcouple": "Qui de nous · amour & sexe",

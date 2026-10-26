@@ -49,9 +49,10 @@ Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par 
 - Principe donné par Naim : à chaque manche, un joueur devine. Les autres reçoivent une question secrète (« Qui de nous est le plus fort ? ») et classent tous les joueurs, devineur compris. Le devineur voit tous les classements et doit retrouver la question parmi 4 propositions.
 - Base : `rooms.game` ('punchline' | 'qui'), `rooms.options` (4 questions dans l'ordre affiché), `rooms.guess`, `rooms.qused` (questions déjà sorties) ; table `rankings` (room, round, player, ranking uuid[]) unique (room, round, player), en temps réel. Fonction `guess_question(p_code, p_guess)`. `next_round` : en « qui » le devineur tourne (pas de gagnant) ; `next_round`/`restart_room` vident options et guess.
 - Phases réutilisées : `draw` (l'hôte tire en silence la question + 3 leurres de types différents, `quiDraw`), `writing` = classement (même minuteur, même trigger), `judging` = devinette, `result`, `end`. Le juge (`rooms.judge`) est le devineur.
-- Points (choix de Claude, à valider avec Naim) : bonne réponse = +2 au devineur et +1 à chaque joueur qui a classé ; raté = personne ne marque.
+- Points (validés par Naim le 26/10 après une partie) : bonne réponse = +2 au devineur et +1 à chaque joueur qui a classé ; raté = personne ne marque.
 - Le devineur et le grand écran ne voient jamais la question avant le résultat. Classement par touches successives (1 = le plus) ; à la fin du temps un classement partiel part complété dans l'ordre d'arrivée. Tableau des classements trié par moyenne (`rankMatrix`).
 - Robots : classent et devinent au hasard. Notation nulle/top des questions et page des notes partagées avec Punchline (types préfixés `q`). Pas d'insignes propres à ce jeu (seul « Le fantôme » peut sortir).
+- Interface jugée « dégueulasse, pas ludique » par Naim le 26/10 : trop de texte en haut et en bas (personne ne lit), tableau de chiffres illisible. Refonte en cours : 3 styles proposés en maquettes (https://claude.ai/artifact/S8wqvm8tD8FU7K7akL6Fjm : A podium, B thermomètre, C lignes de visages ; un avatar de couleur + initiale par joueur, presque plus de texte), attendre son choix.
 - Vues : `quiViews` (téléphones) et `quiTv` (grand écran), choisies dans `render()` quand `room.game === "qui"`.
 
 ## Insignes (25/10/2026, choisis par Naim)

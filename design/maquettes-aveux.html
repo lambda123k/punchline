@@ -1,0 +1,264 @@
+<title>Les Aveux maquettes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout : trois colonnes (A, B, C), chacune = trois écrans de téléphone empilés : répondre, parier, révélation. Palette de l'appli Dawa, volontairement un seul thème sombre. */
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f;
+  --hot:#ff5a36; --hot-deep:#b8381d; --gold:#ffc83d; --gold-deep:#b88a10;
+  --yes:#2fbf71; --yes-deep:#1d7d49; --muted:#5d564c; --line:#e6dcc8; --night:#0e1a6e;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--card);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{max-width:1180px;margin:0 auto 22px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);letter-spacing:-.02em;margin:0}
+.top h1 span{color:var(--gold)}
+.top p{margin:0;opacity:.8;font-size:14px}
+.cols{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.colhead{display:flex;align-items:center;gap:12px}
+.letter{font-family:var(--display);font-weight:800;font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
+.colhead b{font-family:var(--display);font-size:20px;display:block;line-height:1.1}
+.colhead small{opacity:.75;font-size:13px}
+.step{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin:6px 0 -6px 4px}
+.phone{background:rgba(9,18,90,.55);border:2px solid rgba(255,247,232,.14);border-radius:28px;padding:16px 14px 18px;display:flex;flex-direction:column;gap:14px;min-height:380px}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px;font-variant-numeric:tabular-nums}
+.timer{height:8px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
+.timer i{display:block;height:100%;width:62%;background:var(--gold);border-radius:999px}
+/* affirmation */
+.aff{background:var(--ink);color:var(--card);border-radius:20px;padding:20px 18px;font-family:var(--display);font-weight:800;font-size:24px;line-height:1.15;box-shadow:0 8px 0 rgba(0,0,0,.25);text-wrap:balance}
+.aff.small{font-size:17px;padding:14px 16px;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.aff.cream{background:var(--card);color:var(--ink)}
+button{font:inherit;font-weight:800;border:0;cursor:pointer;color:inherit;transition:transform .08s}
+button:active{transform:translateY(2px)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn{background:var(--hot);color:#fff;border-radius:14px;padding:14px;font-size:17px;width:100%;box-shadow:0 5px 0 var(--hot-deep)}
+.btn:disabled{opacity:.4}
+.av{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--c);color:var(--ink);font-weight:800;font-size:13px;flex-shrink:0}
+.avs{display:flex;gap:6px;flex-wrap:wrap}
+.avs .av.wait{opacity:.35}
+/* A : deux gros boutons */
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+.yn button{border-radius:22px;font-family:var(--display);font-size:34px;min-height:150px;letter-spacing:-.02em}
+.yn .y{background:var(--yes);color:#04230f;box-shadow:0 7px 0 var(--yes-deep)}
+.yn .n{background:var(--hot);color:#fff;box-shadow:0 7px 0 var(--hot-deep)}
+.yn.picked button{opacity:.35}
+.yn.picked button.on{opacity:1;outline:4px solid var(--card);outline-offset:3px}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.nums button{background:var(--card);color:var(--ink);border-radius:18px;font-family:var(--display);font-size:34px;padding:12px 0;box-shadow:0 5px 0 rgba(0,0,0,.25);font-variant-numeric:tabular-nums}
+.nums button.on{background:var(--gold);box-shadow:0 5px 0 var(--gold-deep)}
+.big{font-family:var(--display);font-weight:800;font-size:110px;line-height:.9;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
+.big small{display:block;font-size:22px;color:var(--card);letter-spacing:-.01em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border-radius:999px;padding:4px 10px 4px 4px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.chip em{font-style:normal;color:var(--gold)}
+.chip.zero em{color:rgba(255,247,232,.5)}
+.chip.ex{background:rgba(255,200,61,.25)}
+/* B : jauge */
+.swipe{flex:1;display:flex;flex-direction:column;gap:10px}
+.swcard{flex:1;position:relative;border-radius:22px;background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px;font-family:var(--display);font-weight:800;font-size:24px;line-height:1.15;text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.25);text-wrap:balance;min-height:190px;transition:transform .25s}
+.swcard.l{transform:rotate(-6deg) translateX(-14px)}
+.swcard.r{transform:rotate(6deg) translateX(14px)}
+.swbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.swbtns button{border-radius:14px;padding:12px;font-size:17px}
+.swbtns .n{background:var(--hot);color:#fff;box-shadow:0 4px 0 var(--hot-deep)}
+.swbtns .y{background:var(--yes);color:#04230f;box-shadow:0 4px 0 var(--yes-deep)}
+.gauge{display:flex;flex-direction:column-reverse;gap:6px;flex:1}
+.gauge button{display:flex;align-items:center;justify-content:space-between;border-radius:12px;padding:8px 14px;background:rgba(255,255,255,.1);font-family:var(--display);font-size:24px;font-variant-numeric:tabular-nums}
+.gauge button span{display:flex;gap:4px}
+.gauge button span i{width:12px;height:12px;border-radius:50%;background:rgba(255,247,232,.25)}
+.gauge button.fill{background:rgba(47,191,113,.25)}
+.gauge button.fill span i{background:var(--yes)}
+.gauge button.on{background:var(--gold);color:var(--ink)}
+.gauge button.on span i{background:var(--ink)}
+.rev{display:flex;flex-direction:column-reverse;gap:6px}
+.rev div{display:flex;align-items:center;gap:8px;border-radius:12px;padding:6px 10px;background:rgba(255,255,255,.08);min-height:42px}
+.rev div.lit{background:var(--yes);color:#04230f}
+.rev div b{font-family:var(--display);font-size:22px;width:24px;font-variant-numeric:tabular-nums}
+.rev div .avs .av{width:26px;height:26px;font-size:12px;box-shadow:0 0 0 2px var(--card)}
+/* C : cartes retournées */
+.flip{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+.flip button{border-radius:18px;font-family:var(--display);font-size:30px;min-height:150px;background:repeating-linear-gradient(135deg,var(--ink) 0 14px,#221e19 14px 28px);color:var(--gold);box-shadow:0 7px 0 rgba(0,0,0,.3);border:3px solid transparent}
+.flip button.on{border-color:var(--gold)}
+.step2{display:flex;align-items:center;justify-content:center;gap:18px;flex:1}
+.step2 button{width:62px;height:62px;border-radius:50%;background:var(--card);color:var(--ink);font-size:32px;box-shadow:0 5px 0 rgba(0,0,0,.25);line-height:1}
+.step2 .n{font-family:var(--display);font-weight:800;font-size:96px;line-height:1;min-width:1.2ch;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
+.of{text-align:center;opacity:.75;font-weight:700;margin-top:-6px}
+.deck{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.deck span{aspect-ratio:3/4;max-width:100%;border-radius:10px;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:15px}
+.deck .y{background:var(--yes);color:#04230f}
+.deck .no{background:rgba(255,255,255,.12);color:rgba(255,247,232,.55)}
+.deck .back{background:repeating-linear-gradient(135deg,var(--ink) 0 8px,#221e19 8px 16px)}
+.tally{display:flex;align-items:baseline;justify-content:center;gap:10px;font-family:var(--display);font-weight:800}
+.tally b{font-size:64px;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.tally span{font-size:20px}
+.note{font-size:13px;opacity:.8;border-left:3px solid var(--gold);padding-left:10px}
+.replay{background:transparent;border:2px solid rgba(255,247,232,.35);color:var(--card);border-radius:12px;padding:9px 12px;font-size:14px;font-weight:700;align-self:flex-start}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top">
+  <h1>Les <span>Aveux</span></h1>
+  <p>3 maquettes, 3 écrans chacune. Exemple : 5 joueurs, 3 « oui ». Tout est cliquable.</p>
+</header>
+
+<main class="cols">
+
+<!-- A -->
+<section class="col">
+  <div class="colhead"><span class="letter">A</span><div><b>Gros boutons</b><small>Oui / Non pleine page, chiffres en touches, gros nombre à la fin</small></div></div>
+  <div class="step">Répondre</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="aff">J'ai déjà couché le premier soir</div>
+    <div class="yn" id="a-yn"><button class="y" data-v="y">OUI</button><button class="n" data-v="n">NON</button></div>
+  </div>
+  <div class="step">Parier</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="avs"><span class="av" style="--c:#ff5a36">N</span><span class="av" style="--c:#ffc83d">M</span><span class="av" style="--c:#2fbf71">S</span><span class="av wait" style="--c:#b48cff">L</span><span class="av wait" style="--c:#4cc9f0">Y</span></span></div>
+    <div class="timer"><i style="width:40%"></i></div>
+    <div class="aff small">J'ai déjà couché le premier soir</div>
+    <div class="big" style="font-size:40px">Combien de oui ?</div>
+    <div class="nums" id="a-nums"><button>0</button><button>1</button><button>2</button><button class="on">3</button><button>4</button><button>5</button></div>
+  </div>
+  <div class="step">Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Résultat</span></div>
+    <div class="aff small">J'ai déjà couché le premier soir</div>
+    <div class="big" id="a-big">0<small>oui sur 5</small></div>
+    <div class="chips">
+      <span class="chip ex"><span class="av" style="--c:#ff5a36">N</span>Naim <em>+2</em></span>
+      <span class="chip"><span class="av" style="--c:#ffc83d">M</span>Mona <em>+1</em></span>
+      <span class="chip ex"><span class="av" style="--c:#2fbf71">S</span>Sami <em>+2</em></span>
+      <span class="chip zero"><span class="av" style="--c:#b48cff">L</span>Léa <em>0</em></span>
+      <span class="chip"><span class="av" style="--c:#4cc9f0">Y</span>Yanis <em>+1</em></span>
+    </div>
+    <button class="replay" id="a-replay">Rejouer le compteur</button>
+  </div>
+</section>
+
+<!-- B -->
+<section class="col">
+  <div class="colhead"><span class="letter">B</span><div><b>Jauge</b><small>La carte penche vers ta réponse, on parie sur une jauge qui se remplit</small></div></div>
+  <div class="step">Répondre</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="swipe">
+      <div class="swcard" id="b-card">J'ai déjà fouillé le téléphone de mon ex</div>
+      <div class="swbtns"><button class="n" data-v="l">NON</button><button class="y" data-v="r">OUI</button></div>
+    </div>
+  </div>
+  <div class="step">Parier</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Ton pari</span></div>
+    <div class="aff small cream">J'ai déjà fouillé le téléphone de mon ex</div>
+    <div class="gauge" id="b-gauge"></div>
+  </div>
+  <div class="step">Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Résultat</span></div>
+    <div class="aff small cream">J'ai déjà fouillé le téléphone de mon ex</div>
+    <div class="rev" id="b-rev"></div>
+    <div class="note">Les pastilles montrent qui a parié quoi, jamais qui a dit oui.</div>
+    <button class="replay" id="b-replay">Rejouer la montée</button>
+  </div>
+</section>
+
+<!-- C -->
+<section class="col">
+  <div class="colhead"><span class="letter">C</span><div><b>Cartes retournées</b><small>Deux cartes face cachée, un compteur + / −, puis les cartes se retournent une à une</small></div></div>
+  <div class="step">Répondre</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="aff">J'ai déjà vomi dans un taxi</div>
+    <div class="flip" id="c-flip"><button>OUI</button><button>NON</button></div>
+  </div>
+  <div class="step">Parier</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Ton pari</span></div>
+    <div class="aff small">J'ai déjà vomi dans un taxi</div>
+    <div class="step2"><button id="c-minus" aria-label="Moins">−</button><span class="n" id="c-n">2</span><button id="c-plus" aria-label="Plus">+</button></div>
+    <div class="of">oui sur 5</div>
+    <button class="btn">Parier</button>
+  </div>
+  <div class="step">Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Résultat</span></div>
+    <div class="aff small">J'ai déjà vomi dans un taxi</div>
+    <div class="deck" id="c-deck"></div>
+    <div class="tally"><b id="c-tally">0</b><span>oui</span></div>
+    <div class="chips">
+      <span class="chip"><span class="av" style="--c:#ff5a36">N</span>Naim <em>+1</em></span>
+      <span class="chip ex"><span class="av" style="--c:#ffc83d">M</span>Mona <em>+2</em></span>
+      <span class="chip zero"><span class="av" style="--c:#2fbf71">S</span>Sami <em>0</em></span>
+      <span class="chip ex"><span class="av" style="--c:#b48cff">L</span>Léa <em>+2</em></span>
+      <span class="chip"><span class="av" style="--c:#4cc9f0">Y</span>Yanis <em>+1</em></span>
+    </div>
+    <div class="note">Les oui sortent toujours en premier, mélangés : impossible de savoir qui.</div>
+    <button class="replay" id="c-replay">Rejouer le retournement</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const PL = [["N","#ff5a36"],["M","#ffc83d"],["S","#2fbf71"],["L","#b48cff"],["Y","#4cc9f0"]];
+
+/* A */
+$("a-yn").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  $("a-yn").classList.add("picked"); [...$("a-yn").children].forEach(x => x.classList.toggle("on", x === b)); });
+$("a-nums").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  [...$("a-nums").children].forEach(x => x.classList.toggle("on", x === b)); });
+async function aCount(){ for (let i = 0; i <= 3; i++){ $("a-big").firstChild.nodeValue = i; await sleep(reduce ? 0 : 600); } }
+$("a-replay").onclick = aCount;
+
+/* B */
+document.querySelectorAll(".swbtns button").forEach(b => b.onclick = () => { $("b-card").className = "swcard " + b.dataset.v; });
+let bBet = 2;
+function bGauge(){
+  $("b-gauge").innerHTML = [0,1,2,3,4,5].map(n => `<button class="${n <= bBet && n > 0 ? "fill" : ""} ${n === bBet ? "on" : ""}" data-n="${n}">${n}<span>${Array.from({length:5},(_, i) => i < n ? "<i></i>" : "").join("")}</span></button>`).join("");
+}
+$("b-gauge").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; bBet = +b.dataset.n; bGauge(); });
+bGauge();
+const bBets = {0:[],1:[3],2:[0,4],3:[1],4:[2],5:[]};
+async function bRev(final = 3, animate = true){
+  const draw = lit => $("b-rev").innerHTML = [0,1,2,3,4,5].map(n => `<div class="${n <= lit && n > 0 ? "lit" : ""}"><b>${n}</b><span class="avs">${bBets[n].map(i => `<span class="av" style="--c:${PL[i][1]}">${PL[i][0]}</span>`).join("")}</span></div>`).join("");
+  if (!animate || reduce){ draw(final); return; }
+  for (let i = 0; i <= final; i++){ draw(i); await sleep(550); }
+}
+bRev(3, false);
+$("b-replay").onclick = () => bRev(3, true);
+
+/* C */
+$("c-flip").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+  [...$("c-flip").children].forEach(x => x.classList.toggle("on", x === b)); });
+let cN = 2; const cSet = () => $("c-n").textContent = cN;
+$("c-minus").onclick = () => { cN = Math.max(0, cN - 1); cSet(); };
+$("c-plus").onclick = () => { cN = Math.min(5, cN + 1); cSet(); };
+const cRes = ["y","y","n","n","n"];
+async function cDeck(animate = true){
+  const draw = k => { $("c-deck").innerHTML = cRes.map((r, i) => i < k ? (r === "y" ? `<span class="y">OUI</span>` : `<span class="no">NON</span>`) : `<span class="back"></span>`).join("");
+    $("c-tally").textContent = cRes.slice(0, k).filter(r => r === "y").length; };
+  if (!animate || reduce){ draw(5); return; }
+  for (let k = 0; k <= 5; k++){ draw(k); await sleep(500); }
+}
+cDeck(false);
+$("c-replay").onclick = () => cDeck(true);
+$("a-big").firstChild.nodeValue = 3;
+</script>

@@ -60,7 +60,8 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 
 ## Jeu 3 : Les Aveux (à construire, idée retenue par Naim le 27/10)
 - Principe proposé par Claude, validé par Naim (« c'est pas mal ») : une affirmation s'affiche (« J'ai déjà couché le premier soir », « J'ai déjà fouillé le téléphone de mon ex »). Chacun répond oui ou non en secret, puis chacun parie sur le nombre de « oui » dans le groupe. Révélation du nombre (jamais de qui a dit quoi : réponses anonymes, rien de nominatif affiché ni gardé après la manche).
-- Points à proposer à Naim avant de coder (pistes : pari exact = 2 points, à 1 près = 1 point). À valider avec lui.
+- Points validés par Naim le 27/10 : pari exact = 2 points, à 1 près = 1 point. Tout le monde répond en même temps (pas de « confesseur »), affirmation tirée au hasard.
+- Maquettes (27/10) : https://claude.ai/artifact/RR34NFgrrHFBnDrykpKCe2 (source `design/maquettes-aveux.html`) : A gros boutons, B jauge, C cartes retournées. En attente du choix de Naim.
 - Interface dans l'esprit de Dawa : presque pas de texte, deux gros boutons Oui / Non, puis un sélecteur de nombre, puis un compteur qui monte pour la révélation. Montrer d'abord 2 ou 3 maquettes et attendre son choix (règle visuelle).
 - Affirmations : écrire un paquet (ton jeunes adultes, trash côté sexe entre adultes, alcool, ex, soirées ; mêmes limites que les cartes) puis le faire trier par Naim sur une page de tri comme pour Le Verdict. Ici la forme « J'ai déjà… » est voulue (c'est un aveu personnel), contrairement au Verdict.
 - À intégrer comme 3e carte sur l'écran « À quoi voulez-vous jouer ? » (`GAME_CARDS`, `gameLogo`), code interne à choisir (par ex. `aveux`).

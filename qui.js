@@ -2,14 +2,14 @@
 // Tri de Naim le 26/10 : 89 gardées, 7 jetées. Les questions sur un acte passent en « est le plus susceptible de… »
 // (personne ne l'a peut-être jamais fait), et une série « dingueries » pour pouvoir dire des énormités (32, toutes gardées au tri).
 window.QUI_TYPES = {
-  "qsoiree": "Qui de nous · soirées",
-  "qcouple": "Qui de nous · amour & sexe",
-  "qdingue": "Qui de nous · dingueries",
-  "qcaractere": "Qui de nous · caractère",
-  "qquotidien": "Qui de nous · vie quotidienne",
-  "qargent": "Qui de nous · boulot & argent",
-  "qsurvie": "Qui de nous · survie & absurde",
-  "qavenir": "Qui de nous · plus tard"
+  "qsoiree": "Verdict · soirées",
+  "qcouple": "Verdict · amour & sexe",
+  "qdingue": "Verdict · dingueries",
+  "qcaractere": "Verdict · caractère",
+  "qquotidien": "Verdict · vie quotidienne",
+  "qargent": "Verdict · boulot & argent",
+  "qsurvie": "Verdict · survie & absurde",
+  "qavenir": "Verdict · plus tard"
 };
 window.QUI_DECK = {
 qsoiree: [

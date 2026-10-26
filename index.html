@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Punchline</title>
+<title>Dawa</title>
 <meta name="theme-color" content="#14279a">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
-<link rel="icon" href="icon-192.png?v=3">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
+<link rel="icon" href="icon-192.png?v=4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Punchline">
+<meta name="apple-mobile-web-app-title" content="Dawa">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
@@ -170,7 +170,22 @@ body.tv .bmed{width:110px}body.tv .bmed .disc{width:74px;height:74px}body.tv .bm
 .tbar .bar{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
 .tbar .bar i{display:block;height:100%;background:var(--gold)}
 .help{display:flex;flex-direction:column;gap:18px}.help section{display:flex;flex-direction:column;gap:6px}.help h3{font-family:var(--display);font-weight:800;font-size:19px;margin:0;color:var(--gold)}.help p{opacity:.9;max-width:62ch}
-/* Qui de nous : thermomètre (style B choisi par Naim) */
+/* Choix du jeu */
+.hl{display:flex;align-items:center;gap:10px}
+.snd.back{padding:7px}
+h1.choose{font-size:clamp(34px,10vw,48px);line-height:1.02;margin-top:8px}
+.gamecards{display:grid;gap:16px}
+.gamecard{display:flex;flex-direction:column;gap:14px;text-align:left;border-radius:22px;padding:22px 20px;box-shadow:0 8px 0 rgba(0,0,0,.25);color:var(--card);position:relative;overflow:hidden}
+.gamecard .logo{font-size:34px}
+.gamecard ul{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-weight:600;font-size:16px}
+.gamecard li{display:flex;gap:10px;align-items:baseline}
+.gamecard li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;transform:translateY(-1px)}
+.gamecard.punchline{background:var(--ink)}
+.gamecard.qui{background:#0e1a6e;padding-left:38px}
+.gamecard.qui::before{content:"";position:absolute;left:0;top:0;bottom:0;width:14px;background:linear-gradient(var(--hot),var(--gold) 45%,#6fb7ff)}
+.gamecard.qui li::before{background:var(--hot)}
+@media (min-width:700px){.gamecards{grid-template-columns:1fr 1fr}}
+/* Le Verdict (ex « Qui de nous ») : thermomètre (style B choisi par Naim) */
 .gname{font-family:var(--display);font-weight:800;font-size:22px}
 .av{--s:44px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s)*.46);line-height:1;color:var(--ink);background:var(--c);flex-shrink:0;box-shadow:0 3px 0 rgba(0,0,0,.25)}
 .av.xs{--s:22px;box-shadow:none}.av.sm{--s:30px;box-shadow:none}.av.lg{--s:58px}.av.xl{--s:96px}
@@ -259,8 +274,8 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=16"></script>
-<script src="qui.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="cards.js?v=18"></script>
+<script src="qui.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

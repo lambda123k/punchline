@@ -94,3 +94,6 @@ Améliorations 1 à 6 en ligne (v=4), puis 100 nouvelles cartes (v=5). Naim trou
 ## Façon de travailler avec Naim
 - Pour tout ce qui est visuel (icône, design), montrer plusieurs options et attendre son choix avant de mettre en ligne.
 - Il veut des liens directs cliquables avec quoi faire sur chaque page pour les réglages.
+
+## En attente
+- Branche `accueil-jeux` (27/10) : accueil « À quoi voulez-vous jouer ? » + 2e jeu renommé Le Verdict. Montrée en capture à Naim, à fusionner dans `main` dès qu il valide (git merge accueil-jeux, puis push).

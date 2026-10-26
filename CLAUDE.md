@@ -4,7 +4,7 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 
 Deuxième jeu dans la même appli : **Le Verdict** (nom choisi par Naim le 27/10, ex « Qui de nous » ; code interne `qui`). L'accueil demande « À quoi voulez-vous jouer ? » avec deux grandes cartes (nom + 3 points), puis on arrive sur l'accueil du jeu choisi (prénom, code, créer), avec une flèche retour. Le jeu est fixé à la création de la partie (plus de choix dans la salle d'attente). Choix mémorisé dans le navigateur (`pl-game`). Un lien ?c=CODE va directement au formulaire.
 
-Nom de l'appli qui réunit les jeux : pas encore choisi. Naim aime bien « Zbeul » mais n'est pas sûr. Constante `APP_NAME` vide dans app.js en attendant ; `<title>`, manifest et icône disent encore Punchline (icône à refaire avec lui quand le nom sera choisi, en lui montrant des options).
+Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par Naim le 27/10 parmi des mots d'argot du même genre que « Zbeul »). `APP_NAME` dans app.js, `<title>`, manifest. Le dépôt GitHub garde le nom punchline (Naim : pas grave). Icône à refaire : 4 propositions dans `design/icones-dawa.html` (A : DA/WA blanc et or sur bleu, façon ancienne icône ; B : dawa noir sur orange ; C : lettres de travers sur bleu ; D : dawa or sur noir avec la bande du thermomètre), attendre son choix puis générer icon-192, icon-512, apple-touch-icon.
 
 - En ligne : https://lambda123k.github.io/punchline/ (GitHub Pages, branche `main`, racine)
 - Dépôt : github.com/lambda123k/punchline

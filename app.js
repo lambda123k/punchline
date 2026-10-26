@@ -567,7 +567,7 @@ const actions = {
   async share(){
     const url = joinUrl(code);
     try {
-      if (navigator.share){ await navigator.share({ title: "Punchline", text: `Rejoins ma partie de Punchline, code ${code}`, url }); return; }
+      if (navigator.share){ await navigator.share({ title: "Dawa", text: `Rejoins ma partie de ${gameLabel()}, code ${code}`, url }); return; }
     } catch(e){ if (e && e.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(url); toast("Lien copié"); } catch(e){ toast(url); }
   },
@@ -677,10 +677,10 @@ function head(){
   const snd = room ? sndBtn() : `<button class="snd" data-a="menu" aria-label="Paramètres" title="Paramètres">${ICON.gear}</button>`;
   const g = room ? room.game : ui.game;
   const back = !room && ui.game && ui.page === "home" && !ui.menu && !ui.tvAsk ? `<button class="snd back" data-a="chooseGame" aria-label="Changer de jeu" title="Changer de jeu">${ICON.back}</button>` : "";
-  return `<header><div class="hl">${back}${g || room ? gameLogo(g) : APP_NAME ? `<div class="logo">${esc(APP_NAME)}</div>` : "<span></span>"}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
+  return `<header><div class="hl">${back}${g || room ? gameLogo(g) : APP_NAME ? `<div class="logo">Da<span>wa</span></div>` : "<span></span>"}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
 }
-// Nom de l'appli qui réunit les jeux : pas encore choisi par Naim (il hésite sur « Zbeul »)
-const APP_NAME = "";
+// Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
+const APP_NAME = "Dawa";
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_CARDS = [
   ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],

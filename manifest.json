@@ -1,7 +1,7 @@
 {
-  "name": "Punchline",
-  "short_name": "Punchline",
-  "description": "Le jeu de cartes à trous où c'est vous qui écrivez la chute.",
+  "name": "Dawa",
+  "short_name": "Dawa",
+  "description": "Jeux de soirée sur vos téléphones : Punchline et Le Verdict.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,7 +9,16 @@
   "theme_color": "#14279a",
   "lang": "fr",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

@@ -101,8 +101,15 @@ const room = () => admin(`return db.rooms[0]`);
       check(await J.locator(".gauge .gm").count() === 4, "le thermomètre montre les 4 joueurs classés");
       await TV.waitForSelector(".gm");
       if (round === 1){ await J.screenshot({ path: S + "/qui-guess.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-guess.png" }); }
-      const want = round === 1 ? r.card : r.options.find(o => o !== r.card);
-      await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(want)}"]`);
+      if (round === 2){
+        const bad = r.options.find(o => o !== r.card);
+        await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(bad)}"]`);
+        await J.click("[data-a=confirmGuess]");
+        check(await until(J, async () => (await J.locator(".tile.wrong").count()) === 1, "tuile éteinte"), "une mauvaise réponse éteint la tuile");
+        check((await room()).phase === "judging", "le devineur peut réessayer");
+        check(await hasText(J, "2 pts"), "il ne reste que 2 points à gagner");
+      }
+      await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(r.card)}"]`);
       await J.click("[data-a=confirmGuess]");
     }
     check(await until(A, async () => (await room()).phase === "result", "résultat", 12000), "le devineur valide sa réponse");
@@ -110,7 +117,12 @@ const room = () => admin(`return db.rooms[0]`);
     const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     const right = rr.guess === rr.card;
     const diff = Object.fromEntries(Object.keys(after).map(n => [n, after[n] - before[n]]));
-    const expect = Object.fromEntries(Object.keys(after).map(n => [n, !right ? 0 : n === judge ? 2 : 1]));
+    const moule = await admin(`const r=db.rooms[0], ks=db.rankings.filter(k=>k.round===r.round), s={}, c={};
+      ks.forEach(k=>k.ranking.forEach((id,i)=>{s[id]=(s[id]||0)+i+1;c[id]=(c[id]||0)+1}));
+      const a=Object.keys(s).map(id=>[id,s[id]/c[id]]), b=Math.min(...a.map(x=>x[1])), t=a.filter(x=>x[1]===b).map(x=>x[0]);
+      return ks.filter(k=>t.includes(k.ranking[0])).map(k=>db.players.find(p=>p.id===k.player).name)`);
+    const tries = (rr.wrong || []).length + (right ? 1 : 0);
+    const expect = Object.fromEntries(Object.keys(after).map(n => [n, (n === judge && right ? 4 - tries : 0) + (moule.includes(n) ? 1 : 0)]));
     check(JSON.stringify(diff) === JSON.stringify(expect), `points ${right ? "bonne réponse" : "raté"} : ${JSON.stringify(diff)}`);
     const other = byName[rankers[0]];
     check(await hasText(other, right ? "Bien vu" : "Raté"), "le résultat s'affiche");

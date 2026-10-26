@@ -168,6 +168,7 @@ async function loadGameRatings(){
 function soundsFor(a, b){
   if (b.phase === "writing" && (a.phase !== "writing" || a.card !== b.card)) sfx.card();
   if (b.phase === "judging" && a.phase === "judging" && (b.revealed || 0) > (a.revealed || 0)) sfx.flip();
+  if (b.phase === "judging" && a.phase === "judging" && (b.wrong || []).length > (a.wrong || []).length){ sfx.tick(true); buzz([60, 40, 60]); }
   if (b.phase === "result" && a.phase !== "result" && b.game === "qui"){
     const right = b.guess === b.card;
     sfx.win(right && (ui.tv || !!myRanking() || b.judge === me.id));
@@ -234,9 +235,11 @@ function botActions(){
       });
     }
     if (room.phase === "judging" && isBot(room.judge)){
-      botOnce(`${r}:guess`, rand(4500, 7000), () => {
-        if (!still() || room.phase !== "judging") return;
-        return sb.rpc("guess_question", { p_code: c, p_guess: pickOne(room.options || [room.card]) });
+      const n = (room.wrong || []).length;
+      botOnce(`${r}:guess:${n}`, rand(3500, 6000), () => {
+        if (!still() || room.phase !== "judging" || (room.wrong || []).length !== n) return;
+        const left = (room.options || [room.card]).filter(o => !(room.wrong || []).includes(o));
+        return sb.rpc("guess_question", { p_code: c, p_guess: pickOne(left) });
       });
     }
     return;
@@ -516,10 +519,12 @@ const actions = {
   rankReset(){ ui.rank = []; render(); },
   async rankSend(){ if (ui.rank.length >= rankPool().length) await sendRanking(ui.rank); },
   rankEdit(){ const k = myRanking(); ui.rank = k ? k.ranking.slice() : []; ui.editing = true; render(); },
-  guessPick(i){ if (isJudge() && room.phase === "judging"){ ui.sel = +i; render(); } },
+  guessPick(i){ if (isJudge() && room.phase === "judging" && !(room.wrong || []).includes(room.options[+i])){ ui.sel = +i; render(); } },
   async confirmGuess(){
     if (ui.sel == null || !room.options) return;
-    busy = true; await rpc("guess_question", { p_code: code, p_guess: room.options[ui.sel] }); busy = false;
+    const q = room.options[ui.sel];
+    ui.sel = null;
+    busy = true; await rpc("guess_question", { p_code: code, p_guess: q }); busy = false;
   },
   showCreate(){ ui.creating = !ui.creating; ui.tvAsk = false; ui.err = ""; render(); },
   showTv(){ ui.tvAsk = !ui.tvAsk; ui.menu = false; ui.creating = false; ui.err = ""; render(); },
@@ -860,7 +865,7 @@ const views = {
       <p>3. Chacun écrit sa réponse en secret sur son téléphone.</p>
       <p>4. Le juge retourne les réponses et choisit sa préférée : 1 point. Le public vote pour son coup de cœur : 1 point bonus.</p>
       <span class="label light" style="margin-top:8px">Deuxième jeu : Qui de nous</span>
-      <p>À choisir dans la salle d'attente. Chaque manche, un devineur. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tous les joueurs. Le devineur voit les classements et doit retrouver la question parmi 4 : 2 points pour lui, 1 point pour chaque joueur qui a classé.</p>
+      <p>À choisir dans la salle d'attente. Chaque manche, un devineur. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tous les joueurs. Le devineur voit les classements et doit retrouver la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p>
     </div>`;
   },
 
@@ -1054,7 +1059,7 @@ const views = {
 const GAMES = [["punchline", "Punchline"], ["qui", "Qui de nous"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
-  qui: "Une question secrète « Qui de nous… », tout le monde est classé, le devineur retrouve la question parmi 4."
+  qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
 };
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
@@ -1098,8 +1103,9 @@ function groupGauge(big){
 function tiles(pick){
   const o = room.options || [];
   return `<div class="tiles">${o.map((q, i) => {
-    const cls = [ui.sel === i && pick ? "sel" : "", room.phase === "result" ? (q === room.card ? "real" : q === room.guess ? "wrong" : "off") : ""].join(" ");
-    const tag = pick ? `button data-a="guessPick" data-v="${i}"` : "div";
+    const bad = (room.wrong || []).includes(q);
+    const cls = [ui.sel === i && pick ? "sel" : "", bad ? "wrong" : "", room.phase === "result" ? (q === room.card ? "real" : bad ? "" : "off") : ""].join(" ");
+    const tag = pick && !bad ? `button data-a="guessPick" data-v="${i}"` : "div";
     return `<${tag} class="tile ${cls}" style="--t:${TILE[i % 4]}">${esc(optLabel(q))}</${tag.split(" ")[0]}>`;
   }).join("")}</div>`;
 }
@@ -1110,9 +1116,18 @@ function scoreChips(delta){
     return `<span class="chip ${top > 0 && p.score === top ? "lead" : ""} ${present(p) ? "" : "away"}">${av(p.id, "xs")}<b>${p.score}</b>${d ? `<i>+${d}</i>` : ""}</span>`;
   }).join("")}</div>`;
 }
+// Points : 3 / 2 / 1 selon l'essai où le devineur trouve, +1 aux classeurs « dans le moule »
+const triesLeft = () => 3 - (room.wrong || []).length;
+function mouleIds(){
+  const g = groupOrder(); if (!g.ids.length) return [];
+  const best = g.avg[g.ids[0]], tops = g.ids.filter(id => g.avg[id] === best);
+  return roundRanks().filter(k => tops.includes(k.ranking[0])).map(k => k.player);
+}
 function roundDelta(){
-  if (room.guess !== room.card) return {};
-  const d = { [room.judge]: 2 }; roundRanks().forEach(k => { d[k.player] = 1; }); return d;
+  const d = {};
+  if (room.guess === room.card) d[room.judge] = Math.max(0, 4 - ((room.wrong || []).length + 1));
+  mouleIds().forEach(id => { d[id] = (d[id] || 0) + 1; });
+  return d;
 }
 const quiTop = () => room.deadline ? `<div class="qtop">${timerBox()}</div>` : "";
 function rankingGauge(){
@@ -1147,7 +1162,7 @@ const quiViews = {
   },
   judging(){
     const guesser = isJudge();
-    return `${head()}<div class="qtop" style="justify-content:center"><span class="rnd hotpill">${guesser ? "Tu devines" : esc(nameOf(room.judge)) + " devine"}</span></div>
+    return `${head()}<div class="qtop" style="justify-content:center"><span class="rnd hotpill">${guesser ? "Tu devines" : esc(nameOf(room.judge)) + " devine"} · ${triesLeft()} pt${triesLeft() > 1 ? "s" : ""}</span></div>
       ${groupGauge()}
       ${tiles(guesser)}
       ${guesser ? `<button class="btn" data-a="confirmGuess" ${ui.sel == null ? "disabled" : ""}>Valider</button>` : reactBar()}
@@ -1159,6 +1174,7 @@ const quiViews = {
       <div class="qcenter tight">${av(room.judge, "lg")}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div></div>
       ${quiCard()}
       ${groupGauge(true)}
+      ${mouleIds().length ? `<div class="moule"><span class="gend">Dans le moule</span>${mouleIds().map(id => av(id, "sm")).join("")}<b>+1</b></div>` : ""}
       ${scoreChips(roundDelta())}
       ${reactBar()}
       ${canNext ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}

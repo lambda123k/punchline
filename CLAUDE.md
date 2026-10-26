@@ -4,7 +4,7 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 
 Deuxième jeu dans la même appli : **Le Verdict** (nom choisi par Naim le 27/10, ex « Qui de nous » ; code interne `qui`). L'accueil demande « À quoi voulez-vous jouer ? » avec deux grandes cartes (nom + 3 points), puis on arrive sur l'accueil du jeu choisi (prénom, code, créer), avec une flèche retour. Le jeu est fixé à la création de la partie (plus de choix dans la salle d'attente). Choix mémorisé dans le navigateur (`pl-game`). Un lien ?c=CODE va directement au formulaire.
 
-Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par Naim le 27/10 parmi des mots d'argot du même genre que « Zbeul »). `APP_NAME` dans app.js, `<title>`, manifest. Le dépôt GitHub garde le nom punchline (Naim : pas grave). Icône à refaire : 4 propositions dans `design/icones-dawa.html` (A : DA/WA blanc et or sur bleu, façon ancienne icône ; B : dawa noir sur orange ; C : lettres de travers sur bleu ; D : dawa or sur noir avec la bande du thermomètre), attendre son choix puis générer icon-192, icon-512, apple-touch-icon.
+Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par Naim le 27/10 parmi des mots d'argot du même genre que « Zbeul »). `APP_NAME` dans app.js, `<title>`, manifest. Le dépôt GitHub garde le nom punchline (Naim : pas grave). Icône : proposition A retenue (voir Fichiers).
 
 - En ligne : https://lambda123k.github.io/punchline/ (GitHub Pages, branche `main`, racine)
 - Dépôt : github.com/lambda123k/punchline
@@ -14,7 +14,7 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N` et `qui.js?v=N` : monter N à chaque mise en ligne (cache).
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
-- `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône choisie par Naim : PUNCH / LINE en blanc très gras, P et L en jaune, fond bleu de l'appli. Ne pas changer sans lui montrer des options d'abord.
+- `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône Dawa choisie par Naim le 27/10 (proposition A) : DA / WA en blanc très gras sur deux lignes, WA en or, fond bleu de l'appli. Source : `design/icones-dawa.html`. Ne pas changer sans lui montrer des options d'abord.
 - `qui.js` — `window.QUI_DECK` : 121 questions « Qui de nous… ? » rangées par type (préfixe `q` : qsoiree, qcouple, qdingue, qcaractere, qquotidien, qargent, qsurvie, qavenir), libellés dans `QUI_TYPES` ; en dérive `QUI` et `QUI_TYPE`. Écrites par Claude le 26/10, triées par Naim le 26/10 (page https://claude.ai/artifact/W3wvvP8YWuaicm5nvrikUE, collection `qtri` ; `qidees` = ses propres questions ; lire avec ArtifactData) : 89 gardées, 7 jetées.
   Règles de Naim : une question sur un acte que personne n'a peut-être fait se dit « Qui de nous est le plus susceptible de… » (pas « a déjà… » ni « ferait… ») ; les traits (« le plus râleur ») restent tels quels. Il aime les énormités en « le plus susceptible d'être… » (acteur porno, détraqué sexuel, zoophile en cachette) : type `qdingue`, 32 questions ajoutées le 26/10, triées sur la même page (version 2, collection `qtri2`) : les 32 gardées. Ce style lui plaît : en écrire d'autres si le paquet s'use. Mêmes limites que pour les cartes (rien de raciste ou homophobe, ni famille/enfants dans un contexte sexuel).
 - `tests/` — faux backend local + parties complètes Playwright (voir Tests).
@@ -97,5 +97,3 @@ Améliorations 1 à 6 en ligne (v=4), puis 100 nouvelles cartes (v=5). Naim trou
 - Pour tout ce qui est visuel (icône, design), montrer plusieurs options et attendre son choix avant de mettre en ligne.
 - Il veut des liens directs cliquables avec quoi faire sur chaque page pour les réglages.
 
-## En attente
-- Branche `accueil-jeux` (27/10) : accueil « À quoi voulez-vous jouer ? » + 2e jeu renommé Le Verdict. Montrée en capture à Naim, à fusionner dans `main` dès qu il valide (git merge accueil-jeux, puis push).

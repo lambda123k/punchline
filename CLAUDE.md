@@ -13,7 +13,7 @@ Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par 
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône choisie par Naim : PUNCH / LINE en blanc très gras, P et L en jaune, fond bleu de l'appli. Ne pas changer sans lui montrer des options d'abord.
-- `qui.js` — `window.QUI_DECK` : ~100 questions « Qui de nous… ? » rangées par type (préfixe `q` : qsoiree, qcouple, qcaractere, qquotidien, qargent, qsurvie, qavenir), libellés dans `QUI_TYPES` ; en dérive `QUI` et `QUI_TYPE`. Écrites par Claude le 26/10, pas encore triées par Naim.
+- `qui.js` — `window.QUI_DECK` : ~100 questions « Qui de nous… ? » rangées par type (préfixe `q` : qsoiree, qcouple, qcaractere, qquotidien, qargent, qsurvie, qavenir), libellés dans `QUI_TYPES` ; en dérive `QUI` et `QUI_TYPE`. Écrites par Claude le 26/10, en cours de tri par Naim : page https://claude.ai/artifact/W3wvvP8YWuaicm5nvrikUE (collection `qtri`, doc `q<index dans QUI>` = {q, type, v: garder|jeter|reecrire, note} ; collection `qidees` = ses propres questions ; lire avec ArtifactData).
 - `tests/` — faux backend local + parties complètes Playwright (voir Tests).
 
 ## Données (Supabase)

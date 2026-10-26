@@ -58,6 +58,13 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Interface refaite le 26/10 dans le style B « thermomètre » choisi par Naim (maquettes : https://claude.ai/artifact/S8wqvm8tD8FU7K7akL6Fjm). Il trouvait l'ancienne « dégueulasse, pas ludique » : trop de texte (personne ne lit), tableau de chiffres illisible. Donc : presque pas de texte, une pastille couleur + initiale par joueur (`av`, `avColor` selon l'ordre d'arrivée), classement en touchant les pastilles qui se posent sur une jauge chaud → froid (`rankingGauge`), jauge du groupe placée selon la moyenne avec à droite les pastilles de ceux qui l'ont mis en 1er (`groupGauge`), 4 grosses tuiles de couleur pour deviner (`tiles`), scores en pastilles avec le gain de la manche (`scoreChips`).
 - Vues : `quiViews` (téléphones) et `quiTv` (grand écran), choisies dans `render()` quand `room.game === "qui"`.
 
+## Jeu 3 : Les Aveux (à construire, idée retenue par Naim le 27/10)
+- Principe proposé par Claude, validé par Naim (« c'est pas mal ») : une affirmation s'affiche (« J'ai déjà couché le premier soir », « J'ai déjà fouillé le téléphone de mon ex »). Chacun répond oui ou non en secret, puis chacun parie sur le nombre de « oui » dans le groupe. Révélation du nombre (jamais de qui a dit quoi : réponses anonymes, rien de nominatif affiché ni gardé après la manche).
+- Points à proposer à Naim avant de coder (pistes : pari exact = 2 points, à 1 près = 1 point). À valider avec lui.
+- Interface dans l'esprit de Dawa : presque pas de texte, deux gros boutons Oui / Non, puis un sélecteur de nombre, puis un compteur qui monte pour la révélation. Montrer d'abord 2 ou 3 maquettes et attendre son choix (règle visuelle).
+- Affirmations : écrire un paquet (ton jeunes adultes, trash côté sexe entre adultes, alcool, ex, soirées ; mêmes limites que les cartes) puis le faire trier par Naim sur une page de tri comme pour Le Verdict. Ici la forme « J'ai déjà… » est voulue (c'est un aveu personnel), contrairement au Verdict.
+- À intégrer comme 3e carte sur l'écran « À quoi voulez-vous jouer ? » (`GAME_CARDS`, `gameLogo`), code interne à choisir (par ex. `aveux`).
+
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
 - Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.

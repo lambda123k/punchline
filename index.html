@@ -169,6 +169,32 @@ body.tv .bmed{width:110px}body.tv .bmed .disc{width:74px;height:74px}body.tv .bm
 .tbar .tl{display:flex;justify-content:space-between;gap:10px;font-weight:600}
 .tbar .bar{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
 .tbar .bar i{display:block;height:100%;background:var(--gold)}
+/* Qui de nous */
+.gname{font-family:var(--display);font-weight:800;font-size:22px}
+.rank{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.rk{display:flex;align-items:center;gap:10px;background:var(--card);color:var(--ink);border:3px solid transparent;border-radius:14px;padding:12px;text-align:left;font-weight:700;min-height:54px}
+.rk .no{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center;font-family:var(--display);font-size:17px;font-variant-numeric:tabular-nums}
+.rk.on{border-color:var(--hot);background:#ffe6de}
+.rk.on .no{background:var(--hot);border:0;color:#fff}
+.rk .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranked{margin:0;padding:12px 14px 12px 40px;background:rgba(255,255,255,.09);border-radius:14px;font-weight:600;display:grid;gap:4px}
+.mx{overflow-x:auto;background:var(--card);color:var(--ink);border-radius:16px;box-shadow:0 8px 0 rgba(0,0,0,.18)}
+.mx table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.mx th,.mx td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.mx thead th{font-size:12px;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.mx tbody th{text-align:left;font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;padding-left:14px}
+.mx tbody tr:last-child th,.mx tbody tr:last-child td{border-bottom:0}
+.mx td{font-family:var(--display);font-weight:800;font-size:18px}
+.mx td.r1{color:var(--hot)}
+.mx td.rl{color:var(--muted);font-weight:500}
+.mx .avg{background:#f4ead6;color:var(--ink)}
+.mx td.avg{font-size:15px;font-weight:700}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.answer.opt{font-size:19px;font-weight:600}
+.answer.wrong{border-color:var(--muted);opacity:.85}
+.tv2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:start}
+body.tv .mx td{font-size:28px;padding:12px}body.tv .mx th{font-size:18px}body.tv .mx tbody th{font-size:22px;max-width:220px}
+@media (max-width:900px){.tv2{grid-template-columns:1fr}}
 /* Grand écran */
 body.tv .app{max-width:1500px;padding:28px 40px;gap:24px}
 body.tv{font-size:20px}
@@ -200,7 +226,8 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="cards.js?v=11"></script>
+<script src="qui.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

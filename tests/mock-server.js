@@ -1,19 +1,20 @@
 // Faux backend Supabase pour tester Punchline en local (reproduit les fonctions SQL)
 const http = require("http"), fs = require("fs"), path = require("path"), crypto = require("crypto");
 const ROOT = process.argv[2], PORT = +process.argv[3] || 8787;
-const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [] };
+const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [], rankings: [] };
 let version = 0, broadcasts = [];
 const now = () => new Date().toISOString();
 const isBot = id => String(id).startsWith("b07b07b0-");
 const present = p => isBot(p.id) || Date.now() - Date.parse(p.last_seen) < 45000;
-const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"] };
+const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"] };
 const defaults = {
-  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, created_at: now(), updated_at: now() }),
+  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], created_at: now(), updated_at: now() }),
   players: () => ({ ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
   answers: () => ({ id: crypto.randomUUID(), created_at: now(), won: false, fav: false, judge: null, secs: null, late: false }),
   reactions: () => ({ id: crypto.randomUUID(), created_at: now() }),
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
-  card_ratings: () => ({ updated_at: now() })
+  card_ratings: () => ({ updated_at: now() }),
+  rankings: () => ({ id: crypto.randomUUID(), created_at: now() })
 };
 function hook(oldR, r){
   if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)){ r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null; r.writing_at = now(); }
@@ -74,18 +75,29 @@ const rpc = {
     if (!r || r.round !== p_from || ["lobby", "end"].includes(r.phase)) return null;
     const ps = db.players.filter(p => p.room === p_code).sort((a, b) => a.seat - b.seat);
     let nj = null;
-    if (r.winner){ const a = db.answers.find(x => x.id === r.winner); const p = a && ps.find(x => x.id === a.player && present(x)); if (p) nj = p.id; }
+    if (r.winner && r.game === "punchline"){ const a = db.answers.find(x => x.id === r.winner); const p = a && ps.find(x => x.id === a.player && present(x)); if (p) nj = p.id; }
     if (!nj){
       const js = (ps.find(p => p.id === r.judge) || {}).seat; const j = js == null ? -1 : js;
       nj = (ps.find(p => p.seat > j && present(p)) || ps.find(present) || ps[0] || {}).id || null;
     }
-    const old = { ...r }; Object.assign(r, { phase: "draw", round: r.round + 1, judge: nj, card: null, winner: null, fav: null, updated_at: now() }); hook(old, r);
+    const old = { ...r }; Object.assign(r, { phase: "draw", round: r.round + 1, judge: nj, card: null, winner: null, fav: null, options: null, guess: null, updated_at: now() }); hook(old, r);
+    return null;
+  },
+  guess_question({ p_code, p_guess }){
+    const r = db.rooms.find(x => x.code === p_code);
+    if (!r || r.game !== "qui" || r.phase !== "judging") return null;
+    if (p_guess != null && p_guess === r.card){
+      const j = db.players.find(p => p.id === r.judge && p.room === p_code); if (j) j.score += 2;
+      const ids = db.rankings.filter(k => k.room === p_code && k.round === r.round).map(k => k.player);
+      db.players.filter(p => p.room === p_code && p.id !== r.judge && ids.includes(p.id)).forEach(p => p.score++);
+    }
+    const old = { ...r }; Object.assign(r, { guess: p_guess == null ? "" : p_guess, phase: "result", updated_at: now() }); hook(old, r);
     return null;
   },
   restart_room({ p_code }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], updated_at: now() }); hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, updated_at: now() }); hook(old, r);
     return null;
   }
 };

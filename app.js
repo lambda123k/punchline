@@ -32,7 +32,7 @@ const qs = new URLSearchParams(location.search);
 const urlTv = (qs.get("tv") || "").replace(/\D/g, "").slice(0, 4);
 const urlCode = urlTv || (qs.get("c") || "").replace(/\D/g, "").slice(0, 4);
 
-let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [];
+let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [], rankings = [];
 let channel = null, pollTimer = null, pingTimer = null, refreshTimer = null, busy = false;
 let clock = 0; // décalage horloge serveur - horloge locale (ms)
 const savedTimer = store.get("timer");
@@ -40,7 +40,7 @@ const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
 const ui = { creating: false, target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer,
   codeInput: urlCode, err: "", sel: null, editing: false, confirmLeave: false, draft: "",
   tv: false, tvReady: false, tvAsk: !!urlTv, page: "home", stats: null,
-  sound: store.get("sound") !== false, ratings: store.get("ratings") || {} };
+  sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [] };
 
 /* ---------- outils ---------- */
 const $ = s => document.querySelector(s);
@@ -82,12 +82,19 @@ const isJudge = () => !ui.tv && room && room.judge === me.id;
 const judgeGone = () => room && room.judge && (!byId(room.judge) || !present(byId(room.judge)));
 const roundAnswers = () => room ? answers.filter(a => a.round === room.round && byId(a.player)) : [];
 const writers = () => players.filter(p => room && p.id !== room.judge && present(p));
-const writersDone = () => { const ids = new Set(roundAnswers().map(a => a.player)); return writers().filter(p => ids.has(p.id)).length; };
+const writersDone = () => { const ids = doneIds(); return writers().filter(p => ids.has(p.id)).length; };
 const myAnswer = () => roundAnswers().find(a => a.player === me.id);
 const roundVotes = () => room ? votes.filter(v => v.round === room.round) : [];
 const myVote = () => roundVotes().find(v => v.voter === me.id);
 const maxScore = () => Math.max(0, ...players.map(p => p.score));
-const cardType = c => (window.CARD_TYPE || {})[c] || "autre";
+const cardType = c => (window.CARD_TYPE || {})[c] || (window.QUI_TYPE || {})[c] || "autre";
+/* « Qui de nous » : le juge est le devineur, les autres classent tout le monde */
+const isQui = () => !!room && room.game === "qui";
+const roundRanks = () => room ? rankings.filter(k => k.round === room.round && byId(k.player) && k.player !== room.judge) : [];
+const myRanking = () => roundRanks().find(k => k.player === me.id);
+const doneIds = () => new Set((isQui() ? roundRanks() : roundAnswers()).map(a => a.player));
+const iDone = () => isQui() ? !!myRanking() : !!myAnswer();
+const rankPool = () => players.filter(present).sort((a, b) => a.seat - b.seat);
 
 /* ---------- sons et vibrations ---------- */
 let actx = null;
@@ -123,22 +130,23 @@ function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeou
 async function refresh(){
   if (!code) return;
   const c = code;
-  const [r, p, a, v, x] = await Promise.all([
+  const [r, p, a, v, x, k] = await Promise.all([
     sb.from("rooms").select("*").eq("code", c).maybeSingle(),
     sb.from("players").select("*").eq("room", c).order("seat"),
     sb.from("answers").select("*").eq("room", c),
     sb.from("votes").select("*").eq("room", c),
-    sb.from("reactions").select("round,answer,player").eq("room", c)
+    sb.from("reactions").select("round,answer,player").eq("room", c),
+    sb.from("rankings").select("*").eq("room", c)
   ]);
   if (c !== code) return;
   if (r.error || p.error || a.error){ return; } // réseau instable : le prochain passage réessaiera
   if (!r.data){ leaveLocal("La partie n'existe plus."); return; }
   const prev = room;
-  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []);
+  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []);
   if (!ui.tv && !byId(me.id)){ leaveLocal("Tu n'es plus dans la partie."); return; }
   if (!prev || prev.round !== room.round || prev.phase !== room.phase){
     ui.sel = null; ui.confirmLeave = false;
-    if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; }
+    if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; ui.rank = []; }
   }
   if (prev) soundsFor(prev, room);
   if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
@@ -160,7 +168,10 @@ async function loadGameRatings(){
 function soundsFor(a, b){
   if (b.phase === "writing" && (a.phase !== "writing" || a.card !== b.card)) sfx.card();
   if (b.phase === "judging" && a.phase === "judging" && (b.revealed || 0) > (a.revealed || 0)) sfx.flip();
-  if (b.phase === "result" && a.phase !== "result"){
+  if (b.phase === "result" && a.phase !== "result" && b.game === "qui"){
+    const right = b.guess === b.card;
+    sfx.win(right && (ui.tv || !!myRanking() || b.judge === me.id));
+  } else if (b.phase === "result" && a.phase !== "result"){
     const w = answers.find(x => x.id === b.winner);
     sfx.win(ui.tv || (w && w.player === me.id));
   }
@@ -211,6 +222,25 @@ function botActions(){
   if (!isLeader() || !players.some(p => isBot(p.id))) return;
   const r = room.round, c = code;
   const still = () => room && code === c && room.round === r;
+  if (isQui()){
+    if (room.phase === "writing"){
+      const pool = rankPool().map(p => p.id);
+      writers().filter(p => isBot(p.id) && !roundRanks().some(k => k.player === p.id)).forEach(p => {
+        botOnce(`${r}:rank:${p.id}`, rand(2500, 7000), () => {
+          if (!still() || room.phase !== "writing") return;
+          const order = pool.slice().sort(() => Math.random() - .5);
+          return sb.from("rankings").upsert({ room: c, round: r, player: p.id, ranking: order }, { onConflict: "room,round,player" });
+        });
+      });
+    }
+    if (room.phase === "judging" && isBot(room.judge)){
+      botOnce(`${r}:guess`, rand(4500, 7000), () => {
+        if (!still() || room.phase !== "judging") return;
+        return sb.rpc("guess_question", { p_code: c, p_guess: pickOne(room.options || [room.card]) });
+      });
+    }
+    return;
+  }
   if (room.phase === "draw" && isBot(room.judge)){
     botOnce(`${r}:draw`, rand(1500, 2500), () => { if (still() && room.phase === "draw") return actions.draw(); });
   }
@@ -268,6 +298,11 @@ async function autoActions(){
     if (w > 0 && writersDone() >= w) await setPhase("judging", "writing");
   }
   if (!isLeader()) return;
+  if (isQui() && room.phase === "draw" && !autoDone.has("qpick:" + r)){
+    autoDone.add("qpick:" + r);
+    await quiDraw();
+    return;
+  }
   // Le juge est parti (ou ne répond plus) : on passe à une nouvelle manche
   if (["draw","writing","judging"].includes(room.phase) && judgeGone() && !isBot(room.judge) && !autoDone.has("judge:" + r)){
     autoDone.add("judge:" + r);
@@ -332,6 +367,7 @@ function subscribe(c){
     .on("postgres_changes", { event: "*", schema: "public", table: "players", filter: "room=eq." + c }, onPlayers)
     .on("postgres_changes", { event: "*", schema: "public", table: "answers", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "votes", filter: "room=eq." + c }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "rankings", filter: "room=eq." + c }, scheduleRefresh)
     .on("broadcast", { event: "react" }, msg => { const p = msg && msg.payload; if (p) showReaction(p.e, p.n); })
     .subscribe();
   pollTimer = setInterval(refresh, 3000); // filet de sécurité si le temps réel décroche
@@ -358,7 +394,7 @@ async function enterRoom(c, tv){
 }
 function leaveLocal(msg){
   unsubscribe();
-  code = null; room = null; players = []; answers = []; votes = [];
+  code = null; room = null; players = []; answers = []; votes = []; rankings = [];
   if (!ui.tv) store.del("room");
   ui.tv = false; ui.tvReady = false;
   ui.err = msg || ""; ui.confirmLeave = false; ui.editing = false; ui.draft = "";
@@ -375,10 +411,11 @@ async function cardWeights(){
     return w;
   } catch(e){ return {}; }
 }
-function weightedPick(list, w){
-  const total = list.reduce((s, i) => s + (w[window.CARDS[i]] || 1), 0);
+function weightedPick(list, w, deck){
+  const D = deck || window.CARDS;
+  const total = list.reduce((s, i) => s + (w[D[i]] || 1), 0);
   let x = Math.random() * total;
-  for (const i of list){ x -= (w[window.CARDS[i]] || 1); if (x <= 0) return i; }
+  for (const i of list){ x -= (w[D[i]] || 1); if (x <= 0) return i; }
   return list[list.length - 1];
 }
 
@@ -400,6 +437,38 @@ async function commitCard(idx){
     .eq("code", code).eq("round", room.round).in("phase", ["draw", "writing"]);
   busy = false;
   if (error) toast("Connexion perdue, réessaie.");
+  scheduleRefresh();
+}
+
+/* « Qui de nous » : une vraie question + 3 leurres pris dans d'autres types si possible */
+async function quiDraw(){
+  const Q = window.QUI || [], T = window.QUI_TYPE || {};
+  if (Q.length < 4) return;
+  let used = (room.qused || []).filter(i => i < Q.length);
+  if (used.length >= Q.length - 4) used = [];
+  const free = Q.map((_, i) => i).filter(i => !used.includes(i));
+  const idx = weightedPick(free, await cardWeights(), Q), q = Q[idx];
+  const opts = [q], shuffled = Q.map((_, i) => i).filter(i => i !== idx).sort(() => Math.random() - .5);
+  for (const i of shuffled){ if (opts.length < 4 && !opts.some(o => T[o] === T[Q[i]])) opts.push(Q[i]); }
+  for (const i of shuffled){ if (opts.length < 4 && !opts.includes(Q[i])) opts.push(Q[i]); }
+  opts.sort(() => Math.random() - .5);
+  used.push(idx);
+  busy = true;
+  const { error } = await sb.from("rooms").update({ card: q, options: opts, qused: used, guess: null, phase: "writing", updated_at: new Date().toISOString() })
+    .eq("code", code).eq("round", room.round).eq("phase", "draw");
+  busy = false;
+  if (error){ autoDone.delete("qpick:" + room.round); toast("Connexion perdue, réessaie."); }
+  scheduleRefresh();
+}
+async function sendRanking(order){
+  if (!room || room.phase !== "writing" || !order.length) return;
+  const pool = rankPool().map(p => p.id);
+  const full = order.filter(id => pool.includes(id)).concat(pool.filter(id => !order.includes(id)));
+  busy = true;
+  const { error } = await sb.from("rankings").upsert({ room: code, round: room.round, player: me.id, ranking: full }, { onConflict: "room,round,player" });
+  busy = false;
+  if (error){ toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
+  ui.editing = false;
   scheduleRefresh();
 }
 
@@ -431,6 +500,26 @@ const actions = {
     if (data === "no_room"){ ui.err = `Aucune partie avec le code ${c}. Vérifie le code avec l'hôte.`; render(); return; }
     if (data === "name_taken"){ ui.err = "Ce prénom est déjà pris dans cette partie. Ajoute une initiale."; render(); return; }
     await enterRoom(c);
+  },
+  async game(v){
+    if (!room || !isLeader() || room.phase !== "lobby" || !["punchline", "qui"].includes(v)) return;
+    room.game = v; render();
+    await sb.from("rooms").update({ game: v }).eq("code", code).eq("phase", "lobby");
+    scheduleRefresh();
+  },
+  rankTap(id){
+    if (!room || room.phase !== "writing" || isJudge()) return;
+    const i = ui.rank.indexOf(id);
+    if (i >= 0) ui.rank.splice(i, 1); else ui.rank.push(id);
+    buzz(10); render();
+  },
+  rankReset(){ ui.rank = []; render(); },
+  async rankSend(){ if (ui.rank.length >= rankPool().length) await sendRanking(ui.rank); },
+  rankEdit(){ const k = myRanking(); ui.rank = k ? k.ranking.slice() : []; ui.editing = true; render(); },
+  guessPick(i){ if (isJudge() && room.phase === "judging"){ ui.sel = +i; render(); } },
+  async confirmGuess(){
+    if (ui.sel == null || !room.options) return;
+    busy = true; await rpc("guess_question", { p_code: code, p_guess: room.options[ui.sel] }); busy = false;
   },
   showCreate(){ ui.creating = !ui.creating; ui.tvAsk = false; ui.err = ""; render(); },
   showTv(){ ui.tvAsk = !ui.tvAsk; ui.menu = false; ui.creating = false; ui.err = ""; render(); },
@@ -582,6 +671,7 @@ function head(){
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
 
+const roleName = () => isQui() ? "Devineur" : "Juge";
 function scoreList(opts){
   opts = opts || {};
   const top = maxScore();
@@ -589,9 +679,9 @@ function scoreList(opts){
     let pill = "";
     const here = present(p);
     if (!here) pill = `<span class="pill gone">Parti</span>`;
-    else if (opts.status && p.id === room.judge) pill = `<span class="pill judge">Juge</span>`;
-    else if (opts.status) pill = roundAnswers().some(a => a.player === p.id) ? `<span class="pill ok">Écrit</span>` : `<span class="pill">Écrit…</span>`;
-    else if (room && p.id === room.judge && !["lobby","end"].includes(room.phase)) pill = `<span class="pill judge">Juge</span>`;
+    else if (opts.status && p.id === room.judge) pill = `<span class="pill judge">${roleName()}</span>`;
+    else if (opts.status) pill = doneIds().has(p.id) ? `<span class="pill ok">${isQui() ? "Classé" : "Écrit"}</span>` : `<span class="pill">${isQui() ? "Classe…" : "Écrit…"}</span>`;
+    else if (room && p.id === room.judge && !["lobby","end"].includes(room.phase)) pill = `<span class="pill judge">${roleName()}</span>`;
     const kick = opts.kick && p.id !== me.id ? `<button class="x" data-a="kick" data-v="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>` : "";
     const score = opts.noScore ? "" : `<b>${p.score}</b>`;
     return `<div class="pl ${p.id === me.id && !ui.tv ? "me" : ""} ${!opts.noScore && top > 0 && p.score === top ? "top" : ""} ${here ? "" : "away"}"><span class="nm">${esc(p.name)}${p.id === me.id && !ui.tv ? " (toi)" : ""}</span><span class="rt">${pill}${score}${kick}</span></div>`;
@@ -769,6 +859,8 @@ const views = {
       <p>2. Le juge pioche une carte à trous et la lit à voix haute.</p>
       <p>3. Chacun écrit sa réponse en secret sur son téléphone.</p>
       <p>4. Le juge retourne les réponses et choisit sa préférée : 1 point. Le public vote pour son coup de cœur : 1 point bonus.</p>
+      <span class="label light" style="margin-top:8px">Deuxième jeu : Qui de nous</span>
+      <p>À choisir dans la salle d'attente. Chaque manche, un devineur. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tous les joueurs. Le devineur voit les classements et doit retrouver la question parmi 4 : 2 points pour lui, 1 point pour chaque joueur qui a classé.</p>
     </div>`;
   },
 
@@ -778,7 +870,7 @@ const views = {
     if (!s) body = wait("Chargement des notes");
     else if (s.error) body = `<div class="err">Impossible de charger les notes. Vérifie ta connexion.</div>`;
     else {
-      const T = window.CARD_TYPES || {}, deck = window.CARD_DECK || {};
+      const T = { ...(window.CARD_TYPES || {}), ...(window.QUI_TYPES || {}) }, deck = { ...(window.CARD_DECK || {}), ...(window.QUI_DECK || {}) };
       const rows = s.rows.map(r => ({ ...r, type: cardType(r.card) !== "autre" ? cardType(r.card) : (r.type || "autre") }));
       const votesTotal = rows.reduce((t, r) => t + r.up + r.down, 0);
       const types = Object.keys(T).map(k => {
@@ -811,6 +903,10 @@ const views = {
       <button class="ghost small" data-a="share">Partager le lien</button>
     </div>
     <div class="stack">
+      <span class="label light">Jeu</span>
+      ${isLeader() ? `<div class="seg">${GAMES.map(([k, l]) => `<button data-a="game" data-v="${k}" class="${(room.game || "punchline") === k ? "on" : ""}">${l}</button>`).join("")}</div>`
+        : `<div class="gname">${esc(gameLabel())}</div>`}
+      <p style="font-size:14px;opacity:.85">${esc(GAME_RULE[room.game] || GAME_RULE.punchline)}</p>
       <span class="label light">Joueurs · ${n}</span>
       ${scoreList({ noScore: true, kick: isLeader() })}
       <p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>
@@ -821,7 +917,7 @@ const views = {
          ${missing ? `<p class="center" style="font-size:14px;opacity:.85">Encore ${missing} joueur${missing > 1 ? "s" : ""} pour lancer.</p>` : ""}`
       : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
     ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un joueur robot</button>
-      <p class="center" style="font-size:13px;opacity:.75">Pour tester seul : les robots répondent, votent et jugent au hasard.</p>
+      <p class="center" style="font-size:13px;opacity:.75">Pour tester seul : les robots ${isQui() ? "classent et devinent" : "répondent, votent et jugent"} au hasard.</p>
       <p class="center hint">Une télé ou un ordi ? Ouvre ${esc(shortUrl())} dessus, va dans « Grand écran » et tape ${esc(code)}.</p>` : ""}
     ${footer()}`;
   },
@@ -954,6 +1050,134 @@ const views = {
   }
 };
 
+/* ---------- « Qui de nous » ---------- */
+const GAMES = [["punchline", "Punchline"], ["qui", "Qui de nous"]];
+const GAME_RULE = {
+  punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
+  qui: "Une question secrète « Qui de nous… », tout le monde est classé, le devineur retrouve la question parmi 4."
+};
+const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
+const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
+const quiCard = () => `<div class="black pop"><div>${esc(room.card)}</div><div class="brand">Qui de nous</div></div>`;
+// Tableau des classements : une ligne par joueur classé (du plus au moins en moyenne), une colonne par classeur
+function rankMatrix(){
+  const ks = roundRanks();
+  if (!ks.length) return `<p class="lead">Personne n'a classé à temps.</p>`;
+  const ids = [...new Set(ks.flatMap(k => k.ranking))].filter(byId);
+  const avg = {};
+  ids.forEach(id => { const pos = ks.map(k => k.ranking.indexOf(id)).filter(i => i >= 0); avg[id] = pos.reduce((a, b) => a + b + 1, 0) / pos.length; });
+  ids.sort((a, b) => avg[a] - avg[b]);
+  const last = ids.length;
+  const cell = (k, id) => { const i = k.ranking.indexOf(id); return i < 0 ? `<td>–</td>` : `<td class="${i === 0 ? "r1" : i + 1 === last ? "rl" : ""}">${i + 1}</td>`; };
+  return `<div class="mx" role="region" aria-label="Classements"><table>
+    <thead><tr><th scope="col"><span class="sr">Joueur classé</span></th>${ks.map(k => `<th scope="col">${esc(short(nameOf(k.player)))}</th>`).join("")}<th scope="col" class="avg">Moy.</th></tr></thead>
+    <tbody>${ids.map(id => `<tr><th scope="row">${esc(nameOf(id))}${id === me.id && !ui.tv ? " (toi)" : ""}</th>${ks.map(k => cell(k, id)).join("")}<td class="avg">${avg[id].toFixed(1).replace(".", ",")}</td></tr>`).join("")}</tbody>
+  </table></div><p class="hint">Colonnes : qui a classé. 1 = le plus, ${last} = le moins.</p>`;
+}
+function optionList(pickable){
+  const o = room.options || [];
+  return `<div class="answers">${o.map((q, i) => pickable
+    ? `<button class="answer opt ${ui.sel === i ? "sel" : ""}" data-a="guessPick" data-v="${i}"><span class="num">Proposition ${i + 1}</span>${esc(q)}</button>`
+    : `<div class="answer opt"><span class="num">Proposition ${i + 1}</span>${esc(q)}</div>`).join("")}</div>`;
+}
+function quiOutcome(){
+  const right = room.guess === room.card, g = esc(nameOf(room.judge));
+  const nR = roundRanks().length;
+  return { right, html: `<p class="lead">${right ? `${g} a trouvé` : `${g} s'est trompé`}</p>
+    <div class="big-name pop">${right ? "Bien vu" : "Raté"}</div>
+    ${!right && room.guess ? `<div class="answer opt wrong"><span class="num">${g} a choisi</span>${esc(room.guess)}</div>` : ""}
+    <span class="label light">La vraie question</span>
+    <div class="answer win pop">${esc(room.card)}</div>
+    <p class="lead">${right ? `+2 points pour ${g}${nR ? `, +1 pour ${nR > 1 ? `chacun des ${nR} joueurs qui ont classé` : "le joueur qui a classé"}` : ""}.` : "Personne ne marque cette manche."}</p>` };
+}
+const quiViews = {
+  draw(){
+    return `${head()}
+      <p class="lead">Le devineur de cette manche</p>
+      <div class="big-name pop">${isJudge() ? "C'est toi" : esc(nameOf(room.judge))}</div>
+      ${wait("La question secrète se prépare")}
+      ${scoreList()}
+      ${footer()}`;
+  },
+  writing(){
+    const w = writers().length, n = writersDone();
+    if (isJudge()) return `${head()}
+      <p class="lead">Cette manche, c'est toi le devineur.</p>
+      <div class="big-name pop">Ne regarde pas leurs écrans</div>
+      ${timerBox()}
+      <p>Les autres ont reçu une question secrète « Qui de nous… » et classent tout le monde, toi compris. Ensuite, tu verras leurs classements et tu devras retrouver la question parmi 4.</p>
+      <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>classements reçus</span></div>
+      ${scoreList({ status: true, noScore: true })}
+      ${n > 0 && n < w ? `<button class="ghost small" data-a="reveal">Voir les classements sans attendre</button>` : ""}
+      ${footer()}`;
+    const mine = myRanking(), pool = rankPool();
+    if (mine && !ui.editing) return `${head()}
+      ${quiCard()}
+      ${timerBox()}
+      <div class="stack center"><h2>Classement envoyé</h2>${wait(`En attente des autres`)}</div>
+      <ol class="ranked">${mine.ranking.filter(byId).map(id => `<li>${esc(nameOf(id))}</li>`).join("")}</ol>
+      <button class="ghost small" data-a="rankEdit">Modifier mon classement</button>
+      ${footer()}`;
+    const done = ui.rank.length >= pool.length;
+    return `${head()}
+      ${quiCard()}
+      ${timerBox()}
+      <p class="lead">Touche les joueurs dans l'ordre, du plus au moins. Toi compris, et ${esc(nameOf(room.judge))} aussi.</p>
+      <div class="rank">${pool.map(p => { const i = ui.rank.indexOf(p.id);
+        return `<button class="rk ${i >= 0 ? "on" : ""}" data-a="rankTap" data-v="${p.id}" aria-pressed="${i >= 0}"><span class="no">${i >= 0 ? i + 1 : ""}</span><span class="nm">${esc(p.name)}${p.id === me.id ? " (toi)" : ""}</span></button>`; }).join("")}</div>
+      <div class="row">${ui.rank.length ? `<button class="ghost small" data-a="rankReset" style="width:auto">Recommencer</button>` : ""}<button class="btn" data-a="rankSend" ${done ? "" : "disabled"}>${done ? "Envoyer mon classement" : `Encore ${pool.length - ui.rank.length} à classer`}</button></div>
+      <p style="font-size:14px;opacity:.85">${room.deadline ? "À la fin du temps, ton classement part tel quel. " : ""}Ne dis pas la question à voix haute.</p>
+      ${footer()}`;
+  },
+  judging(){
+    const guesser = isJudge(), g = esc(nameOf(room.judge));
+    const top = guesser ? `<h2>Quelle était la question ?</h2><p class="lead">Regarde comment ils ont classé tout le monde, puis choisis la question qui colle le mieux.</p>`
+      : `<h2>${g} cherche la question</h2><p class="lead">Pas d'indice, même avec les yeux.</p>`;
+    return `${head()}
+      ${top}
+      ${rankMatrix()}
+      <span class="label light">Les 4 propositions</span>
+      ${optionList(guesser)}
+      ${guesser ? `<button class="btn" data-a="confirmGuess" ${ui.sel == null ? "disabled" : ""}>Valider</button>` : reactBar() + wait("Suspense")}
+      ${footer()}`;
+  },
+  result(){
+    const over = maxScore() >= room.target, canNext = isJudge() || isLeader() || judgeGone();
+    return `${head()}
+      ${quiOutcome().html}
+      ${reactBar()}
+      <span class="label light">Les classements</span>
+      ${rankMatrix()}
+      ${scoreList()}
+      ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
+      ${rateBlock()}
+      ${footer()}`;
+  }
+};
+const quiTv = {
+  draw(){
+    return `${tvHead()}<div class="tvgrid"><main class="stack center tvmain">
+      <p class="lead">Le devineur de cette manche</p><div class="big-name pop">${esc(nameOf(room.judge))}</div>${wait("La question secrète se prépare")}</main>${tvSide()}</div>`;
+  },
+  writing(){
+    const w = writers().length, n = writersDone();
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
+      <div class="black"><div>Qui de nous… ?</div><div class="brand">Question secrète, sur vos téléphones</div></div>${timerBox()}
+      <div class="row" style="align-items:baseline;gap:14px"><span class="counter">${n}/${w}</span><span class="lead">classements reçus · ${esc(nameOf(room.judge))} devine ensuite</span></div>
+      ${scoreList({ status: true, noScore: true })}</main>${tvSide()}</div>`;
+  },
+  judging(){
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
+      <h2>${esc(nameOf(room.judge))} cherche la question</h2>
+      <div class="tv2">${`<div class="stack"><span class="label light">Les classements</span>${rankMatrix()}</div>`}
+      <div class="stack"><span class="label light">Les 4 propositions</span>${optionList(false)}</div></div></main>${tvSide()}</div>`;
+  },
+  result(){
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${quiOutcome().html}
+      <span class="label light">Les classements</span>${rankMatrix()}</main>${tvSide()}</div>`;
+  }
+};
+
 /* ---------- vues grand écran (télé / ordi) ---------- */
 const tvHead = () => `<header><div class="logo">Punch<span>line</span></div><div class="hr"><div class="tag">${room.phase === "lobby" ? "Grand écran" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round}`} · code ${esc(code)}</div>
   ${sndBtn()}<button class="link" data-a="leave">Quitter</button></div></header>`;
@@ -1029,11 +1253,13 @@ function tick(){
   // bip sur les 5 dernières secondes
   if (sec >= 1 && sec <= 5 && left > 0 && !once.has("beep:" + key + ":" + sec)){
     once.add("beep:" + key + ":" + sec);
-    if (ui.tv || isJudge() || !myAnswer()) sfx.tick(sec === 1);
+    if (ui.tv || isJudge() || !iDone()) sfx.tick(sec === 1);
   }
   if (ui.tv) return;
   // à la fin du temps, la réponse en cours part toute seule
-  if (left <= 0.7 && !isJudge() && !myAnswer() && cleanAnswer(ui.draft) && !once.has("send:" + key)){ once.add("send:" + key); actions.send(); }
+  if (left <= 0.7 && !isJudge() && !once.has("send:" + key)){
+    if (isQui() ? (!myRanking() && ui.rank.length) : (!myAnswer() && cleanAnswer(ui.draft))){ once.add("send:" + key); isQui() ? sendRanking(ui.rank) : actions.send(); }
+  }
   // puis on passe aux cartes
   const drives = isJudge() || (isLeader() && (isBot(room.judge) || judgeGone()));
   if (left <= -1 && drives && !once.has("reveal:" + key)){ once.add("reveal:" + key); setPhase("judging", "writing"); }
@@ -1058,8 +1284,8 @@ let lastHtml = "";
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
-  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : (tvViews[room.phase] || tvViews.lobby)();
-  else { const v = !room ? "home" : room.phase; html = (views[v] || views.home)(); }
+  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
+  else { const v = !room ? "home" : room.phase; html = ((isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
   $("#app").innerHTML = html;

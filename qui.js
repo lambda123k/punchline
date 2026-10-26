@@ -1,0 +1,125 @@
+// Questions du jeu « Qui de nous » (26/10/2026). Chaque manche : une vraie question + 3 leurres d'autres types.
+// Les joueurs classent tout le monde du « plus » au « moins ».
+window.QUI_TYPES = {
+  "qsoiree": "Qui de nous · soirées",
+  "qcouple": "Qui de nous · amour & sexe",
+  "qcaractere": "Qui de nous · caractère",
+  "qquotidien": "Qui de nous · vie quotidienne",
+  "qargent": "Qui de nous · boulot & argent",
+  "qsurvie": "Qui de nous · survie & absurde",
+  "qavenir": "Qui de nous · plus tard"
+};
+window.QUI_DECK = {
+qsoiree: [
+"Qui de nous finit toujours la soirée en dernier ?",
+"Qui de nous tient le moins bien l'alcool ?",
+"Qui de nous envoie les pires messages à 3 h du matin ?",
+"Qui de nous se ferait refouler à l'entrée d'une boîte ?",
+"Qui de nous danse le plus mal ?",
+"Qui de nous part sans dire au revoir ?",
+"Qui de nous oublie tout le lendemain ?",
+"Qui de nous finirait au commissariat après une soirée ?",
+"Qui de nous chante le plus fort au karaoké ?",
+"Qui de nous dit « dernier verre » et ment ?",
+"Qui de nous est le pire pour organiser une soirée ?",
+"Qui de nous vomit le premier ?",
+"Qui de nous se réveille chez un inconnu ?",
+"Qui de nous perd toujours son téléphone en soirée ?"
+],
+qcouple: [
+"Qui de nous a le plus d'ex ?",
+"Qui de nous retourne toujours avec son ex ?",
+"Qui de nous drague le plus mal ?",
+"Qui de nous tombe amoureux le plus vite ?",
+"Qui de nous a le plus de conquêtes ?",
+"Qui de nous ferait un plan à trois ?",
+"Qui de nous est le plus jaloux ?",
+"Qui de nous ghosterait quelqu'un après un premier rendez-vous ?",
+"Qui de nous a déjà couché le premier soir ?",
+"Qui de nous fouille dans le téléphone de son copain ou sa copine ?",
+"Qui de nous se marierait sur un coup de tête ?",
+"Qui de nous est le plus coincé au lit ?",
+"Qui de nous a l'historique de recherche le plus inavouable ?",
+"Qui de nous se ferait larguer par message ?"
+],
+qcaractere: [
+"Qui de nous est le plus râleur ?",
+"Qui de nous ment le mieux ?",
+"Qui de nous garde le moins bien un secret ?",
+"Qui de nous est le plus susceptible ?",
+"Qui de nous pleure devant un film ?",
+"Qui de nous a toujours raison, même quand il a tort ?",
+"Qui de nous est le plus radin ?",
+"Qui de nous est le plus mauvais perdant ?",
+"Qui de nous est le plus naïf ?",
+"Qui de nous parle le plus de lui ?",
+"Qui de nous est le plus têtu ?",
+"Qui de nous fait le plus de drama ?",
+"Qui de nous est le plus gentil ?",
+"Qui de nous est le plus drôle sans le faire exprès ?",
+"Qui de nous a le plus d'ego ?",
+"Qui de nous est le plus hypocrite ?"
+],
+qquotidien: [
+"Qui de nous est toujours en retard ?",
+"Qui de nous a l'appart le plus sale ?",
+"Qui de nous passe le plus de temps sur son téléphone ?",
+"Qui de nous cuisine le plus mal ?",
+"Qui de nous dort le plus ?",
+"Qui de nous met le plus de temps à se préparer ?",
+"Qui de nous répond le moins aux messages ?",
+"Qui de nous envoie des vocaux de dix minutes ?",
+"Qui de nous mange le plus ?",
+"Qui de nous conduit le plus mal ?",
+"Qui de nous se perd même avec un GPS ?",
+"Qui de nous oublie les anniversaires ?",
+"Qui de nous fait le moins de sport ?",
+"Qui de nous a le pire style vestimentaire ?"
+],
+qargent: [
+"Qui de nous deviendra le plus riche ?",
+"Qui de nous finira ruiné ?",
+"Qui de nous dépense tout le jour de la paie ?",
+"Qui de nous se ferait virer le plus vite ?",
+"Qui de nous fait le moins d'efforts au travail ?",
+"Qui de nous serait le pire patron ?",
+"Qui de nous se ferait arnaquer par un faux conseiller bancaire ?",
+"Qui de nous ne rembourse jamais ses dettes ?",
+"Qui de nous lancerait une entreprise complètement débile ?",
+"Qui de nous ferait le meilleur commercial ?",
+"Qui de nous partirait vivre au bout du monde sur un coup de tête ?",
+"Qui de nous joue le plus au loto ?"
+],
+qsurvie: [
+"Qui de nous mourrait en premier dans un film d'horreur ?",
+"Qui de nous survivrait le plus longtemps sur une île déserte ?",
+"Qui de nous rejoindrait une secte ?",
+"Qui de nous croit le plus aux complots ?",
+"Qui de nous se ferait kidnapper le plus facilement ?",
+"Qui de nous paierait la caution des autres ?",
+"Qui de nous parle à ses plantes ?",
+"Qui de nous gagnerait une émission de télé-réalité ?",
+"Qui de nous se battrait contre un cygne ?",
+"Qui de nous serait le plus inutile pendant une invasion de zombies ?",
+"Qui de nous braquerait une banque ?",
+"Qui de nous croit qu'il pourrait battre un ours ?",
+"Qui de nous a peur du noir ?",
+"Qui de nous deviendrait célèbre pour une raison honteuse ?"
+],
+qavenir: [
+"Qui de nous aura le plus d'enfants ?",
+"Qui de nous finira seul avec dix chats ?",
+"Qui de nous se mariera en premier ?",
+"Qui de nous divorcera en premier ?",
+"Qui de nous sera le plus beau à 60 ans ?",
+"Qui de nous écrira sa biographie ?",
+"Qui de nous finira en prison ?",
+"Qui de nous changera complètement de vie à 40 ans ?",
+"Qui de nous sera le parent le plus sévère ?",
+"Qui de nous vivra le plus vieux ?",
+"Qui de nous deviendra politicien ?",
+"Qui de nous finira en couple avec quelqu'un de cette pièce ?"
+]
+};
+window.QUI = []; window.QUI_TYPE = {};
+Object.keys(window.QUI_DECK).forEach(t => window.QUI_DECK[t].forEach(q => { window.QUI.push(q); window.QUI_TYPE[q] = t; }));

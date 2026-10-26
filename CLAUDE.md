@@ -2,16 +2,19 @@
 
 Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une carte à trous, chaque joueur écrit SA réponse (pas de cartes réponses), le juge retourne les réponses une par une puis choisit la meilleure.
 
+Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par l'hôte dans la salle d'attente.
+
 - En ligne : https://lambda123k.github.io/punchline/ (GitHub Pages, branche `main`, racine)
 - Dépôt : github.com/lambda123k/punchline
 - Base : projet Supabase `punchline` (id `pjywkbrqtntblxtwqjlj`, région eu-west-3), clé anon dans `app.js`
 
 ## Fichiers
-- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N` et `cards.js?v=N` : monter N à chaque mise en ligne (cache).
+- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N` et `qui.js?v=N` : monter N à chaque mise en ligne (cache).
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône choisie par Naim : PUNCH / LINE en blanc très gras, P et L en jaune, fond bleu de l'appli. Ne pas changer sans lui montrer des options d'abord.
-- `tests/` — faux backend local + partie complète Playwright (voir Tests).
+- `qui.js` — `window.QUI_DECK` : ~100 questions « Qui de nous… ? » rangées par type (préfixe `q` : qsoiree, qcouple, qcaractere, qquotidien, qargent, qsurvie, qavenir), libellés dans `QUI_TYPES` ; en dérive `QUI` et `QUI_TYPE`. Écrites par Claude le 26/10, pas encore triées par Naim.
+- `tests/` — faux backend local + parties complètes Playwright (voir Tests).
 
 ## Données (Supabase)
 - `rooms` (code 4 chiffres PK, host, phase lobby|draw|writing|judging|result|end, round, judge, card, used int[], target, mode (inutilisé), winner, fav (réponse coup de cœur), timer s (0 = illimité), deadline, revealed)
@@ -41,6 +44,15 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 - Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
 - Absents : sans ping depuis 45 s → « Parti », on ne l'attend plus pour écrire ; s'il est juge, l'hôte relance une manche avec un autre juge ; retiré de la partie après 5 min. Revient dès qu'il rouvre l'appli (avant 5 min).
 
+## Jeu 2 : Qui de nous (26/10/2026, idée de Naim)
+- Principe donné par Naim : à chaque manche, un joueur devine. Les autres reçoivent une question secrète (« Qui de nous est le plus fort ? ») et classent tous les joueurs, devineur compris. Le devineur voit tous les classements et doit retrouver la question parmi 4 propositions.
+- Base : `rooms.game` ('punchline' | 'qui'), `rooms.options` (4 questions dans l'ordre affiché), `rooms.guess`, `rooms.qused` (questions déjà sorties) ; table `rankings` (room, round, player, ranking uuid[]) unique (room, round, player), en temps réel. Fonction `guess_question(p_code, p_guess)`. `next_round` : en « qui » le devineur tourne (pas de gagnant) ; `next_round`/`restart_room` vident options et guess.
+- Phases réutilisées : `draw` (l'hôte tire en silence la question + 3 leurres de types différents, `quiDraw`), `writing` = classement (même minuteur, même trigger), `judging` = devinette, `result`, `end`. Le juge (`rooms.judge`) est le devineur.
+- Points (choix de Claude, à valider avec Naim) : bonne réponse = +2 au devineur et +1 à chaque joueur qui a classé ; raté = personne ne marque.
+- Le devineur et le grand écran ne voient jamais la question avant le résultat. Classement par touches successives (1 = le plus) ; à la fin du temps un classement partiel part complété dans l'ordre d'arrivée. Tableau des classements trié par moyenne (`rankMatrix`).
+- Robots : classent et devinent au hasard. Notation nulle/top des questions et page des notes partagées avec Punchline (types préfixés `q`). Pas d'insignes propres à ce jeu (seul « Le fantôme » peut sortir).
+- Vues : `quiViews` (téléphones) et `quiTv` (grand écran), choisies dans `render()` quand `room.game === "qui"`.
+
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
 - Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.
@@ -50,7 +62,8 @@ Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une cart
 Le bac à sable n'atteint ni Supabase ni GitHub Pages, et npm ne peut rien installer. Partie complète (3 téléphones + grand écran) contre un faux backend qui reproduit les fonctions SQL :
 ```
 node tests/mock-server.js /home/claude/punchline 8787 &
-NODE_PATH=/opt/npm-tools/node_modules node tests/test.js
+NODE_PATH=/opt/npm-tools/node_modules node tests/test.js        # Punchline
+NODE_PATH=/opt/npm-tools/node_modules node tests/test-qui.js    # Qui de nous (serveur neuf)
 ```
 (Le test remplace supabase-js par `tests/mock-client.js` et le QR par un carré. Un serveur garde son état : en relancer un neuf pour chaque passage. Penser à garder `mock-server.js` aligné avec le SQL.) La logique SQL se teste avec `execute_sql` dans une transaction annulée : insertions en rôle postgres, puis `set local role anon` pour appeler les fonctions.
 

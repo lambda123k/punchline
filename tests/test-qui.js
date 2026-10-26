@@ -1,0 +1,133 @@
+// Partie de « Qui de nous » : 3 téléphones + 1 robot + grand écran contre le faux backend
+const { chromium } = require("playwright");
+const fs = require("fs");
+const S = __dirname, BASE = "http://localhost:8787/";
+const CLIENT = fs.readFileSync(S + "/mock-client.js", "utf8");
+const QR = `window.qrcode=function(){return{addData(){},make(){},createSvgTag(){return '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'}}};`;
+const errors = [];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const admin = code => fetch(BASE + "api/admin", { method: "POST", body: JSON.stringify({ code }) }).then(r => r.json()).then(j => j.data);
+let ok = 0, fail = 0;
+function check(c, msg){ if (c){ ok++; console.log("  ✓ " + msg); } else { fail++; console.log("  ✗ " + msg); } }
+async function phone(browser, name, opts){
+  const ctx = await browser.newContext(opts || { viewport: { width: 390, height: 844 }, hasTouch: true });
+  await ctx.route(/fonts\.(googleapis|gstatic)/, r => r.abort());
+  await ctx.route(/supabase-js/, r => r.fulfill({ body: CLIENT, contentType: "application/javascript" }));
+  await ctx.route(/qrcode-generator/, r => r.fulfill({ body: QR, contentType: "application/javascript" }));
+  const p = await ctx.newPage();
+  p.on("pageerror", e => errors.push(name + ": " + e.message));
+  p.on("console", m => { if (m.type() === "error" && !m.text().includes("ERR_FAILED")) errors.push(name + " console: " + m.text()); });
+  p.label = name;
+  return p;
+}
+const txt = p => p.locator("#app").innerText();
+async function until(p, fn, msg, ms){
+  const t0 = Date.now();
+  while (Date.now() - t0 < (ms || 10000)){ try { if (await fn()) return true; } catch(e){} await sleep(150); }
+  console.log("  ⏱ attente dépassée : " + msg + " (" + p.label + ")\n" + (await txt(p)).slice(0, 400));
+  return false;
+}
+const hasText = (p, s, ms) => until(p, async () => (await txt(p)).toLowerCase().includes(s.toLowerCase()), s, ms);
+const room = () => admin(`return db.rooms[0]`);
+
+(async () => {
+  const browser = await chromium.launch();
+  const A = await phone(browser, "Naim"), B = await phone(browser, "Léa"), C = await phone(browser, "Tom");
+  const TV = await phone(browser, "TV", { viewport: { width: 1600, height: 900 } });
+  const byName = { Naim: A, "Léa": B, Tom: C };
+
+  console.log("Salle d'attente et choix du jeu");
+  await A.goto(BASE); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
+  await until(A, async () => /\d{4}/.test(await A.locator(".codebig").innerText()), "code");
+  const code = (await A.locator(".codebig").innerText()).trim();
+  for (const [p, n] of [[B, "Léa"], [C, "Tom"]]){ await p.goto(BASE + "?c=" + code); await p.fill("#name", n); await p.click("[data-a=join]"); }
+  await hasText(A, "Tom");
+  await A.click("[data-a=game][data-v=qui]");
+  check(await until(A, async () => (await room()).game === "qui", "jeu enregistré"), "l'hôte choisit « Qui de nous »");
+  check(await hasText(B, "Qui de nous"), "les autres voient le jeu choisi");
+  check(await B.locator("[data-a=game]").count() === 0, "seul l'hôte peut changer de jeu");
+  await A.click("[data-a=addBot]");
+  await hasText(A, "Robot Gégé");
+  await A.screenshot({ path: S + "/qui-lobby.png", fullPage: true });
+  await TV.goto(BASE + "?tv=" + code); await hasText(TV, "Lancer l'affichage"); await TV.click("[data-a=tvGo]");
+  await hasText(TV, "Sortez vos téléphones");
+
+  const ids = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.id]))`);
+  const nameOfId = id => Object.keys(ids).find(k => ids[k] === id);
+  let prevJudge = null;
+
+  for (const round of [1, 2]){
+    console.log(`Manche ${round}`);
+    if (round === 1) await A.click("[data-a=start]");
+    else {
+      const nextBtn = [A, B, C].find(() => true);
+      await until(A, async () => (await A.locator("[data-a=next]").count()) > 0 || (await B.locator("[data-a=next]").count()) > 0 || (await C.locator("[data-a=next]").count()) > 0, "bouton manche suivante");
+      for (const p of [A, B, C]) if (await p.locator("[data-a=next]").count()){ await p.click("[data-a=next]"); break; }
+      void nextBtn;
+    }
+    check(await until(A, async () => { const r = await room(); return r.phase === "writing" && r.round === round; }, "question tirée"), "la question secrète est tirée toute seule");
+    const r = await room();
+    const judge = nameOfId(r.judge), J = byName[judge];
+    console.log("  devineur : " + judge + " · question : " + r.card);
+    check(r.options && r.options.length === 4 && r.options.includes(r.card) && new Set(r.options).size === 4, "4 propositions différentes dont la vraie");
+    if (round === 2) check(r.judge !== prevJudge, "le rôle de devineur tourne");
+    prevJudge = r.judge;
+    await sleep(600);
+    if (J){
+      check(!(await txt(J)).includes(r.card), "le devineur ne voit pas la question");
+      check(await hasText(J, "toi le devineur"), "le devineur sait qu'il devine");
+    }
+    check(!(await txt(TV)).includes(r.card), "le grand écran ne montre pas la question");
+    const rankers = Object.keys(byName).filter(n => n !== judge);
+    for (const n of rankers){
+      const p = byName[n];
+      await hasText(p, r.card);
+      const btns = p.locator("[data-a=rankTap]");
+      const k = await btns.count();
+      check(k === 4, `${n} doit classer 4 joueurs (${k})`);
+      for (let i = 0; i < k; i++) await btns.nth((i * 3 + rankers.indexOf(n)) % k).click();
+      if (round === 1 && n === rankers[0]) await p.screenshot({ path: S + "/qui-ranking.png", fullPage: true });
+      await p.click("[data-a=rankSend]");
+      await hasText(p, "Classement envoyé");
+    }
+    check(await until(A, async () => (await room()).phase === "judging", "phase devinette", 15000), "on passe à la devinette quand tout le monde a classé (robot compris)");
+    const nr = await admin(`return db.rankings.filter(k=>k.round===${round}).length`);
+    check(nr === 3, `3 classements reçus (${nr})`);
+    const before = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
+    if (J){
+      await J.waitForSelector(".mx");
+      check(await J.locator("[data-a=guessPick]").count() === 4, "le devineur a 4 propositions");
+      check(await J.locator(".mx tbody tr").count() === 4, "le tableau montre les 4 joueurs classés");
+      await TV.waitForSelector(".mx");
+      if (round === 1){ await J.screenshot({ path: S + "/qui-guess.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-guess.png" }); }
+      const want = round === 1 ? r.card : r.options.find(o => o !== r.card);
+      await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(want)}"]`);
+      await J.click("[data-a=confirmGuess]");
+    }
+    check(await until(A, async () => (await room()).phase === "result", "résultat", 12000), "le devineur valide sa réponse");
+    const rr = await room();
+    const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
+    const right = rr.guess === rr.card;
+    const diff = Object.fromEntries(Object.keys(after).map(n => [n, after[n] - before[n]]));
+    const expect = Object.fromEntries(Object.keys(after).map(n => [n, !right ? 0 : n === judge ? 2 : 1]));
+    check(JSON.stringify(diff) === JSON.stringify(expect), `points ${right ? "bonne réponse" : "raté"} : ${JSON.stringify(diff)}`);
+    const other = byName[rankers[0]];
+    check(await hasText(other, right ? "Bien vu" : "Raté"), "le résultat s'affiche");
+    check((await txt(other)).includes(rr.card), "la vraie question est révélée");
+    check(await hasText(TV, "La vraie question"), "… aussi sur le grand écran");
+    if (round === 1){ await other.screenshot({ path: S + "/qui-result.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-result.png" }); }
+  }
+
+  console.log("Retour en salle d'attente");
+  await admin(`db.rooms[0].target = 1`);
+  await hasText(A, "Voir le classement final");
+  await A.click("[data-a=next]");
+  await until(A, async () => (await room()).phase === "end", "fin");
+  await hasText(A, "Rejouer"); await A.click("[data-a=restart]");
+  check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "qui"; }, "lobby"), "« Rejouer » garde le jeu choisi");
+
+  console.log(`\n${ok} réussis, ${fail} ratés`);
+  if (errors.length) console.log("Erreurs JS :\n" + [...new Set(errors)].join("\n"));
+  await browser.close();
+  process.exit(fail || errors.length ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(2); });

@@ -1058,123 +1058,127 @@ const GAME_RULE = {
 };
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
-const quiCard = () => `<div class="black pop"><div>${esc(room.card)}</div><div class="brand">Qui de nous</div></div>`;
-// Tableau des classements : une ligne par joueur classé (du plus au moins en moyenne), une colonne par classeur
-function rankMatrix(){
+// Pastille de couleur + initiale par joueur (couleur fixe selon l'ordre d'arrivée)
+const AV_COLORS = ["#ff5a36", "#ffc83d", "#2fbf71", "#b48cff", "#4cc9f0", "#ff8fb1", "#f7f052", "#7ee0c3", "#ff9f43", "#9ab3ff"];
+const initial = n => { n = String(n || "?").replace(/^Robot\s+/i, ""); return (n.trim()[0] || "?").toUpperCase(); };
+function avColor(id){ const p = byId(id); const i = p ? [...players].sort((a, b) => a.seat - b.seat).indexOf(p) : 0; return AV_COLORS[(i < 0 ? 0 : i) % AV_COLORS.length]; }
+const av = (id, size, extra) => `<span class="av ${size || ""} ${extra || ""}" style="--c:${avColor(id)}" aria-hidden="true">${esc(initial(nameOf(id)))}</span>`;
+const meName = id => id === me.id && !ui.tv ? "Toi" : esc(nameOf(id));
+// « Qui de nous est le plus susceptible d'être… » : la petite ligne au-dessus, la fin en gros
+function splitQ(q){
+  const m = String(q || "").match(/^(Qui de nous(?: est le plus susceptible)?)\s+(.*)$/i);
+  return m ? [m[1], m[2]] : ["Qui de nous", String(q || "")];
+}
+const quiCard = q => { const [a, b] = splitQ(q || room.card); return `<div class="qcard pop"><small>${esc(a)}</small>${esc(b)}</div>`; };
+const optLabel = q => { const b = splitQ(q)[1]; return b.charAt(0).toUpperCase() + b.slice(1).replace(/\s*\?$/, ""); };
+const TILE = ["#4cc9f0", "#ff5a36", "#2fbf71", "#b48cff"];
+// Moyenne des places : la jauge range les joueurs du plus (haut) au moins (bas)
+function groupOrder(){
   const ks = roundRanks();
-  if (!ks.length) return `<p class="lead">Personne n'a classé à temps.</p>`;
   const ids = [...new Set(ks.flatMap(k => k.ranking))].filter(byId);
-  const avg = {};
-  ids.forEach(id => { const pos = ks.map(k => k.ranking.indexOf(id)).filter(i => i >= 0); avg[id] = pos.reduce((a, b) => a + b + 1, 0) / pos.length; });
+  const avg = {}, firsts = {};
+  ids.forEach(id => { const pos = ks.map(k => k.ranking.indexOf(id)).filter(i => i >= 0); avg[id] = pos.reduce((a, b) => a + b + 1, 0) / pos.length; firsts[id] = ks.filter(k => k.ranking[0] === id).map(k => k.player); });
   ids.sort((a, b) => avg[a] - avg[b]);
-  const last = ids.length;
-  const cell = (k, id) => { const i = k.ranking.indexOf(id); return i < 0 ? `<td>–</td>` : `<td class="${i === 0 ? "r1" : i + 1 === last ? "rl" : ""}">${i + 1}</td>`; };
-  return `<div class="mx" role="region" aria-label="Classements"><table>
-    <thead><tr><th scope="col"><span class="sr">Joueur classé</span></th>${ks.map(k => `<th scope="col">${esc(short(nameOf(k.player)))}</th>`).join("")}<th scope="col" class="avg">Moy.</th></tr></thead>
-    <tbody>${ids.map(id => `<tr><th scope="row">${esc(nameOf(id))}${id === me.id && !ui.tv ? " (toi)" : ""}</th>${ks.map(k => cell(k, id)).join("")}<td class="avg">${avg[id].toFixed(1).replace(".", ",")}</td></tr>`).join("")}</tbody>
-  </table></div><p class="hint">Colonnes : qui a classé. 1 = le plus, ${last} = le moins.</p>`;
+  return { ids, avg, firsts, n: ks.length };
 }
-function optionList(pickable){
+// Jauge du groupe : écart vertical proportionnel à l'écart de moyenne, avec à droite qui l'a mis en 1er
+function groupGauge(big){
+  const g = groupOrder();
+  if (!g.ids.length) return `<div class="nobody">Personne n'a classé à temps</div>`;
+  let prev = null;
+  const rows = g.ids.map((id, i) => {
+    const gap = prev == null ? 0 : Math.max(6, Math.min(46, (g.avg[id] - g.avg[prev]) * 24));
+    prev = id;
+    const top = i === 0;
+    return `<div class="gm ${top ? "first" : ""}" style="margin-top:${gap}px">${av(id, top && big ? "lg" : top ? "" : "sm")}<span class="who">${meName(id)}</span>
+      ${g.firsts[id].length ? `<span class="vs" title="L'ont mis en premier">${g.firsts[id].map(p => av(p, "xs")).join("")}</span>` : ""}</div>`;
+  }).join("");
+  return `<div class="gauge"><div class="gbar"></div><div class="gcol"><span class="gend hot">Le plus</span>${rows}<span class="gend cold">Le moins</span></div></div>`;
+}
+function tiles(pick){
   const o = room.options || [];
-  return `<div class="answers">${o.map((q, i) => pickable
-    ? `<button class="answer opt ${ui.sel === i ? "sel" : ""}" data-a="guessPick" data-v="${i}"><span class="num">Proposition ${i + 1}</span>${esc(q)}</button>`
-    : `<div class="answer opt"><span class="num">Proposition ${i + 1}</span>${esc(q)}</div>`).join("")}</div>`;
+  return `<div class="tiles">${o.map((q, i) => {
+    const cls = [ui.sel === i && pick ? "sel" : "", room.phase === "result" ? (q === room.card ? "real" : q === room.guess ? "wrong" : "off") : ""].join(" ");
+    const tag = pick ? `button data-a="guessPick" data-v="${i}"` : "div";
+    return `<${tag} class="tile ${cls}" style="--t:${TILE[i % 4]}">${esc(optLabel(q))}</${tag.split(" ")[0]}>`;
+  }).join("")}</div>`;
 }
-function quiOutcome(){
-  const right = room.guess === room.card, g = esc(nameOf(room.judge));
-  const nR = roundRanks().length;
-  return { right, html: `<p class="lead">${right ? `${g} a trouvé` : `${g} s'est trompé`}</p>
-    <div class="big-name pop">${right ? "Bien vu" : "Raté"}</div>
-    ${!right && room.guess ? `<div class="answer opt wrong"><span class="num">${g} a choisi</span>${esc(room.guess)}</div>` : ""}
-    <span class="label light">La vraie question</span>
-    <div class="answer win pop">${esc(room.card)}</div>
-    <p class="lead">${right ? `+2 points pour ${g}${nR ? `, +1 pour ${nR > 1 ? `chacun des ${nR} joueurs qui ont classé` : "le joueur qui a classé"}` : ""}.` : "Personne ne marque cette manche."}</p>` };
+function scoreChips(delta){
+  const top = maxScore();
+  return `<div class="chips">${[...players].sort((a, b) => b.score - a.score).map(p => {
+    const d = delta && delta[p.id];
+    return `<span class="chip ${top > 0 && p.score === top ? "lead" : ""} ${present(p) ? "" : "away"}">${av(p.id, "xs")}<b>${p.score}</b>${d ? `<i>+${d}</i>` : ""}</span>`;
+  }).join("")}</div>`;
+}
+function roundDelta(){
+  if (room.guess !== room.card) return {};
+  const d = { [room.judge]: 2 }; roundRanks().forEach(k => { d[k.player] = 1; }); return d;
+}
+const quiTop = () => room.deadline ? `<div class="qtop">${timerBox()}</div>` : "";
+function rankingGauge(){
+  const pool = rankPool(), sent = myRanking() && !ui.editing, order = sent ? myRanking().ranking.filter(byId) : ui.rank;
+  const slots = pool.map((_, i) => {
+    const id = order[i];
+    if (id) return `<button class="slot full" style="--c:${avColor(id)}" ${sent ? "disabled" : `data-a="rankTap" data-v="${id}"`}>${av(id, "sm", "inv")}<span>${meName(id)}</span></button>`;
+    return `<div class="slot ${i === order.length ? "next" : ""}">${i === order.length ? "Touche un joueur" : ""}</div>`;
+  }).join("");
+  return `<div class="gauge"><div class="gbar"></div><div class="gcol slots"><span class="gend hot">Le plus</span>${slots}<span class="gend cold">Le moins</span></div></div>`;
 }
 const quiViews = {
   draw(){
-    return `${head()}
-      <p class="lead">Le devineur de cette manche</p>
-      <div class="big-name pop">${isJudge() ? "C'est toi" : esc(nameOf(room.judge))}</div>
-      ${wait("La question secrète se prépare")}
-      ${scoreList()}
-      ${footer()}`;
+    return `${head()}<div class="qcenter">${av(room.judge, "xl", "pulse")}<div class="big-name">${isJudge() ? "Tu devines" : esc(nameOf(room.judge)) + " devine"}</div>${wait("")}</div>${footer()}`;
   },
   writing(){
-    const w = writers().length, n = writersDone();
-    if (isJudge()) return `${head()}
-      <p class="lead">Cette manche, c'est toi le devineur.</p>
-      <div class="big-name pop">Ne regarde pas leurs écrans</div>
-      ${timerBox()}
-      <p>Les autres ont reçu une question secrète « Qui de nous… » et classent tout le monde, toi compris. Ensuite, tu verras leurs classements et tu devras retrouver la question parmi 4.</p>
-      <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>classements reçus</span></div>
-      ${scoreList({ status: true, noScore: true })}
-      ${n > 0 && n < w ? `<button class="ghost small" data-a="reveal">Voir les classements sans attendre</button>` : ""}
+    const w = writers(), done = doneIds();
+    if (isJudge()) return `${head()}${quiTop()}
+      <div class="qcenter">${av(me.id, "xl")}<div class="big-name">Tu devines</div><p class="lead">Ne regarde pas leurs écrans</p></div>
+      <div class="waitrow">${w.map(p => `<span class="wv ${done.has(p.id) ? "ok" : ""}">${av(p.id)}</span>`).join("")}</div>
       ${footer()}`;
-    const mine = myRanking(), pool = rankPool();
-    if (mine && !ui.editing) return `${head()}
+    const pool = rankPool(), sent = myRanking() && !ui.editing, full = ui.rank.length >= pool.length;
+    return `${head()}${quiTop()}
       ${quiCard()}
-      ${timerBox()}
-      <div class="stack center"><h2>Classement envoyé</h2>${wait(`En attente des autres`)}</div>
-      <ol class="ranked">${mine.ranking.filter(byId).map(id => `<li>${esc(nameOf(id))}</li>`).join("")}</ol>
-      <button class="ghost small" data-a="rankEdit">Modifier mon classement</button>
-      ${footer()}`;
-    const done = ui.rank.length >= pool.length;
-    return `${head()}
-      ${quiCard()}
-      ${timerBox()}
-      <p class="lead">Touche les joueurs dans l'ordre, du plus au moins. Toi compris, et ${esc(nameOf(room.judge))} aussi.</p>
-      <div class="rank">${pool.map(p => { const i = ui.rank.indexOf(p.id);
-        return `<button class="rk ${i >= 0 ? "on" : ""}" data-a="rankTap" data-v="${p.id}" aria-pressed="${i >= 0}"><span class="no">${i >= 0 ? i + 1 : ""}</span><span class="nm">${esc(p.name)}${p.id === me.id ? " (toi)" : ""}</span></button>`; }).join("")}</div>
-      <div class="row">${ui.rank.length ? `<button class="ghost small" data-a="rankReset" style="width:auto">Recommencer</button>` : ""}<button class="btn" data-a="rankSend" ${done ? "" : "disabled"}>${done ? "Envoyer mon classement" : `Encore ${pool.length - ui.rank.length} à classer`}</button></div>
-      <p style="font-size:14px;opacity:.85">${room.deadline ? "À la fin du temps, ton classement part tel quel. " : ""}Ne dis pas la question à voix haute.</p>
+      ${rankingGauge()}
+      ${sent ? `<div class="waitrow">${w.map(p => `<span class="wv ${done.has(p.id) ? "ok" : ""}">${av(p.id, "sm")}</span>`).join("")}</div>
+        <button class="ghost small" data-a="rankEdit">Modifier</button>`
+      : full ? `<div class="row">${`<button class="ghost small" data-a="rankReset" style="width:auto">Recommencer</button>`}<button class="btn" data-a="rankSend">Envoyer</button></div>`
+      : `<div class="pool">${pool.map(p => { const used = ui.rank.includes(p.id);
+          return `<button class="pv ${used ? "used" : ""}" data-a="rankTap" data-v="${p.id}" aria-label="${esc(p.name)}">${av(p.id, "lg")}<span>${p.id === me.id ? "Toi" : esc(short(p.name))}</span></button>`; }).join("")}</div>`}
       ${footer()}`;
   },
   judging(){
-    const guesser = isJudge(), g = esc(nameOf(room.judge));
-    const top = guesser ? `<h2>Quelle était la question ?</h2><p class="lead">Regarde comment ils ont classé tout le monde, puis choisis la question qui colle le mieux.</p>`
-      : `<h2>${g} cherche la question</h2><p class="lead">Pas d'indice, même avec les yeux.</p>`;
-    return `${head()}
-      ${top}
-      ${rankMatrix()}
-      <span class="label light">Les 4 propositions</span>
-      ${optionList(guesser)}
-      ${guesser ? `<button class="btn" data-a="confirmGuess" ${ui.sel == null ? "disabled" : ""}>Valider</button>` : reactBar() + wait("Suspense")}
+    const guesser = isJudge();
+    return `${head()}<div class="qtop" style="justify-content:center"><span class="rnd hotpill">${guesser ? "Tu devines" : esc(nameOf(room.judge)) + " devine"}</span></div>
+      ${groupGauge()}
+      ${tiles(guesser)}
+      ${guesser ? `<button class="btn" data-a="confirmGuess" ${ui.sel == null ? "disabled" : ""}>Valider</button>` : reactBar()}
       ${footer()}`;
   },
   result(){
-    const over = maxScore() >= room.target, canNext = isJudge() || isLeader() || judgeGone();
+    const right = room.guess === room.card, over = maxScore() >= room.target, canNext = isJudge() || isLeader() || judgeGone();
     return `${head()}
-      ${quiOutcome().html}
+      <div class="qcenter tight">${av(room.judge, "lg")}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div></div>
+      ${quiCard()}
+      ${groupGauge(true)}
+      ${scoreChips(roundDelta())}
       ${reactBar()}
-      <span class="label light">Les classements</span>
-      ${rankMatrix()}
-      ${scoreList()}
-      ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
+      ${canNext ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}
       ${rateBlock()}
       ${footer()}`;
   }
 };
 const quiTv = {
-  draw(){
-    return `${tvHead()}<div class="tvgrid"><main class="stack center tvmain">
-      <p class="lead">Le devineur de cette manche</p><div class="big-name pop">${esc(nameOf(room.judge))}</div>${wait("La question secrète se prépare")}</main>${tvSide()}</div>`;
-  },
+  draw(){ return `${tvHead()}<div class="tvgrid"><main class="qcenter tvmain">${av(room.judge, "xl", "pulse")}<div class="big-name">${esc(nameOf(room.judge))} devine</div></main>${tvSide()}</div>`; },
   writing(){
-    const w = writers().length, n = writersDone();
-    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
-      <div class="black"><div>Qui de nous… ?</div><div class="brand">Question secrète, sur vos téléphones</div></div>${timerBox()}
-      <div class="row" style="align-items:baseline;gap:14px"><span class="counter">${n}/${w}</span><span class="lead">classements reçus · ${esc(nameOf(room.judge))} devine ensuite</span></div>
-      ${scoreList({ status: true, noScore: true })}</main>${tvSide()}</div>`;
+    const w = writers(), done = doneIds();
+    return `${tvHead()}<div class="tvgrid"><main class="qcenter tvmain">${timerBox()}
+      <div class="qcard"><small>Qui de nous</small>Question secrète</div>
+      <div class="waitrow">${w.map(p => `<span class="wv ${done.has(p.id) ? "ok" : ""}">${av(p.id, "lg")}</span>`).join("")}</div>
+      <div class="big-name" style="font-size:44px">${esc(nameOf(room.judge))} devine ensuite</div></main>${tvSide()}</div>`;
   },
-  judging(){
-    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
-      <h2>${esc(nameOf(room.judge))} cherche la question</h2>
-      <div class="tv2">${`<div class="stack"><span class="label light">Les classements</span>${rankMatrix()}</div>`}
-      <div class="stack"><span class="label light">Les 4 propositions</span>${optionList(false)}</div></div></main>${tvSide()}</div>`;
-  },
+  judging(){ return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain">${groupGauge(true)}${tiles(false)}</main>${tvSide()}</div>`; },
   result(){
-    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${quiOutcome().html}
-      <span class="label light">Les classements</span>${rankMatrix()}</main>${tvSide()}</div>`;
+    const right = room.guess === room.card;
+    return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain"><div class="stack">${quiCard()}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div>${scoreChips(roundDelta())}</div>${groupGauge(true)}</main>${tvSide()}</div>`;
   }
 };
 

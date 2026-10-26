@@ -28,6 +28,7 @@ async function until(p, fn, msg, ms){
   return false;
 }
 const hasText = (p, s, ms) => until(p, async () => (await txt(p)).toLowerCase().includes(s.toLowerCase()), s, ms);
+const tail = q => q.replace(/^Qui de nous( est le plus susceptible)?\s+/i, "");
 const room = () => admin(`return db.rooms[0]`);
 
 (async () => {
@@ -75,30 +76,30 @@ const room = () => admin(`return db.rooms[0]`);
     await sleep(600);
     if (J){
       check(!(await txt(J)).includes(r.card), "le devineur ne voit pas la question");
-      check(await hasText(J, "toi le devineur"), "le devineur sait qu'il devine");
+      check(await hasText(J, "Tu devines"), "le devineur sait qu'il devine");
     }
     check(!(await txt(TV)).includes(r.card), "le grand écran ne montre pas la question");
     const rankers = Object.keys(byName).filter(n => n !== judge);
     for (const n of rankers){
       const p = byName[n];
-      await hasText(p, r.card);
-      const btns = p.locator("[data-a=rankTap]");
-      const k = await btns.count();
+      await hasText(p, tail(r.card));
+      const k = await p.locator(".pv").count();
       check(k === 4, `${n} doit classer 4 joueurs (${k})`);
-      for (let i = 0; i < k; i++) await btns.nth((i * 3 + rankers.indexOf(n)) % k).click();
+      for (let i = 0; i < k; i++){ const free = p.locator(".pv:not(.used)"); await free.nth((i + rankers.indexOf(n)) % (await free.count())).click(); }
+      check(await p.locator(".slot.full").count() === 4, "les 4 joueurs sont posés sur le thermomètre");
       if (round === 1 && n === rankers[0]) await p.screenshot({ path: S + "/qui-ranking.png", fullPage: true });
       await p.click("[data-a=rankSend]");
-      await hasText(p, "Classement envoyé");
+      await p.waitForSelector("[data-a=rankEdit]");
     }
     check(await until(A, async () => (await room()).phase === "judging", "phase devinette", 15000), "on passe à la devinette quand tout le monde a classé (robot compris)");
     const nr = await admin(`return db.rankings.filter(k=>k.round===${round}).length`);
     check(nr === 3, `3 classements reçus (${nr})`);
     const before = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     if (J){
-      await J.waitForSelector(".mx");
+      await J.waitForSelector(".gm");
       check(await J.locator("[data-a=guessPick]").count() === 4, "le devineur a 4 propositions");
-      check(await J.locator(".mx tbody tr").count() === 4, "le tableau montre les 4 joueurs classés");
-      await TV.waitForSelector(".mx");
+      check(await J.locator(".gauge .gm").count() === 4, "le thermomètre montre les 4 joueurs classés");
+      await TV.waitForSelector(".gm");
       if (round === 1){ await J.screenshot({ path: S + "/qui-guess.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-guess.png" }); }
       const want = round === 1 ? r.card : r.options.find(o => o !== r.card);
       await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(want)}"]`);
@@ -113,14 +114,14 @@ const room = () => admin(`return db.rooms[0]`);
     check(JSON.stringify(diff) === JSON.stringify(expect), `points ${right ? "bonne réponse" : "raté"} : ${JSON.stringify(diff)}`);
     const other = byName[rankers[0]];
     check(await hasText(other, right ? "Bien vu" : "Raté"), "le résultat s'affiche");
-    check((await txt(other)).includes(rr.card), "la vraie question est révélée");
-    check(await hasText(TV, "La vraie question"), "… aussi sur le grand écran");
+    check((await txt(other)).includes(tail(rr.card)), "la vraie question est révélée");
+    check(await hasText(TV, right ? "Bien vu" : "Raté"), "… aussi sur le grand écran");
     if (round === 1){ await other.screenshot({ path: S + "/qui-result.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-result.png" }); }
   }
 
   console.log("Retour en salle d'attente");
   await admin(`db.rooms[0].target = 1`);
-  await hasText(A, "Voir le classement final");
+  await hasText(A, "Classement final");
   await A.click("[data-a=next]");
   await until(A, async () => (await room()).phase === "end", "fin");
   await hasText(A, "Rejouer"); await A.click("[data-a=restart]");

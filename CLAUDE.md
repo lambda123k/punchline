@@ -2,7 +2,9 @@
 
 Jeu de soirée multi-téléphones façon Limite Limite : le juge pioche une carte à trous, chaque joueur écrit SA réponse (pas de cartes réponses), le juge retourne les réponses une par une puis choisit la meilleure.
 
-Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par l'hôte dans la salle d'attente.
+Deuxième jeu dans la même appli : **Le Verdict** (nom choisi par Naim le 27/10, ex « Qui de nous » ; code interne `qui`). L'accueil demande « À quoi voulez-vous jouer ? » avec deux grandes cartes (nom + 3 points), puis on arrive sur l'accueil du jeu choisi (prénom, code, créer), avec une flèche retour. Le jeu est fixé à la création de la partie (plus de choix dans la salle d'attente). Choix mémorisé dans le navigateur (`pl-game`). Un lien ?c=CODE va directement au formulaire.
+
+Nom de l'appli qui réunit les jeux : pas encore choisi. Naim aime bien « Zbeul » mais n'est pas sûr. Constante `APP_NAME` vide dans app.js en attendant ; `<title>`, manifest et icône disent encore Punchline (icône à refaire avec lui quand le nom sera choisi, en lui montrant des options).
 
 - En ligne : https://lambda123k.github.io/punchline/ (GitHub Pages, branche `main`, racine)
 - Dépôt : github.com/lambda123k/punchline
@@ -46,7 +48,7 @@ Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par 
 - Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.
 - Absents : sans ping depuis 45 s → « Parti », on ne l'attend plus pour écrire ; s'il est juge, l'hôte relance une manche avec un autre juge ; retiré de la partie après 5 min. Revient dès qu'il rouvre l'appli (avant 5 min).
 
-## Jeu 2 : Qui de nous (26/10/2026, idée de Naim)
+## Jeu 2 : Le Verdict, ex « Qui de nous » (26/10/2026, idée de Naim)
 - Principe donné par Naim : à chaque manche, un joueur devine. Les autres reçoivent une question secrète (« Qui de nous est le plus fort ? ») et classent tous les joueurs, devineur compris. Le devineur voit tous les classements et doit retrouver la question parmi 4 propositions.
 - Base : `rooms.game` ('punchline' | 'qui'), `rooms.options` (4 questions dans l'ordre affiché), `rooms.guess`, `rooms.qused` (questions déjà sorties) ; table `rankings` (room, round, player, ranking uuid[]) unique (room, round, player), en temps réel. Fonction `guess_question(p_code, p_guess)`. `next_round` : en « qui » le devineur tourne (pas de gagnant) ; `next_round`/`restart_room` vident options et guess.
 - Phases réutilisées : `draw` (l'hôte tire en silence la question + 3 leurres de types différents, `quiDraw`), `writing` = classement (même minuteur, même trigger), `judging` = devinette, `result`, `end`. Le juge (`rooms.judge`) est le devineur.

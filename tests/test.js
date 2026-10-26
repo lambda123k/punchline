@@ -37,7 +37,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   const TV = await phone(browser, "TV", { viewport: { width: 1600, height: 900 } });
 
   console.log("Création et arrivée des joueurs");
-  await A.goto(BASE); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
+  await A.goto(BASE); check(await hasText(A, "À quoi voulez-vous jouer"), "l'accueil propose les deux jeux"); await A.click("[data-a=pickGame][data-v=punchline]"); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
   await until(A, async () => /\d{4}/.test(await A.locator(".codebig").innerText()), "code");
   const code = (await A.locator(".codebig").innerText()).trim();
   for (const [p, n] of [[B, "Léa"], [C, "Tom"]]){ await p.goto(BASE + "?c=" + code); await p.fill("#name", n); await p.click("[data-a=join]"); }

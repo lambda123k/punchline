@@ -38,15 +38,13 @@ const room = () => admin(`return db.rooms[0]`);
   const byName = { Naim: A, "Léa": B, Tom: C };
 
   console.log("Salle d'attente et choix du jeu");
-  await A.goto(BASE); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
+  await A.goto(BASE); await A.click("[data-a=pickGame][data-v=qui]"); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
   await until(A, async () => /\d{4}/.test(await A.locator(".codebig").innerText()), "code");
   const code = (await A.locator(".codebig").innerText()).trim();
   for (const [p, n] of [[B, "Léa"], [C, "Tom"]]){ await p.goto(BASE + "?c=" + code); await p.fill("#name", n); await p.click("[data-a=join]"); }
   await hasText(A, "Tom");
-  await A.click("[data-a=game][data-v=qui]");
-  check(await until(A, async () => (await room()).game === "qui", "jeu enregistré"), "l'hôte choisit « Qui de nous »");
-  check(await hasText(B, "Qui de nous"), "les autres voient le jeu choisi");
-  check(await B.locator("[data-a=game]").count() === 0, "seul l'hôte peut changer de jeu");
+  check(await until(A, async () => (await room()).game === "qui", "jeu enregistré"), "la partie créée depuis Le Verdict est bien un Verdict");
+  check(await hasText(B, "Verdict"), "les autres arrivent dans Le Verdict");
   await A.click("[data-a=addBot]");
   await hasText(A, "Robot Gégé");
   await A.screenshot({ path: S + "/qui-lobby.png", fullPage: true });

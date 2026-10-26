@@ -40,7 +40,7 @@ const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
 const ui = { creating: false, target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer,
   codeInput: urlCode, err: "", sel: null, editing: false, confirmLeave: false, draft: "",
   tv: false, tvReady: false, tvAsk: !!urlTv, page: "home", stats: null,
-  sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [] };
+  sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [], game: store.get("game") || null };
 
 /* ---------- outils ---------- */
 const $ = s => document.querySelector(s);
@@ -489,7 +489,7 @@ const actions = {
     const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: "mix" });
     busy = false;
     if (error || !data){ ui.err = "Impossible de créer la partie. Vérifie ta connexion."; render(); return; }
-    await sb.from("rooms").update({ timer: ui.timer }).eq("code", data);
+    await sb.from("rooms").update({ timer: ui.timer, game: ui.game === "qui" ? "qui" : "punchline" }).eq("code", data);
     await enterRoom(data);
   },
   async join(){
@@ -549,6 +549,8 @@ const actions = {
     render();
   },
   home(){ ui.page = "home"; render(); },
+  pickGame(v){ if (!["punchline", "qui"].includes(v)) return; ui.game = v; store.set("game", v); ui.err = ""; ui.creating = false; render(); },
+  chooseGame(){ ui.game = null; store.del("game"); ui.err = ""; ui.creating = false; render(); },
   help(){ ui.menu = false; ui.page = "help"; render(); },
   sound(){ ui.sound = !ui.sound; store.set("sound", ui.sound); unlockAudio(); if (ui.sound) sfx.pop(); render(); },
   target(v){ ui.target = +v; store.set("target", ui.target); render(); },
@@ -663,6 +665,7 @@ const ICON = {
   sndOn: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   sndOff: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   gear: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   heart: on => `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`
 };
 const sndBtn = () => `<button class="snd" data-a="sound" aria-label="${ui.sound ? "Couper le son" : "Activer le son"}" title="${ui.sound ? "Son activé" : "Son coupé"}">${ui.sound ? ICON.sndOn : ICON.sndOff}</button>`;
@@ -672,8 +675,17 @@ function head(){
     tag = room.phase === "lobby" ? "" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round} · ${esc(code)}`;
   }
   const snd = room ? sndBtn() : `<button class="snd" data-a="menu" aria-label="Paramètres" title="Paramètres">${ICON.gear}</button>`;
-  return `<header><div class="logo">Punch<span>line</span></div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
+  const g = room ? room.game : ui.game;
+  const back = !room && ui.game && ui.page === "home" && !ui.menu && !ui.tvAsk ? `<button class="snd back" data-a="chooseGame" aria-label="Changer de jeu" title="Changer de jeu">${ICON.back}</button>` : "";
+  return `<header><div class="hl">${back}${g || room ? gameLogo(g) : APP_NAME ? `<div class="logo">${esc(APP_NAME)}</div>` : "<span></span>"}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
 }
+// Nom de l'appli qui réunit les jeux : pas encore choisi par Naim (il hésite sur « Zbeul »)
+const APP_NAME = "";
+const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const GAME_CARDS = [
+  ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],
+  ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]]
+];
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
 
@@ -823,6 +835,11 @@ const views = {
     if (ui.page === "stats") return views.stats();
     if (ui.page === "help") return views.help();
     const viaLink = !!urlCode && ui.codeInput === urlCode && !urlTv;
+    if (!ui.game && !viaLink && !ui.menu && !ui.tvAsk) return `${head()}
+    <h1 class="choose">À quoi voulez-vous jouer ?</h1>
+    ${errBox()}
+    <div class="gamecards">${GAME_CARDS.map(([k, pts]) => `<button class="gamecard ${k}" data-a="pickGame" data-v="${k}">
+      ${gameLogo(k)}<ul>${pts.map(t => `<li>${esc(t)}</li>`).join("")}</ul></button>`).join("")}</div>`;
     return `${head()}
     ${errBox()}
     ${ui.menu ? `
@@ -830,7 +847,7 @@ const views = {
       <div class="mhead"><h2>Paramètres</h2><button class="ghost dark small" data-a="menu">Fermer</button></div>
       <button class="mrow" data-a="sound" role="switch" aria-checked="${ui.sound}"><span><b>Son</b><small>Chrono, retournement des cartes, victoire</small></span><span class="sw ${ui.sound ? "on" : ""}"></span></button>
       <button class="mrow" data-a="showTv"><span><b>Afficher sur un grand écran</b><small>La télé ou l'ordi montre la carte et les réponses, chacun écrit sur son téléphone</small></span><span class="chev">›</span></button>
-      <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles des deux jeux</small></span><span class="chev">›</span></button>
+      <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles de Punchline et du Verdict</small></span><span class="chev">›</span></button>
       <button class="mrow" data-a="stats"><span><b>Notes des cartes</b><small>Quels styles de cartes vous font rire</small></span><span class="chev">›</span></button>
     </div>` : ui.tvAsk ? `
     <div class="card stack pop">
@@ -866,7 +883,7 @@ const views = {
     <div class="help">
       <section><h3>Rejoindre</h3><p>Quelqu'un crée la partie. Les autres scannent le QR code avec l'appareil photo, ou tapent le code à 4 chiffres. Il faut 3 joueurs. Pour tester seul, l'hôte peut ajouter des robots.</p></section>
       <section><h3>Punchline</h3><p>Le juge pioche une carte à trous et la lit à voix haute. Chacun écrit sa réponse en secret. Le juge retourne les réponses une par une et choisit sa préférée : 1 point, et le gagnant devient le juge suivant. Les autres votent pour leur coup de cœur : 1 point bonus à la plus votée.</p></section>
-      <section><h3>Qui de nous</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
+      <section><h3>Le Verdict</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -908,9 +925,6 @@ const views = {
       <button class="ghost small" data-a="share">Partager le lien</button>
     </div>
     <div class="stack">
-      <span class="label light">Jeu</span>
-      ${isLeader() ? `<div class="seg">${GAMES.map(([k, l]) => `<button data-a="game" data-v="${k}" class="${(room.game || "punchline") === k ? "on" : ""}">${l}</button>`).join("")}</div>`
-        : `<div class="gname">${esc(gameLabel())}</div>`}
       <span class="label light">Joueurs · ${n}</span>
       ${scoreList({ noScore: true, kick: isLeader() })}
       ${isLeader() ? "" : `<p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>`}
@@ -1045,7 +1059,7 @@ const views = {
 };
 
 /* ---------- « Qui de nous » ---------- */
-const GAMES = [["punchline", "Punchline"], ["qui", "Qui de nous"]];
+const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."

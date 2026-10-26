@@ -120,7 +120,7 @@ const room = () => admin(`return db.rooms[0]`);
   }
 
   console.log("Retour en salle d'attente");
-  await admin(`db.rooms[0].target = 1`);
+  await admin(`db.rooms[0].target = 1; db.players[0].score = Math.max(1, db.players[0].score)`);
   await hasText(A, "Classement final");
   await A.click("[data-a=next]");
   await until(A, async () => (await room()).phase === "end", "fin");

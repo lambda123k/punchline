@@ -549,6 +549,7 @@ const actions = {
     render();
   },
   home(){ ui.page = "home"; render(); },
+  help(){ ui.menu = false; ui.page = "help"; render(); },
   sound(){ ui.sound = !ui.sound; store.set("sound", ui.sound); unlockAudio(); if (ui.sound) sfx.pop(); render(); },
   target(v){ ui.target = +v; store.set("target", ui.target); render(); },
   async timer(v){
@@ -668,7 +669,7 @@ const sndBtn = () => `<button class="snd" data-a="sound" aria-label="${ui.sound 
 function head(){
   let tag = "";
   if (room){
-    tag = room.phase === "lobby" ? `Partie ${esc(code)}` : room.phase === "end" ? "Fin de partie" : `Manche ${room.round} · ${esc(code)}`;
+    tag = room.phase === "lobby" ? "" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round} · ${esc(code)}`;
   }
   const snd = room ? sndBtn() : `<button class="snd" data-a="menu" aria-label="Paramètres" title="Paramètres">${ICON.gear}</button>`;
   return `<header><div class="logo">Punch<span>line</span></div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
@@ -717,7 +718,7 @@ function favTally(){
 function favBlock(){
   const { counts, total } = favTally();
   if (!total) return "";
-  if (!room.fav) return `<div class="fav"><span class="label light">Coup de cœur du public</span><p>Égalité dans les votes, pas de point bonus cette fois.</p></div>`;
+  if (!room.fav) return "";
   const a = answers.find(x => x.id === room.fav);
   if (!a) return "";
   const n = counts[a.id] || 0;
@@ -820,21 +821,20 @@ function endBadgeBlock(){
 const views = {
   home(){
     if (ui.page === "stats") return views.stats();
+    if (ui.page === "help") return views.help();
     const viaLink = !!urlCode && ui.codeInput === urlCode && !urlTv;
     return `${head()}
-    <h1>Le jeu où c'est vous qui écrivez la chute.</h1>
-    <p class="lead">Une carte à trous s'affiche sur tous les téléphones. Chacun la complète avec la réponse la plus drôle possible, et le juge choisit la meilleure.</p>
     ${errBox()}
     ${ui.menu ? `
     <div class="card menu pop">
       <div class="mhead"><h2>Paramètres</h2><button class="ghost dark small" data-a="menu">Fermer</button></div>
       <button class="mrow" data-a="sound" role="switch" aria-checked="${ui.sound}"><span><b>Son</b><small>Chrono, retournement des cartes, victoire</small></span><span class="sw ${ui.sound ? "on" : ""}"></span></button>
       <button class="mrow" data-a="showTv"><span><b>Afficher sur un grand écran</b><small>La télé ou l'ordi montre la carte et les réponses, chacun écrit sur son téléphone</small></span><span class="chev">›</span></button>
+      <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles des deux jeux</small></span><span class="chev">›</span></button>
       <button class="mrow" data-a="stats"><span><b>Notes des cartes</b><small>Quels styles de cartes vous font rire</small></span><span class="chev">›</span></button>
     </div>` : ui.tvAsk ? `
     <div class="card stack pop">
       <h2>Grand écran</h2>
-      <p style="color:var(--muted)">Cet écran (télé, ordi) affichera la carte, le compte à rebours et les réponses pour tout le monde. Il ne joue pas : chacun écrit sur son téléphone.</p>
       <label for="code">Code de la partie</label>
       <input id="code" class="codein" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" value="${esc(ui.codeInput)}" autocomplete="off">
       <button class="btn" data-a="watch">Afficher la partie</button>
@@ -858,17 +858,19 @@ const views = {
       <button class="btn" data-a="create">Créer la partie</button>
       <button class="ghost dark small" data-a="showCreate">Annuler</button>
     </div>` : `<button class="ghost" data-a="showCreate">Créer une partie</button>`}`}
-    <div class="stack" style="gap:6px;opacity:.85;font-size:14px">
-      <span class="label light">Comment on joue</span>
-      <p>1. Quelqu'un crée la partie, les autres scannent le QR code ou tapent le code.</p>
-      <p>2. Le juge pioche une carte à trous et la lit à voix haute.</p>
-      <p>3. Chacun écrit sa réponse en secret sur son téléphone.</p>
-      <p>4. Le juge retourne les réponses et choisit sa préférée : 1 point. Le public vote pour son coup de cœur : 1 point bonus.</p>
-      <span class="label light" style="margin-top:8px">Deuxième jeu : Qui de nous</span>
-      <p>À choisir dans la salle d'attente. Chaque manche, un devineur. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tous les joueurs. Le devineur voit les classements et doit retrouver la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p>
-    </div>`;
+`;
   },
 
+  help(){
+    return `${head()}<h2>Comment jouer</h2>
+    <div class="help">
+      <section><h3>Rejoindre</h3><p>Quelqu'un crée la partie. Les autres scannent le QR code avec l'appareil photo, ou tapent le code à 4 chiffres. Il faut 3 joueurs. Pour tester seul, l'hôte peut ajouter des robots.</p></section>
+      <section><h3>Punchline</h3><p>Le juge pioche une carte à trous et la lit à voix haute. Chacun écrit sa réponse en secret. Le juge retourne les réponses une par une et choisit sa préférée : 1 point, et le gagnant devient le juge suivant. Les autres votent pour leur coup de cœur : 1 point bonus à la plus votée.</p></section>
+      <section><h3>Qui de nous</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
+      <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
+    </div>
+    <button class="ghost" data-a="home">Retour</button>`;
+  },
   stats(){
     const s = ui.stats;
     let body;
@@ -901,29 +903,23 @@ const views = {
     const n = players.length, missing = Math.max(0, MIN_PLAYERS - players.filter(present).length);
     return `${head()}
     <div class="stack center">
-      <span class="label light">Code de la partie</span>
       <div class="codebig">${esc(code)}</div>
       <div class="qr" id="qr" aria-label="QR code pour rejoindre la partie">${qrSvg(joinUrl(code))}</div>
-      <p class="lead" style="font-size:14px">Scanne avec l'appareil photo, ou tape le code dans l'appli.</p>
       <button class="ghost small" data-a="share">Partager le lien</button>
     </div>
     <div class="stack">
       <span class="label light">Jeu</span>
       ${isLeader() ? `<div class="seg">${GAMES.map(([k, l]) => `<button data-a="game" data-v="${k}" class="${(room.game || "punchline") === k ? "on" : ""}">${l}</button>`).join("")}</div>`
         : `<div class="gname">${esc(gameLabel())}</div>`}
-      <p style="font-size:14px;opacity:.85">${esc(GAME_RULE[room.game] || GAME_RULE.punchline)}</p>
       <span class="label light">Joueurs · ${n}</span>
       ${scoreList({ noScore: true, kick: isLeader() })}
-      <p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>
+      ${isLeader() ? "" : `<p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>`}
       ${isLeader() ? `<span class="label light">Temps pour répondre</span>${timerSeg(room.timer)}` : ""}
     </div>
     ${isLeader()
-      ? `<button class="btn" data-a="start" ${missing ? "disabled" : ""}>Lancer la partie</button>
-         ${missing ? `<p class="center" style="font-size:14px;opacity:.85">Encore ${missing} joueur${missing > 1 ? "s" : ""} pour lancer.</p>` : ""}`
+      ? `<button class="btn" data-a="start" ${missing ? "disabled" : ""}>${missing ? `Encore ${missing} joueur${missing > 1 ? "s" : ""}` : "Lancer la partie"}</button>`
       : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
-    ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un joueur robot</button>
-      <p class="center" style="font-size:13px;opacity:.75">Pour tester seul : les robots ${isQui() ? "classent et devinent" : "répondent, votent et jugent"} au hasard.</p>
-      <p class="center hint">Une télé ou un ordi ? Ouvre ${esc(shortUrl())} dessus, va dans « Grand écran » et tape ${esc(code)}.</p>` : ""}
+    ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un robot</button>` : ""}
     ${footer()}`;
   },
 
@@ -931,21 +927,18 @@ const views = {
     if (isJudge()){
       const pv = ui.preview && ui.preview.round === room.round && ui.preview.idx != null ? window.CARDS[ui.preview.idx] : null;
       if (pv) return `${head()}
-      <p class="lead">Seulement sur ton téléphone pour l'instant.</p>
       <div class="black pop"><div>${fill(pv)}</div><div class="brand">Punchline</div></div>
       <button class="btn gold" data-a="keep">Garder cette carte</button>
       <button class="ghost" data-a="peek">Piocher une autre carte</button>
       ${footer()}`;
       return `${head()}
-      <p class="lead">Cette manche, c'est toi le juge.</p>
-      <div class="big-name pop">À toi de piocher</div>
+      <div class="big-name pop">Tu es le juge</div>
       <button class="btn gold" data-a="peek">Piocher une carte</button>
-      <p style="font-size:14px;opacity:.85">Tu la vois d'abord seul. Si elle ne te plaît pas, pioches-en une autre. Une fois gardée, elle s'affiche chez tout le monde.</p>
       ${scoreList()}
       ${footer()}`;
     }
     return `${head()}
-      <p class="lead">Le juge de cette manche</p>
+      <span class="label light">Juge</span>
       <div class="big-name pop">${esc(nameOf(room.judge))}</div>
       ${wait("pioche une carte")}
       ${scoreList()}
@@ -957,7 +950,6 @@ const views = {
     if (isJudge()) return `${head()}
       ${blackCard()}
       ${timerBox()}
-      <p class="lead">Lis la carte à voix haute. Les autres écrivent leur réponse.</p>
       <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>réponses reçues</span></div>
       ${scoreList({ status: true, noScore: true })}
       ${n > 0 && n < w ? `<button class="ghost small" data-a="reveal">Révéler sans attendre</button>` : ""}
@@ -978,7 +970,6 @@ const views = {
         <p class="preview" id="preview" aria-live="polite"></p>
         <button class="btn" data-a="send" id="send" disabled>Envoyer</button>
       </div>
-      <p style="font-size:14px;opacity:.85">${room.deadline ? "À la fin du temps, ce que tu as écrit part tout seul. " : ""}Le juge ne saura pas qui a écrit quoi avant d'avoir choisi.</p>
       ${footer()}`;
   },
 
@@ -1003,14 +994,13 @@ const views = {
     }).join("");
     let top, bottom;
     if (judge && !all){
-      top = `<h2>Retourne les cartes une par une</h2><p class="lead">Lis chaque carte à voix haute avant de passer à la suivante.</p>`;
+      top = `<h2>Lis-les une par une</h2>`;
       bottom = `<button class="btn gold" data-a="flip">${shown === 0 ? "Retourner la première carte" : `Retourner la carte suivante (${shown + 1}/${n})`}</button>`;
     } else if (judge){
-      top = `<h2>Choisis la meilleure carte</h2><p class="lead">Touche ta préférée puis valide. Pendant ce temps, les autres votent pour leur coup de cœur.</p>`;
+      top = `<h2>Choisis la meilleure</h2>`;
       bottom = `<button class="btn" data-a="confirmPick" ${ui.sel ? "" : "disabled"}>Valider ce choix</button>`;
     } else {
-      top = `<h2>${all ? `${jn} choisit la meilleure` : `${jn} lit les cartes`}</h2>
-        <p class="lead">Vote pour ton coup de cœur (pas la tienne) : la carte la plus votée gagne 1 point bonus.</p>`;
+      top = `<h2>${all ? `${jn} choisit la meilleure` : `${jn} lit les cartes`}</h2>`;
       bottom = wait(all ? "Suspense" : `${shown}/${n} cartes retournées`);
     }
     return `${head()}
@@ -1031,7 +1021,6 @@ const views = {
       <p class="lead">Gagnant de la manche</p>
       <div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
-      ${win && !over ? `<p class="lead">${win.player === me.id ? "Tu deviens" : esc(nameOf(win.player)) + " devient"} juge pour la prochaine manche.</p>` : ""}
       ${favBlock()}
       ${reactBar()}
       ${scoreList()}
@@ -1205,13 +1194,13 @@ const tvSide = () => `<aside class="side"><span class="label light">Scores · pa
 const tvViews = {
   start(){
     return `<header><div class="logo">Punch<span>line</span></div></header>
-    <div class="tvstart"><h1>Grand écran prêt</h1><p class="lead">Partie ${esc(code)}. Touche le bouton pour lancer l'affichage et activer le son.</p>
+    <div class="tvstart"><h1>Grand écran prêt</h1><p class="lead">Partie ${esc(code)}</p>
     <button class="btn gold" data-a="tvGo" style="max-width:420px">Lancer l'affichage</button></div>`;
   },
   lobby(){
     return `${tvHead()}<div class="tvlobby">
-      <div class="stack center"><span class="label light">Sortez vos téléphones</span><div class="codebig">${esc(code)}</div>
-      <p class="lead">Scannez le QR code ou ouvrez <b>${esc(shortUrl())}</b> et tapez le code.</p></div>
+      <div class="stack center"><div class="codebig">${esc(code)}</div>
+      <p class="lead"><b>${esc(shortUrl())}</b></p></div>
       <div class="qr big">${qrSvg(joinUrl(code))}</div>
       <div class="stack"><span class="label light">Joueurs · ${players.length}</span>${scoreList({ noScore: true })}
       ${wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}</div></div>`;
@@ -1223,7 +1212,7 @@ const tvViews = {
   writing(){
     const w = writers().length, n = writersDone();
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${blackCard()}${timerBox()}
-      <div class="row" style="align-items:baseline;gap:14px"><span class="counter">${n}/${w}</span><span class="lead">réponses reçues · écrivez sur vos téléphones</span></div>
+      <div class="row" style="align-items:baseline;gap:14px"><span class="counter">${n}/${w}</span><span class="lead">réponses</span></div>
       ${scoreList({ status: true, noScore: true })}</main>${tvSide()}</div>`;
   },
   judging(){
@@ -1235,8 +1224,7 @@ const tvViews = {
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
       <h2>${!n ? "Personne n'a répondu à temps" : all ? `${esc(nameOf(room.judge))} choisit la meilleure` : `${esc(nameOf(room.judge))} lit les cartes · ${shown}/${n}`}</h2>
       <div class="black slim"><div>${fill(room.card)}</div></div>
-      <div class="answers tvans">${cards}</div>
-      ${n ? `<p class="lead">Sur vos téléphones : votez pour votre coup de cœur et réagissez</p>` : ""}</main>${tvSide()}</div>`;
+      <div class="answers tvans">${cards}</div></main>${tvSide()}</div>`;
   },
   result(){
     const win = answers.find(a => a.id === room.winner);

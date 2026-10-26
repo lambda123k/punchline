@@ -39,7 +39,8 @@ Deuxième jeu dans la même appli : **Qui de nous** (voir plus bas), choisi par 
 - Coup de cœur : pendant la lecture, les autres votent (pas pour leur propre réponse) ; affiché au résultat
 - Réactions 😂 💀 🔥 dès la 1re carte retournée et au résultat, sur tous les écrans
 - Pas d'emojis dans l'interface (Naim n'aime pas), sauf les réactions 😂 💀 🔥 ; icônes dessinées en SVG (`ICON` dans app.js)
-- Accueil : roue crantée en haut à droite → Paramètres (son, afficher sur un grand écran, notes des cartes), choisie par Naim plutôt que des boutons sur l'accueil
+- Accueil : roue crantée en haut à droite → Paramètres (son, afficher sur un grand écran, comment jouer, notes des cartes), choisie par Naim plutôt que des boutons sur l'accueil
+- Pas de texte d'explication dans l'appli (Naim, 26/10 : « trop moche, pas utile, tout est évident ») : ni phrase d'accroche, ni « comment on joue », ni consignes sous les boutons. Les règles sont dans Paramètres → Comment jouer (`views.help`). Garder les écrans réduits aux boutons, cartes et noms.
 - Sons (Web Audio, interrupteur dans Paramètres et icône haut-parleur en haut pendant la partie, mémorisé) et vibrations (Android ; l'iPhone ne vibre pas depuis le web) : nouvelle carte, retournement, 5 dernières secondes, victoire
 - Notation des cartes au résultat : discrète (petits liens « nulle / top » en bas), visible seulement par l'hôte (Naim : « c'est plus pour moi ») ; à la pioche, poids = (top+1)/(nulle+1) borné entre 0,15 et 4. Page « Notes des cartes » depuis Paramètres : % top par type, meilleures / pires cartes.
 - Grand écran : accueil → Paramètres → « Afficher sur un grand écran » + code (ou `?tv=CODE`), bouton « Lancer l'affichage » (débloque le son, plein écran). Ne compte pas comme joueur.

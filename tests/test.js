@@ -42,12 +42,12 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   const code = (await A.locator(".codebig").innerText()).trim();
   for (const [p, n] of [[B, "Léa"], [C, "Tom"]]){ await p.goto(BASE + "?c=" + code); await p.fill("#name", n); await p.click("[data-a=join]"); }
   await hasText(A, "Tom");
-  check((await txt(A)).includes("Grand écran"), "l'hôte voit l'astuce grand écran");
+  check(await A.locator("[data-a=addBot]").count() === 1, "l'hôte peut ajouter un robot");
 
   console.log("Grand écran");
   await TV.goto(BASE); await TV.click("[data-a=menu]"); await TV.click("[data-a=showTv]"); await TV.fill("#code", code); await TV.click("[data-a=watch]");
   await hasText(TV, "Lancer l'affichage"); await TV.click("[data-a=tvGo]");
-  await hasText(TV, "Sortez vos téléphones");
+  await TV.waitForSelector(".tvlobby");
   check((await txt(TV)).includes("Léa") && (await txt(TV)).includes("Tom"), "le grand écran liste les joueurs");
   check(await admin(`return db.players.length`) === 3, "le grand écran ne compte pas comme joueur");
   await TV.screenshot({ path: S + "/tv-lobby.png" });
@@ -62,10 +62,10 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   const others = Object.keys(byName).filter(n => n !== jName);
   console.log("  juge : " + jName);
   await hasText(J, "Piocher une carte"); await J.click("[data-a=peek]"); await J.waitForSelector("[data-a=keep]"); await J.click("[data-a=peek]"); await J.click("[data-a=keep]");
-  await hasText(TV, "réponses reçues");
+  await hasText(TV, "réponses");
   await TV.screenshot({ path: S + "/tv-writing.png" });
   for (const n of others){ const p = byName[n]; await until(p, () => p.locator("#ans").isVisible(), "zone réponse"); await p.fill("#ans", "réponse de " + n); await p.click("#send"); }
-  await hasText(J, "Retourne les cartes");
+  await hasText(J, "Lis-les une par une");
   for (let i = 0; i < 2; i++){ await J.click("[data-a=flip]"); await sleep(400); }
   const P1 = byName[others[0]], P2 = byName[others[1]];
   await until(P1, () => P1.locator("[data-a=vote]").count().then(n => n === 1), "un seul bouton coup de cœur (pas pour la sienne)");
@@ -108,14 +108,14 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   await Gp.context().setOffline(true);
   await admin(`db.players.find(p=>p.name===${JSON.stringify(gone)}).last_seen=new Date(Date.now()-60000).toISOString()`);
   for (const p of [A, B, C]) if (p !== Gp && await p.locator("[data-a=next]").count()){ await p.click("[data-a=next]"); break; }
-  await hasText(W, "À toi de piocher");
+  await hasText(W, "Tu es le juge");
   await W.click("[data-a=peek]"); await W.waitForSelector("[data-a=keep]"); await W.click("[data-a=keep]");
   const leaderPage = A;
   await hasText(leaderPage, "Parti");
   check(await until(W, async () => (await W.locator(".counter").innerText()) === "0/1", "compteur 0/1"), "le juge n'attend que les joueurs présents (0/1)");
   const writer = Object.keys(byName).find(n => n !== winner && n !== gone);
   await byName[writer].fill("#ans", "seul réponse"); await byName[writer].click("#send");
-  check(await hasText(W, "Retourne les cartes"), "la manche avance sans attendre l'absent");
+  check(await hasText(W, "Lis-les une par une"), "la manche avance sans attendre l'absent");
 
   console.log("Le juge part en pleine manche");
   await W.click("[data-a=flip]"); await sleep(300);

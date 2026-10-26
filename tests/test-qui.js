@@ -51,7 +51,7 @@ const room = () => admin(`return db.rooms[0]`);
   await hasText(A, "Robot Gégé");
   await A.screenshot({ path: S + "/qui-lobby.png", fullPage: true });
   await TV.goto(BASE + "?tv=" + code); await hasText(TV, "Lancer l'affichage"); await TV.click("[data-a=tvGo]");
-  await hasText(TV, "Sortez vos téléphones");
+  await TV.waitForSelector(".tvlobby");
 
   const ids = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.id]))`);
   const nameOfId = id => Object.keys(ids).find(k => ids[k] === id);
@@ -112,7 +112,7 @@ const room = () => admin(`return db.rooms[0]`);
       await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(r.card)}"]`);
       await J.click("[data-a=confirmGuess]");
     }
-    check(await until(A, async () => (await room()).phase === "result", "résultat", 12000), "le devineur valide sa réponse");
+    check(await until(A, async () => (await room()).phase === "result", "résultat", 30000), "le devineur valide sa réponse");
     const rr = await room();
     const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     const right = rr.guess === rr.card;

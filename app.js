@@ -32,7 +32,7 @@ const qs = new URLSearchParams(location.search);
 const urlTv = (qs.get("tv") || "").replace(/\D/g, "").slice(0, 4);
 const urlCode = urlTv || (qs.get("c") || "").replace(/\D/g, "").slice(0, 4);
 
-let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [], rankings = [];
+let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [], rankings = [], bets = [];
 let channel = null, pollTimer = null, pingTimer = null, refreshTimer = null, busy = false;
 let clock = 0; // décalage horloge serveur - horloge locale (ms)
 const savedTimer = store.get("timer");
@@ -40,7 +40,8 @@ const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
 const ui = { creating: false, target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer,
   codeInput: urlCode, err: "", sel: null, editing: false, confirmLeave: false, draft: "",
   tv: false, tvReady: false, tvAsk: !!urlTv, page: "home", stats: null,
-  sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [], game: store.get("game") || null };
+  sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [], game: store.get("game") || null,
+  ayes: null, abet: null, ashow: null };
 
 /* ---------- outils ---------- */
 const $ = s => document.querySelector(s);
@@ -81,19 +82,23 @@ const isLeader = () => !ui.tv && !!leader() && leader().id === me.id;
 const isJudge = () => !ui.tv && room && room.judge === me.id;
 const judgeGone = () => room && room.judge && (!byId(room.judge) || !present(byId(room.judge)));
 const roundAnswers = () => room ? answers.filter(a => a.round === room.round && byId(a.player)) : [];
-const writers = () => players.filter(p => room && p.id !== room.judge && present(p));
+const writers = () => players.filter(p => room && (p.id !== room.judge || room.game === "aveux") && present(p));
 const writersDone = () => { const ids = doneIds(); return writers().filter(p => ids.has(p.id)).length; };
 const myAnswer = () => roundAnswers().find(a => a.player === me.id);
 const roundVotes = () => room ? votes.filter(v => v.round === room.round) : [];
 const myVote = () => roundVotes().find(v => v.voter === me.id);
 const maxScore = () => Math.max(0, ...players.map(p => p.score));
-const cardType = c => (window.CARD_TYPE || {})[c] || (window.QUI_TYPE || {})[c] || "autre";
+const cardType = c => (window.CARD_TYPE || {})[c] || (window.QUI_TYPE || {})[c] || (window.AVEUX_TYPE || {})[c] || "autre";
 /* « Qui de nous » : le juge est le devineur, les autres classent tout le monde */
 const isQui = () => !!room && room.game === "qui";
 const roundRanks = () => room ? rankings.filter(k => k.round === room.round && byId(k.player) && k.player !== room.judge) : [];
 const myRanking = () => roundRanks().find(k => k.player === me.id);
-const doneIds = () => new Set((isQui() ? roundRanks() : roundAnswers()).map(a => a.player));
-const iDone = () => isQui() ? !!myRanking() : !!myAnswer();
+/* « Les Aveux » : tout le monde répond (pas de juge), le oui n'est jamais lié au joueur, seul le pari l'est */
+const isAveux = () => !!room && room.game === "aveux";
+const roundBets = () => room ? bets.filter(b => b.round === room.round && byId(b.player)) : [];
+const myBet = () => roundBets().find(b => b.player === me.id);
+const doneIds = () => new Set((isAveux() ? roundBets() : isQui() ? roundRanks() : roundAnswers()).map(a => a.player));
+const iDone = () => isAveux() ? !!myBet() : isQui() ? !!myRanking() : !!myAnswer();
 const rankPool = () => players.filter(present).sort((a, b) => a.seat - b.seat);
 
 /* ---------- sons et vibrations ---------- */
@@ -130,23 +135,24 @@ function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeou
 async function refresh(){
   if (!code) return;
   const c = code;
-  const [r, p, a, v, x, k] = await Promise.all([
+  const [r, p, a, v, x, k, b] = await Promise.all([
     sb.from("rooms").select("*").eq("code", c).maybeSingle(),
     sb.from("players").select("*").eq("room", c).order("seat"),
     sb.from("answers").select("*").eq("room", c),
     sb.from("votes").select("*").eq("room", c),
     sb.from("reactions").select("round,answer,player").eq("room", c),
-    sb.from("rankings").select("*").eq("room", c)
+    sb.from("rankings").select("*").eq("room", c),
+    sb.from("aveux_bets").select("*").eq("room", c)
   ]);
   if (c !== code) return;
   if (r.error || p.error || a.error){ return; } // réseau instable : le prochain passage réessaiera
   if (!r.data){ leaveLocal("La partie n'existe plus."); return; }
   const prev = room;
-  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []);
+  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []); bets = b.error ? bets : (b.data || []);
   if (!ui.tv && !byId(me.id)){ leaveLocal("Tu n'es plus dans la partie."); return; }
   if (!prev || prev.round !== room.round || prev.phase !== room.phase){
     ui.sel = null; ui.confirmLeave = false;
-    if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; ui.rank = []; }
+    if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; ui.rank = []; ui.ayes = null; ui.abet = null; }
   }
   if (prev) soundsFor(prev, room);
   if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
@@ -169,7 +175,9 @@ function soundsFor(a, b){
   if (b.phase === "writing" && (a.phase !== "writing" || a.card !== b.card)) sfx.card();
   if (b.phase === "judging" && a.phase === "judging" && (b.revealed || 0) > (a.revealed || 0)) sfx.flip();
   if (b.phase === "judging" && a.phase === "judging" && (b.wrong || []).length > (a.wrong || []).length){ sfx.tick(true); buzz([60, 40, 60]); }
-  if (b.phase === "result" && a.phase !== "result" && b.game === "qui"){
+  if (b.phase === "result" && a.phase !== "result" && b.game === "aveux"){
+    // le son de victoire part à la fin du compteur (voir aveuxCount)
+  } else if (b.phase === "result" && a.phase !== "result" && b.game === "qui"){
     const right = b.guess === b.card;
     sfx.win(right && (ui.tv || !!myRanking() || b.judge === me.id));
   } else if (b.phase === "result" && a.phase !== "result"){
@@ -223,6 +231,18 @@ function botActions(){
   if (!isLeader() || !players.some(p => isBot(p.id))) return;
   const r = room.round, c = code;
   const still = () => room && code === c && room.round === r;
+  if (isAveux()){
+    if (room.phase === "writing"){
+      const n = rankPool().length;
+      players.filter(p => isBot(p.id) && present(p) && !roundBets().some(b => b.player === p.id)).forEach(p => {
+        botOnce(`${r}:aveu:${p.id}`, rand(2000, 6000), () => {
+          if (!still() || room.phase !== "writing") return;
+          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: rand(0, n + 1) });
+        });
+      });
+    }
+    return;
+  }
   if (isQui()){
     if (room.phase === "writing"){
       const pool = rankPool().map(p => p.id);
@@ -296,18 +316,26 @@ async function autoActions(){
   botActions();
   const r = room.round;
   // Le juge révèle dès que tous les joueurs présents ont écrit (l'hôte le fait si le juge est un robot)
-  if (room.phase === "writing" && (isJudge() || (isBot(room.judge) && isLeader()))){
+  if (room.phase === "writing" && !isAveux() && (isJudge() || (isBot(room.judge) && isLeader()))){
     const w = writers().length;
     if (w > 0 && writersDone() >= w) await setPhase("judging", "writing");
   }
   if (!isLeader()) return;
+  if (isAveux()){
+    if (room.phase === "draw" && !autoDone.has("apick:" + r)){ autoDone.add("apick:" + r); await aveuxDraw(); return; }
+    // tout le monde a répondu : révélation
+    const w = writers().length;
+    if (room.phase === "writing" && w > 0 && writersDone() >= w && !autoDone.has("areveal:" + r)){
+      autoDone.add("areveal:" + r); await rpc("aveu_reveal", { p_code: code, p_round: r }); return;
+    }
+  }
   if (isQui() && room.phase === "draw" && !autoDone.has("qpick:" + r)){
     autoDone.add("qpick:" + r);
     await quiDraw();
     return;
   }
   // Le juge est parti (ou ne répond plus) : on passe à une nouvelle manche
-  if (["draw","writing","judging"].includes(room.phase) && judgeGone() && !isBot(room.judge) && !autoDone.has("judge:" + r)){
+  if (!isAveux() && ["draw","writing","judging"].includes(room.phase) && judgeGone() && !isBot(room.judge) && !autoDone.has("judge:" + r)){
     autoDone.add("judge:" + r);
     toast(`${nameOf(room.judge)} ne répond plus, on change de juge.`);
     await rpc("next_round", { p_code: code, p_from: r });
@@ -371,6 +399,7 @@ function subscribe(c){
     .on("postgres_changes", { event: "*", schema: "public", table: "answers", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "votes", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "rankings", filter: "room=eq." + c }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "aveux_bets", filter: "room=eq." + c }, scheduleRefresh)
     .on("broadcast", { event: "react" }, msg => { const p = msg && msg.payload; if (p) showReaction(p.e, p.n); })
     .subscribe();
   pollTimer = setInterval(refresh, 3000); // filet de sécurité si le temps réel décroche
@@ -397,7 +426,7 @@ async function enterRoom(c, tv){
 }
 function leaveLocal(msg){
   unsubscribe();
-  code = null; room = null; players = []; answers = []; votes = []; rankings = [];
+  code = null; room = null; players = []; answers = []; votes = []; rankings = []; bets = [];
   if (!ui.tv) store.del("room");
   ui.tv = false; ui.tvReady = false;
   ui.err = msg || ""; ui.confirmLeave = false; ui.editing = false; ui.draft = "";
@@ -463,6 +492,32 @@ async function quiDraw(){
   if (error){ autoDone.delete("qpick:" + room.round); toast("Connexion perdue, réessaie."); }
   scheduleRefresh();
 }
+/* « Les Aveux » : une affirmation au hasard, pondérée par les notes */
+async function aveuxDraw(){
+  const A = window.AVEUX || [];
+  if (!A.length) return;
+  let used = (room.aused || []).filter(i => i < A.length);
+  if (used.length >= A.length - 1) used = [];
+  const free = A.map((_, i) => i).filter(i => !used.includes(i));
+  const idx = weightedPick(free, await cardWeights(), A);
+  used.push(idx);
+  busy = true;
+  const { error } = await sb.from("rooms").update({ card: A[idx], aused: used, phase: "writing", updated_at: new Date().toISOString() })
+    .eq("code", code).eq("round", room.round).eq("phase", "draw");
+  busy = false;
+  if (error){ autoDone.delete("apick:" + room.round); toast("Connexion perdue, réessaie."); }
+  scheduleRefresh();
+}
+const betMax = () => Math.max(1, rankPool().length);
+const curBet = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet, betMax());
+async function sendAveu(){
+  if (!room || room.phase !== "writing" || ui.ayes == null || myBet()) return;
+  busy = true;
+  const { error } = await sb.rpc("aveu_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: curBet() });
+  busy = false;
+  if (error){ toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
+  buzz(20); scheduleRefresh();
+}
 async function sendRanking(order){
   if (!room || room.phase !== "writing" || !order.length) return;
   const pool = rankPool().map(p => p.id);
@@ -489,7 +544,7 @@ const actions = {
     const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: "mix" });
     busy = false;
     if (error || !data){ ui.err = "Impossible de créer la partie. Vérifie ta connexion."; render(); return; }
-    await sb.from("rooms").update({ timer: ui.timer, game: ui.game === "qui" ? "qui" : "punchline" }).eq("code", data);
+    await sb.from("rooms").update({ timer: ui.timer, game: GAME_IDS.includes(ui.game) ? ui.game : "punchline" }).eq("code", data);
     await enterRoom(data);
   },
   async join(){
@@ -505,7 +560,7 @@ const actions = {
     await enterRoom(c);
   },
   async game(v){
-    if (!room || !isLeader() || room.phase !== "lobby" || !["punchline", "qui"].includes(v)) return;
+    if (!room || !isLeader() || room.phase !== "lobby" || !GAME_IDS.includes(v)) return;
     room.game = v; render();
     await sb.from("rooms").update({ game: v }).eq("code", code).eq("phase", "lobby");
     scheduleRefresh();
@@ -517,6 +572,10 @@ const actions = {
     buzz(10); render();
   },
   rankReset(){ ui.rank = []; render(); },
+  ayes(v){ if (!room || room.phase !== "writing" || myBet()) return; ui.ayes = v === "1"; buzz(15); render(); },
+  aback(){ if (myBet()) return; ui.ayes = null; render(); },
+  abet(d){ ui.abet = Math.max(0, Math.min(betMax(), curBet() + (+d))); buzz(8); render(); },
+  async asend(){ await sendAveu(); },
   async rankSend(){ if (ui.rank.length >= rankPool().length) await sendRanking(ui.rank); },
   rankEdit(){ const k = myRanking(); ui.rank = k ? k.ranking.slice() : []; ui.editing = true; render(); },
   guessPick(i){ if (isJudge() && room.phase === "judging" && !(room.wrong || []).includes(room.options[+i])){ ui.sel = +i; render(); } },
@@ -549,7 +608,7 @@ const actions = {
     render();
   },
   home(){ ui.page = "home"; render(); },
-  pickGame(v){ if (!["punchline", "qui"].includes(v)) return; ui.game = v; store.set("game", v); ui.err = ""; ui.creating = false; render(); },
+  pickGame(v){ if (!GAME_IDS.includes(v)) return; ui.game = v; store.set("game", v); ui.err = ""; ui.creating = false; render(); },
   chooseGame(){ ui.game = null; store.del("game"); ui.err = ""; ui.creating = false; render(); },
   help(){ ui.menu = false; ui.page = "help"; render(); },
   sound(){ ui.sound = !ui.sound; store.set("sound", ui.sound); unlockAudio(); if (ui.sound) sfx.pop(); render(); },
@@ -681,10 +740,12 @@ function head(){
 }
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
-const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
   ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],
-  ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]]
+  ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]],
+  ["aveux", ["Une affirmation", "Chacun avoue en secret", "Pariez sur le nombre de oui"]]
 ];
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
@@ -697,9 +758,9 @@ function scoreList(opts){
     let pill = "";
     const here = present(p);
     if (!here) pill = `<span class="pill gone">Parti</span>`;
-    else if (opts.status && p.id === room.judge) pill = `<span class="pill judge">${roleName()}</span>`;
+    else if (opts.status && !isAveux() && p.id === room.judge) pill = `<span class="pill judge">${roleName()}</span>`;
     else if (opts.status) pill = doneIds().has(p.id) ? `<span class="pill ok">${isQui() ? "Classé" : "Écrit"}</span>` : `<span class="pill">${isQui() ? "Classe…" : "Écrit…"}</span>`;
-    else if (room && p.id === room.judge && !["lobby","end"].includes(room.phase)) pill = `<span class="pill judge">${roleName()}</span>`;
+    else if (room && !isAveux() && p.id === room.judge && !["lobby","end"].includes(room.phase)) pill = `<span class="pill judge">${roleName()}</span>`;
     const kick = opts.kick && p.id !== me.id ? `<button class="x" data-a="kick" data-v="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>` : "";
     const score = opts.noScore ? "" : `<b>${p.score}</b>`;
     return `<div class="pl ${p.id === me.id && !ui.tv ? "me" : ""} ${!opts.noScore && top > 0 && p.score === top ? "top" : ""} ${here ? "" : "away"}"><span class="nm">${esc(p.name)}${p.id === me.id && !ui.tv ? " (toi)" : ""}</span><span class="rt">${pill}${score}${kick}</span></div>`;
@@ -847,7 +908,7 @@ const views = {
       <div class="mhead"><h2>Paramètres</h2><button class="ghost dark small" data-a="menu">Fermer</button></div>
       <button class="mrow" data-a="sound" role="switch" aria-checked="${ui.sound}"><span><b>Son</b><small>Chrono, retournement des cartes, victoire</small></span><span class="sw ${ui.sound ? "on" : ""}"></span></button>
       <button class="mrow" data-a="showTv"><span><b>Afficher sur un grand écran</b><small>La télé ou l'ordi montre la carte et les réponses, chacun écrit sur son téléphone</small></span><span class="chev">›</span></button>
-      <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles de Punchline et du Verdict</small></span><span class="chev">›</span></button>
+      <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles des trois jeux</small></span><span class="chev">›</span></button>
       <button class="mrow" data-a="stats"><span><b>Notes des cartes</b><small>Quels styles de cartes vous font rire</small></span><span class="chev">›</span></button>
     </div>` : ui.tvAsk ? `
     <div class="card stack pop">
@@ -884,6 +945,7 @@ const views = {
       <section><h3>Rejoindre</h3><p>Quelqu'un crée la partie. Les autres scannent le QR code avec l'appareil photo, ou tapent le code à 4 chiffres. Il faut 3 joueurs. Pour tester seul, l'hôte peut ajouter des robots.</p></section>
       <section><h3>Punchline</h3><p>Le juge pioche une carte à trous et la lit à voix haute. Chacun écrit sa réponse en secret. Le juge retourne les réponses une par une et choisit sa préférée : 1 point, et le gagnant devient le juge suivant. Les autres votent pour leur coup de cœur : 1 point bonus à la plus votée.</p></section>
       <section><h3>Le Verdict</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
+      <section><h3>Les Aveux</h3><p>Une affirmation s'affiche, par exemple « J'ai déjà couché le premier soir ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui dans le groupe. Personne ne sait qui a dit oui : on ne voit que le total. Pari exact : 2 points. À 1 près : 1 point.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -894,7 +956,7 @@ const views = {
     if (!s) body = wait("Chargement des notes");
     else if (s.error) body = `<div class="err">Impossible de charger les notes. Vérifie ta connexion.</div>`;
     else {
-      const T = { ...(window.CARD_TYPES || {}), ...(window.QUI_TYPES || {}) }, deck = { ...(window.CARD_DECK || {}), ...(window.QUI_DECK || {}) };
+      const T = { ...(window.CARD_TYPES || {}), ...(window.QUI_TYPES || {}), ...(window.AVEUX_TYPES || {}) }, deck = { ...(window.CARD_DECK || {}), ...(window.QUI_DECK || {}), ...(window.AVEUX_DECK || {}) };
       const rows = s.rows.map(r => ({ ...r, type: cardType(r.card) !== "autre" ? cardType(r.card) : (r.type || "autre") }));
       const votesTotal = rows.reduce((t, r) => t + r.up + r.down, 0);
       const types = Object.keys(T).map(k => {
@@ -1059,7 +1121,7 @@ const views = {
 };
 
 /* ---------- « Qui de nous » ---------- */
-const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"]];
+const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
@@ -1201,8 +1263,81 @@ const quiTv = {
   }
 };
 
+/* ---------- « Les Aveux » : répondre (la carte penche), parier (+ / −), révélation (gros compteur) ---------- */
+// Points de la manche : 2 pour un pari exact, 1 à un près
+function aveuxDelta(){
+  const d = {};
+  if (room.yes == null) return d;
+  roundBets().forEach(b => { const e = Math.abs(b.bet - room.yes); if (e <= 1) d[b.player] = e === 0 ? 2 : 1; });
+  return d;
+}
+// Compteur qui monte de 0 au nombre de oui, un cran toutes les 0,6 s
+function aveuxCount(){
+  if (!room || room.phase !== "result" || room.yes == null) return;
+  const key = code + ":" + room.round;
+  if (ui.ashow && ui.ashow.key === key) return;
+  ui.ashow = { key, n: 0, done: room.yes === 0 };
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const step = () => {
+    if (!ui.ashow || ui.ashow.key !== key) return;
+    if (reduce) ui.ashow.n = room.yes;
+    if (ui.ashow.n >= room.yes){ ui.ashow.done = true; const d = aveuxDelta(); sfx.win(ui.tv || !!d[me.id]); render(); return; }
+    ui.ashow.n++; sfx.tick(false); render();
+    setTimeout(step, 600);
+  };
+  setTimeout(step, 700);
+}
+const aveuCard = (cls) => `<div class="acard ${cls || ""}">${esc(room.card)}</div>`;
+const aveuWait = size => `<div class="waitrow">${rankPool().map(p => `<span class="wv ${doneIds().has(p.id) ? "ok" : ""}">${av(p.id, size || "sm")}</span>`).join("")}</div>`;
+const aveuxTop = () => room.deadline ? `<div class="qtop">${timerBox()}</div>` : "";
+const aveuxViews = {
+  draw(){ return `${head()}<div class="qcenter">${wait("")}</div>${footer()}`; },
+  writing(){
+    if (myBet()) return `${head()}${aveuxTop()}
+      ${aveuCard("small")}
+      <div class="qcenter tight"><div class="big">Pari envoyé</div></div>
+      ${aveuWait("")}
+      ${footer()}`;
+    if (ui.ayes == null) return `${head()}${aveuxTop()}
+      <div class="aswipe">${aveuCard("pop")}
+      <div class="ayn"><button class="no" data-a="ayes" data-v="0">NON</button><button class="yes" data-a="ayes" data-v="1">OUI</button></div></div>
+      ${footer()}`;
+    const n = curBet(), max = betMax();
+    return `${head()}${aveuxTop()}
+      ${aveuCard("small " + (ui.ayes ? "r" : "l"))}
+      <div class="astep"><button data-a="abet" data-v="-1" aria-label="Moins" ${n <= 0 ? "disabled" : ""}>−</button><span class="an" aria-live="polite">${n}</span><button data-a="abet" data-v="1" aria-label="Plus" ${n >= max ? "disabled" : ""}>+</button></div>
+      <div class="aof">oui sur ${max}</div>
+      <button class="btn" data-a="asend">Parier</button>
+      <button class="link" data-a="aback">Changer ma réponse</button>
+      ${footer()}`;
+  },
+  result(){
+    aveuxCount();
+    const s = ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: room.yes, done: true };
+    const over = maxScore() >= room.target;
+    return `${head()}
+      ${aveuCard("small")}
+      <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>
+      ${s.done ? `${scoreChips(aveuxDelta())}
+      ${reactBar()}
+      ${isLeader() ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}
+      ${rateBlock()}` : ""}
+      ${footer()}`;
+  }
+};
+const aveuxTv = {
+  draw(){ return `${tvHead()}<div class="tvgrid"><main class="qcenter tvmain">${wait("")}</main>${tvSide()}</div>`; },
+  writing(){ return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${timerBox()}${aveuCard()}${aveuWait("lg")}</main>${tvSide()}</div>`; },
+  result(){
+    aveuxCount();
+    const s = ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: room.yes, done: true };
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${aveuCard("small")}
+      <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>${s.done ? scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
+  }
+};
+
 /* ---------- vues grand écran (télé / ordi) ---------- */
-const tvHead = () => `<header><div class="logo">Punch<span>line</span></div><div class="hr"><div class="tag">${room.phase === "lobby" ? "Grand écran" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round}`} · code ${esc(code)}</div>
+const tvHead = () => `<header>${gameLogo(room.game)}<div class="hr"><div class="tag">${room.phase === "lobby" ? "Grand écran" : room.phase === "end" ? "Fin de partie" : `Manche ${room.round}`} · code ${esc(code)}</div>
   ${sndBtn()}<button class="link" data-a="leave">Quitter</button></div></header>`;
 const tvSide = () => `<aside class="side"><span class="label light">Scores · partie en ${room.target}</span>${scoreList()}<div class="joinmini"><div class="qr small">${qrSvg(joinUrl(code))}</div><span>Rejoindre : <b>${esc(code)}</b></span></div></aside>`;
 const tvViews = {
@@ -1279,6 +1414,11 @@ function tick(){
   }
   if (ui.tv) return;
   // à la fin du temps, la réponse en cours part toute seule
+  if (isAveux()){
+    if (left <= 0.7 && ui.ayes != null && !myBet() && !once.has("send:" + key)){ once.add("send:" + key); sendAveu(); }
+    if (left <= -1 && isLeader() && !once.has("reveal:" + key)){ once.add("reveal:" + key); rpc("aveu_reveal", { p_code: code, p_round: room.round }); }
+    return;
+  }
   if (left <= 0.7 && !isJudge() && !once.has("send:" + key)){
     if (isQui() ? (!myRanking() && ui.rank.length) : (!myAnswer() && cleanAnswer(ui.draft))){ once.add("send:" + key); isQui() ? sendRanking(ui.rank) : actions.send(); }
   }
@@ -1306,8 +1446,8 @@ let lastHtml = "";
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
-  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
-  else { const v = !room ? "home" : room.phase; html = ((isQui() && quiViews[v]) || views[v] || views.home)(); }
+  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
+  else { const v = !room ? "home" : room.phase; html = ((isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
   $("#app").innerHTML = html;

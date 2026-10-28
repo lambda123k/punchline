@@ -11,7 +11,7 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Base : projet Supabase `punchline` (id `pjywkbrqtntblxtwqjlj`, région eu-west-3), clé anon dans `app.js`
 
 ## Fichiers
-- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N` et `qui.js?v=N` : monter N à chaque mise en ligne (cache).
+- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N`, `qui.js?v=N` et `aveux.js?v=N` : monter N à chaque mise en ligne (cache).
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône Dawa choisie par Naim le 27/10 (proposition A) : DA / WA en blanc très gras sur deux lignes, WA en or, fond bleu de l'appli. Source : `design/icones-dawa.html`. Ne pas changer sans lui montrer des options d'abord.
@@ -58,13 +58,14 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Interface refaite le 26/10 dans le style B « thermomètre » choisi par Naim (maquettes : https://claude.ai/artifact/S8wqvm8tD8FU7K7akL6Fjm). Il trouvait l'ancienne « dégueulasse, pas ludique » : trop de texte (personne ne lit), tableau de chiffres illisible. Donc : presque pas de texte, une pastille couleur + initiale par joueur (`av`, `avColor` selon l'ordre d'arrivée), classement en touchant les pastilles qui se posent sur une jauge chaud → froid (`rankingGauge`), jauge du groupe placée selon la moyenne avec à droite les pastilles de ceux qui l'ont mis en 1er (`groupGauge`), 4 grosses tuiles de couleur pour deviner (`tiles`), scores en pastilles avec le gain de la manche (`scoreChips`).
 - Vues : `quiViews` (téléphones) et `quiTv` (grand écran), choisies dans `render()` quand `room.game === "qui"`.
 
-## Jeu 3 : Les Aveux (à construire, idée retenue par Naim le 27/10)
-- Principe proposé par Claude, validé par Naim (« c'est pas mal ») : une affirmation s'affiche (« J'ai déjà couché le premier soir », « J'ai déjà fouillé le téléphone de mon ex »). Chacun répond oui ou non en secret, puis chacun parie sur le nombre de « oui » dans le groupe. Révélation du nombre (jamais de qui a dit quoi : réponses anonymes, rien de nominatif affiché ni gardé après la manche).
-- Points validés par Naim le 27/10 : pari exact = 2 points, à 1 près = 1 point. Tout le monde répond en même temps (pas de « confesseur »), affirmation tirée au hasard.
-- Maquettes (27/10) : https://claude.ai/artifact/RR34NFgrrHFBnDrykpKCe2 (source `design/maquettes-aveux.html`) : A gros boutons, B jauge, C cartes retournées. En attente du choix de Naim.
-- Interface dans l'esprit de Dawa : presque pas de texte, deux gros boutons Oui / Non, puis un sélecteur de nombre, puis un compteur qui monte pour la révélation. Montrer d'abord 2 ou 3 maquettes et attendre son choix (règle visuelle).
-- Affirmations : écrire un paquet (ton jeunes adultes, trash côté sexe entre adultes, alcool, ex, soirées ; mêmes limites que les cartes) puis le faire trier par Naim sur une page de tri comme pour Le Verdict. Ici la forme « J'ai déjà… » est voulue (c'est un aveu personnel), contrairement au Verdict.
-- À intégrer comme 3e carte sur l'écran « À quoi voulez-vous jouer ? » (`GAME_CARDS`, `gameLogo`), code interne à choisir (par ex. `aveux`).
+## Jeu 3 : Les Aveux (en ligne le 28/10/2026, code interne `aveux`)
+- Principe proposé par Claude, validé par Naim : une affirmation s'affiche (« J'ai déjà couché le premier soir »). Tout le monde répond en même temps (pas de juge) oui ou non en secret, puis parie sur le nombre de oui. Révélation du total uniquement, jamais de qui a dit quoi.
+- Points (Naim, 27/10) : pari exact = 2 points, à 1 près = 1 point.
+- Interface choisie par Naim le 27/10 parmi 3 maquettes (https://claude.ai/artifact/RR34NFgrrHFBnDrykpKCe2, source `design/maquettes-aveux.html`) : répondre façon B (carte crème + boutons NON / OUI, la carte penche vers la réponse), parier façon C (− nombre + , démarre à la moitié, « Changer ma réponse »), révélation façon A (gros compteur qui monte de 0 au total, un cran toutes les 0,6 s, puis pastilles de score avec le gain). `aveuxViews` / `aveuxTv` dans app.js, styles `.acard`, `.ayn`, `.astep`, `.ybig`.
+- Base : `aveux_bets` (room, round, player, bet) en temps réel, lisible ; `aveux_secret` (room, round, yes) sans aucune politique RLS, donc illisible depuis l'appli : le oui n'est jamais lié au joueur. `rooms.yes` (rempli à la révélation), `rooms.aused` (affirmations déjà sorties). Fonctions `aveu_send(p_code, p_player, p_yes, p_bet)` (une seule fois par manche) et `aveu_reveal(p_code, p_round)` (compte les points, passe en result). `next_round`/`restart_room` vident `yes` (et `aused` au restart).
+- Déroulé : `draw` → l'hôte tire l'affirmation (`aveuxDraw`, pondérée par les notes) → `writing` (réponse + pari, même minuteur ; à zéro la réponse en cours part seule) → l'hôte appelle `aveu_reveal` quand tout le monde a parié ou 1 s après la fin du temps → `result`. Robots : oui/non et pari au hasard.
+- Affirmations : `aveux.js` (`AVEUX_DECK`, `AVEUX_TYPES` préfixe `a` : asoiree, asexe, aex, ahonte, aboulot, adingue). 98 écrites par Claude le 27/10, triées par Naim (page https://claude.ai/artifact/81fRtNeU9Q77iLTQ9zt3Wv, collection `atri`, idées perso `aidees`) : 94 gardées, 4 jetées (vomi dans un taxi, incruster un mariage, pipi dans la rue, viré d'une boîte). Ici la forme « J'ai déjà… » est voulue. Notation nulle/top et page des notes partagées.
+- Test : `node tests/test-aveux.js` (serveur neuf).
 
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
@@ -77,6 +78,7 @@ Le bac à sable n'atteint ni Supabase ni GitHub Pages, et npm ne peut rien insta
 node tests/mock-server.js /home/claude/punchline 8787 &
 NODE_PATH=/opt/npm-tools/node_modules node tests/test.js        # Punchline
 NODE_PATH=/opt/npm-tools/node_modules node tests/test-qui.js    # Qui de nous (serveur neuf)
+NODE_PATH=/opt/npm-tools/node_modules node tests/test-aveux.js  # Les Aveux (serveur neuf)
 ```
 (Le test remplace supabase-js par `tests/mock-client.js` et le QR par un carré. Un serveur garde son état : en relancer un neuf pour chaque passage. Penser à garder `mock-server.js` aligné avec le SQL.) La logique SQL se teste avec `execute_sql` dans une transaction annulée : insertions en rôle postgres, puis `set local role anon` pour appeler les fonctions.
 

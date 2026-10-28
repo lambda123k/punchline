@@ -184,7 +184,7 @@ h1.choose{font-size:clamp(34px,10vw,48px);line-height:1.02;margin-top:8px}
 .gamecard.qui{background:#0e1a6e;padding-left:38px}
 .gamecard.qui::before{content:"";position:absolute;left:0;top:0;bottom:0;width:14px;background:linear-gradient(var(--hot),var(--gold) 45%,#6fb7ff)}
 .gamecard.qui li::before{background:var(--hot)}
-@media (min-width:700px){.gamecards{grid-template-columns:1fr 1fr}}
+
 /* Le Verdict (ex « Qui de nous ») : thermomètre (style B choisi par Naim) */
 .gname{font-family:var(--display);font-weight:800;font-size:22px}
 .av{--s:44px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s)*.46);line-height:1;color:var(--ink);background:var(--c);flex-shrink:0;box-shadow:0 3px 0 rgba(0,0,0,.25)}
@@ -243,6 +243,31 @@ body.tv .qcard{font-size:40px}
 body.tv .big{font-size:80px}
 @media (prefers-reduced-motion:no-preference){.pulse{animation:avp 1.6s ease-in-out infinite}@keyframes avp{50%{transform:scale(1.07)}}}
 @media (max-width:900px){.tv2{grid-template-columns:1fr}}
+/* Les Aveux : la carte penche vers la réponse (B), pari en + / − (C), gros compteur (A) — choix de Naim le 27/10 */
+.gamecard.aveux{background:var(--card);color:var(--ink)}
+.gamecard.aveux .logo span{color:var(--hot)}
+.gamecard.aveux li::before{background:#2fbf71}
+.acard{background:var(--card);color:var(--ink);border-radius:22px;padding:22px 20px;font-family:var(--display);font-weight:800;font-size:clamp(24px,6.8vw,30px);line-height:1.15;text-align:center;text-wrap:balance;box-shadow:0 8px 0 rgba(0,0,0,.25);transition:transform .3s cubic-bezier(.2,1.4,.4,1)}
+.aswipe{display:flex;flex-direction:column;gap:14px;flex:1}
+.aswipe .acard{flex:1;display:flex;align-items:center;justify-content:center;min-height:220px}
+.acard.small{font-size:19px;padding:14px 16px;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.acard.l{transform:rotate(-5deg) translateX(-8px);box-shadow:0 5px 0 var(--hot-deep)}
+.acard.r{transform:rotate(5deg) translateX(8px);box-shadow:0 5px 0 #1d7d49}
+.ayn{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ayn button{font-family:var(--display);font-weight:800;font-size:28px;padding:18px 0;border-radius:18px}
+.ayn .no{background:var(--hot);color:#fff;box-shadow:0 6px 0 var(--hot-deep)}
+.ayn .yes{background:#2fbf71;color:#04230f;box-shadow:0 6px 0 #1d7d49}
+.astep{display:flex;align-items:center;justify-content:center;gap:22px;padding-top:18px}
+.astep button{width:68px;height:68px;border-radius:50%;background:var(--card);color:var(--ink);font-size:34px;line-height:1;padding:0;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.astep .an{font-family:var(--display);font-weight:800;font-size:110px;line-height:1;min-width:1.3ch;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
+.aof{text-align:center;font-weight:700;opacity:.75;margin-top:-8px}
+.ybig{font-family:var(--display);font-weight:800;font-size:130px;line-height:.9;text-align:center;color:var(--card);font-variant-numeric:tabular-nums;padding:10px 0}
+.ybig.done{color:var(--gold)}
+.ybig small{display:block;font-size:22px;color:var(--card);letter-spacing:-.01em;opacity:.85;margin-top:6px}
+body.tv .acard{font-size:clamp(36px,3.8vw,60px);padding:36px}
+body.tv .acard.small{font-size:30px;padding:20px 26px}
+body.tv .ybig{font-size:clamp(160px,18vw,260px)}
+@media (prefers-reduced-motion:reduce){.acard{transition:none}}
 /* Grand écran */
 body.tv .app{max-width:1500px;padding:28px 40px;gap:24px}
 body.tv{font-size:20px}
@@ -274,8 +299,9 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=18"></script>
-<script src="qui.js?v=18"></script>
-<script src="app.js?v=18"></script>
+<script src="cards.js?v=19"></script>
+<script src="qui.js?v=19"></script>
+<script src="aveux.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

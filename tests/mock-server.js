@@ -1,20 +1,22 @@
 // Faux backend Supabase pour tester Punchline en local (reproduit les fonctions SQL)
 const http = require("http"), fs = require("fs"), path = require("path"), crypto = require("crypto");
 const ROOT = process.argv[2], PORT = +process.argv[3] || 8787;
-const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [], rankings: [] };
+const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [], rankings: [], aveux_bets: [] };
+const secret = {}; // nombre de oui par manche, jamais lisible depuis l'appli (comme aveux_secret)
 let version = 0, broadcasts = [];
 const now = () => new Date().toISOString();
 const isBot = id => String(id).startsWith("b07b07b0-");
 const present = p => isBot(p.id) || Date.now() - Date.parse(p.last_seen) < 45000;
-const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"] };
+const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"], aveux_bets: ["room", "round", "player"] };
 const defaults = {
-  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], created_at: now(), updated_at: now() }),
+  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], yes: null, aused: [], created_at: now(), updated_at: now() }),
   players: () => ({ ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
   answers: () => ({ id: crypto.randomUUID(), created_at: now(), won: false, fav: false, judge: null, secs: null, late: false }),
   reactions: () => ({ id: crypto.randomUUID(), created_at: now() }),
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
   card_ratings: () => ({ updated_at: now() }),
-  rankings: () => ({ id: crypto.randomUUID(), created_at: now() })
+  rankings: () => ({ id: crypto.randomUUID(), created_at: now() }),
+  aveux_bets: () => ({ created_at: now() })
 };
 function hook(oldR, r){
   if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)){ r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null; r.writing_at = now(); }
@@ -80,7 +82,7 @@ const rpc = {
       const js = (ps.find(p => p.id === r.judge) || {}).seat; const j = js == null ? -1 : js;
       nj = (ps.find(p => p.seat > j && present(p)) || ps.find(present) || ps[0] || {}).id || null;
     }
-    const old = { ...r }; Object.assign(r, { phase: "draw", round: r.round + 1, judge: nj, card: null, winner: null, fav: null, options: null, guess: null, wrong: [], updated_at: now() }); hook(old, r);
+    const old = { ...r }; Object.assign(r, { phase: "draw", round: r.round + 1, judge: nj, card: null, winner: null, fav: null, options: null, guess: null, wrong: [], yes: null, updated_at: now() }); hook(old, r);
     return null;
   },
   guess_question({ p_code, p_guess }){
@@ -102,10 +104,30 @@ const rpc = {
     Object.assign(r, { guess: p_guess == null ? "" : p_guess, wrong: p_guess != null && p_guess !== r.card ? r.wrong.concat([p_guess]) : r.wrong, phase: "result", updated_at: now() }); hook(old, r);
     return null;
   },
+  aveu_send({ p_code, p_player, p_yes, p_bet }){
+    const r = db.rooms.find(x => x.code === p_code);
+    if (!r || r.phase !== "writing" || r.game !== "aveux") return false;
+    if (!db.players.some(p => p.id === p_player && p.room === p_code)) return false;
+    if (db.aveux_bets.some(b => b.room === p_code && b.round === r.round && b.player === p_player)) return false;
+    db.aveux_bets.push({ ...defaults.aveux_bets(), room: p_code, round: r.round, player: p_player, bet: Math.max(0, Math.min(30, p_bet)) });
+    const k = p_code + ":" + r.round; secret[k] = (secret[k] || 0) + (p_yes ? 1 : 0);
+    return true;
+  },
+  aveu_reveal({ p_code, p_round }){
+    const r = db.rooms.find(x => x.code === p_code);
+    if (!r || r.round !== p_round || r.phase !== "writing" || r.game !== "aveux") return null;
+    const y = secret[p_code + ":" + p_round] || 0;
+    db.aveux_bets.filter(b => b.room === p_code && b.round === p_round).forEach(b => {
+      const p = db.players.find(x => x.id === b.player && x.room === p_code); const e = Math.abs(b.bet - y);
+      if (p) p.score += e === 0 ? 2 : e === 1 ? 1 : 0;
+    });
+    const old = { ...r }; Object.assign(r, { phase: "result", yes: y, updated_at: now() }); hook(old, r);
+    return null;
+  },
   restart_room({ p_code }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], updated_at: now() }); hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], updated_at: now() }); hook(old, r);
     return null;
   }
 };
@@ -147,7 +169,7 @@ http.createServer((req, res) => {
         if (u.pathname === "/api/rpc"){ out = rpc[b.name](b.args); version++; }
         else if (u.pathname === "/api/q"){ out = query(b); if (b.action !== "select") version++; }
         else if (u.pathname === "/api/bc"){ broadcasts.push({ id: broadcasts.length + 1, ch: b.ch, from: b.from, payload: b.payload }); }
-        else if (u.pathname === "/api/admin"){ out = new Function("db", b.code)(db); version++; }
+        else if (u.pathname === "/api/admin"){ out = new Function("db", "secret", b.code)(db, secret); version++; }
         res.end(JSON.stringify({ data: out }));
       } catch(e){ res.end(JSON.stringify({ error: { message: String(e) } })); }
     });

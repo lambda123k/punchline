@@ -84,7 +84,7 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   // le juge choisit la réponse de P1 (la seule votée est celle de P2)
   await J.locator(".answer", { hasText: "réponse de " + others[0] }).click();
   await J.click("[data-a=confirmPick]");
-  await hasText(P1, "Gagnant de la manche");
+  await hasText(P1, "Et le gagnant est");
   const scores = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
   check(scores[others[0]] === 1 && scores[others[1]] === 1, `gagnant +1 et coup de cœur +1 (${JSON.stringify(scores)})`);
   check(await hasText(P2, "Coup de cœur du public"), "le coup de cœur s'affiche au résultat");

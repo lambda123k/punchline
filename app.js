@@ -129,6 +129,69 @@ const sfx = {
 };
 function play(fn){ if (!ui.sound || !actx || actx.state !== "running") return; try { fn(); } catch(e){} }
 
+/* ---------- peps façon plateau télé (choix de Naim, 30/10 : on garde le bleu, on ajoute le mouvement) ---------- */
+const CD_MS = 2100;
+const calm = () => !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+let cdUntil = 0;
+function fxLayer(){ let l = document.getElementById("fx"); if (!l){ l = document.createElement("div"); l.id = "fx"; document.body.appendChild(l); } return l; }
+// Compte à rebours 3-2-1 géant avant chaque résultat
+function countdown(then){
+  if (calm()){ cdUntil = 0; if (then) then(); return; }
+  cdUntil = Date.now() + CD_MS;
+  const el = document.createElement("div"); el.className = "cd"; fxLayer().appendChild(el);
+  ["3", "2", "1"].forEach((n, i) => setTimeout(() => { el.innerHTML = `<span>${n}</span>`; sfx.tick(i === 2); buzz(i === 2 ? 60 : 25); }, i * 700));
+  setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 250); if (then) then(); }, CD_MS);
+}
+// Bandeau « Manche N » qui traverse l'écran au début de chaque manche
+function roundBanner(n){
+  if (calm()) return;
+  const el = document.createElement("div"); el.className = "rbanner"; el.innerHTML = `<span>Manche ${n}</span>`;
+  fxLayer().appendChild(el); setTimeout(() => el.remove(), 1700);
+}
+// Confettis sur un canevas par-dessus l'écran
+function confetti(big){
+  if (calm()) return;
+  const cv = document.createElement("canvas"); cv.className = "confetti"; fxLayer().appendChild(cv);
+  const w = innerWidth, h = innerHeight, dpr = Math.min(2, devicePixelRatio || 1), ctx = cv.getContext("2d");
+  cv.width = w * dpr; cv.height = h * dpr; ctx.scale(dpr, dpr);
+  const cols = ["#ffc83d", "#ff5a36", "#2fbf71", "#4cc9f0", "#fff7e8", "#b48cff"];
+  const n = big ? 220 : 110, parts = Array.from({ length: n }, (_, i) => ({ x: i % 2 ? w * .2 : w * .8, y: h * .55,
+    vx: (Math.random() - .5) * 10 + (i % 2 ? 3 : -3), vy: -7 - Math.random() * 9, s: 5 + Math.random() * 7, rot: Math.random() * 6, vr: (Math.random() - .5) * .35, c: cols[i % cols.length] }));
+  const t0 = performance.now();
+  (function frame(t){
+    ctx.clearRect(0, 0, w, h);
+    parts.forEach(p => { p.vy += .28; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vx *= .99;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (t - t0 < 3400) requestAnimationFrame(frame); else cv.remove();
+  })(t0);
+}
+// Les points montent un par un dans les pastilles de score
+function countUp(){
+  document.querySelectorAll("#app [data-from]").forEach(el => {
+    const a = +el.dataset.from, b = +el.dataset.to; if (!(b > a)) return;
+    let v = a; el.textContent = v; el.parentNode.classList.add("bump");
+    const step = () => { v++; el.textContent = v; if (v < b) setTimeout(step, 320); else setTimeout(() => el.parentNode && el.parentNode.classList.remove("bump"), 600); };
+    setTimeout(step, 350);
+  });
+}
+let fxPrev = null;
+function fxOnScreen(){
+  if (!room || (ui.tv && !ui.tvReady)){ fxPrev = null; return; }
+  const prev = fxPrev; fxPrev = { phase: room.phase, round: room.round, code };
+  if (!prev || prev.code !== code) return;
+  if (room.phase === "draw" && prev.round !== room.round) roundBanner(room.round);
+  if (room.phase === "result" && prev.phase !== "result"){
+    countdown(() => {
+      if (room.game === "aveux") return;   // les Aveux enchaînent avec leur compteur (aveuxCount)
+      let mine;
+      if (room.game === "qui"){ const right = room.guess === room.card; mine = right && (ui.tv || !!myRanking() || isJudge()); if (right) confetti(mine); }
+      else { const w = answers.find(x => x.id === room.winner); mine = ui.tv || (w && w.player === me.id); if (w) confetti(mine); }
+      sfx.win(mine); countUp();
+    });
+  }
+  if (room.phase === "end" && prev.phase !== "end"){ sfx.win(true); confetti(true); setTimeout(() => confetti(true), 900); }
+}
+
 /* ---------- réseau ---------- */
 function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 120); }
 
@@ -180,16 +243,7 @@ function soundsFor(a, b){
   if (b.phase === "writing" && (a.phase !== "writing" || a.card !== b.card)) sfx.card();
   if (b.phase === "judging" && a.phase === "judging" && (b.revealed || 0) > (a.revealed || 0)) sfx.flip();
   if (b.phase === "judging" && a.phase === "judging" && (b.wrong || []).length > (a.wrong || []).length){ sfx.tick(true); buzz([60, 40, 60]); }
-  if (b.phase === "result" && a.phase !== "result" && b.game === "aveux"){
-    // le son de victoire part à la fin du compteur (voir aveuxCount)
-  } else if (b.phase === "result" && a.phase !== "result" && b.game === "qui"){
-    const right = b.guess === b.card;
-    sfx.win(right && (ui.tv || !!myRanking() || b.judge === me.id));
-  } else if (b.phase === "result" && a.phase !== "result"){
-    const w = answers.find(x => x.id === b.winner);
-    sfx.win(ui.tv || (w && w.player === me.id));
-  }
-  if (b.phase === "end" && a.phase !== "end") sfx.win(true);
+  // victoire, résultat et fin de partie : sons joués par les effets (après le compte à rebours, voir fxOnScreen)
 }
 
 // Les mises à jour de présence (ping) arrivent très souvent : on les applique sans tout recharger
@@ -787,6 +841,19 @@ function scoreList(opts){
   }).join("")}</div>`;
 }
 
+// Points gagnés pendant la manche : +1 au gagnant, +1 au coup de cœur
+function punchDelta(){
+  const d = {}, add = id => { if (id) d[id] = (d[id] || 0) + 1; };
+  const w = answers.find(a => a.id === room.winner), f = answers.find(a => a.id === room.fav);
+  add(w && w.player); add(f && f.player);
+  return d;
+}
+// Salle d'attente : chaque joueur arrive en pastille qui tombe, places vides en pointillés jusqu'à 3
+function crowd(kick){
+  const empty = Math.max(0, MIN_PLAYERS - players.length);
+  return `<div class="crowd">${players.map(p => `<span class="cp ${present(p) ? "" : "away"}">${av(p.id, "lg")}<span class="cn">${meName(p.id)}</span>${kick && p.id !== me.id ? `<button class="cx" data-a="kick" data-v="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>` : ""}</span>`).join("")}
+    ${Array.from({ length: empty }, () => `<span class="cp empty"><span class="av lg">?</span><span class="cn">&nbsp;</span></span>`).join("")}</div>`;
+}
 function blackCard(ans){
   return `<div class="black pop"><div>${fill(room.card, ans)}</div><div class="brand">Punchline</div></div>`;
 }
@@ -1007,8 +1074,7 @@ const views = {
       <button class="ghost small" data-a="share">Partager le lien</button>
     </div>
     <div class="stack">
-      <span class="label light">Joueurs · ${n}</span>
-      ${scoreList({ noScore: true, kick: isLeader() })}
+      ${crowd(isLeader())}
       ${isLeader() ? "" : `<p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>`}
       ${isLeader() ? `<span class="label light">Temps pour répondre</span>${timerSeg(room.timer)}` : ""}
     </div>
@@ -1030,14 +1096,12 @@ const views = {
       return `${head()}
       <div class="big-name pop">Tu es le juge</div>
       <button class="btn gold" data-a="peek">Piocher une carte</button>
-      ${scoreList()}
+      ${scoreChips()}
       ${footer()}`;
     }
     return `${head()}
-      <span class="label light">Juge</span>
-      <div class="big-name pop">${esc(nameOf(room.judge))}</div>
-      ${wait("pioche une carte")}
-      ${scoreList()}
+      <div class="qcenter">${av(room.judge, "xl", "pulse")}<div class="big-name pop">${esc(nameOf(room.judge))}</div>${wait("pioche une carte")}</div>
+      ${scoreChips()}
       ${footer()}`;
   },
 
@@ -1046,8 +1110,8 @@ const views = {
     if (isJudge()) return `${head()}
       ${blackCard()}
       ${timerBox()}
-      <div class="row" style="align-items:baseline;gap:10px"><span class="counter">${n}/${w}</span><span>réponses reçues</span></div>
-      ${scoreList({ status: true, noScore: true })}
+      <div class="row" style="align-items:baseline;gap:10px;justify-content:center"><span class="counter">${n}/${w}</span></div>
+      <div class="waitrow">${writers().map(p => `<span class="wv ${doneIds().has(p.id) ? "ok" : ""}">${av(p.id)}</span>`).join("")}</div>
       ${n > 0 && n < w ? `<button class="ghost small" data-a="reveal">Révéler sans attendre</button>` : ""}
       ${footer()}`;
     const mine = myAnswer();
@@ -1114,12 +1178,12 @@ const views = {
     const over = maxScore() >= room.target;
     const canNext = isJudge() || isLeader() || judgeGone();
     return `${head()}
-      <p class="lead">Gagnant de la manche</p>
-      <div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
-      ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
+      <div class="wbanner">Et le gagnant est…</div>
+      <div class="qcenter tight">${win ? av(win.player, "xl") : ""}<div class="big-name">${win ? meName(win.player) : "Personne"}</div></div>
+      ${win ? `<div class="answer win">${fill(room.card, win.text)}</div>` : ""}
       ${favBlock()}
+      ${scoreChips(punchDelta())}
       ${reactBar()}
-      ${scoreList()}
       ${canNext ? `<button class="btn" data-a="next">${over ? "Voir le classement final" : "Manche suivante"}</button>` : wait(`${esc(nameOf(room.judge))} lance la suite`)}
       ${others.length ? `<div class="stack"><span class="label light">Les autres cartes</span><div class="answers">${others.map(a => `<div class="answer" style="font-size:18px">${fill(room.card, a.text)}<span class="by">${esc(nameOf(a.player))}</span></div>`).join("")}</div></div>` : ""}
       ${rateBlock()}
@@ -1130,10 +1194,9 @@ const views = {
     const top = maxScore();
     const champs = players.filter(p => p.score === top);
     return `${head()}
-      <p class="lead">Champion${champs.length > 1 ? "s" : ""} de la soirée</p>
-      <div class="big-name pop">${champs.map(p => esc(p.name)).join(" & ")}</div>
-      <p class="lead">${top} point${top > 1 ? "s" : ""}.</p>
-      ${scoreList()}
+      <div class="wbanner">Champion${champs.length > 1 ? "s" : ""} de la soirée</div>
+      <div class="qcenter tight"><div class="row" style="justify-content:center;gap:10px">${champs.map(p => av(p.id, "xl")).join("")}</div><div class="big-name">${champs.map(p => esc(p.name)).join(" & ")}</div><span class="rnd hotpill">${top} point${top > 1 ? "s" : ""}</span></div>
+      ${scoreChips()}
       ${endBadgeBlock()}
       ${isLeader() ? `<button class="btn" data-a="restart">Rejouer avec les mêmes</button>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
       <button class="ghost" data-a="leave">Quitter</button>`;
@@ -1198,7 +1261,7 @@ function scoreChips(delta){
   const top = maxScore();
   return `<div class="chips">${[...players].sort((a, b) => b.score - a.score).map(p => {
     const d = delta && delta[p.id];
-    return `<span class="chip ${top > 0 && p.score === top ? "lead" : ""} ${present(p) ? "" : "away"}">${av(p.id, "xs")}<b>${p.score}</b>${d ? `<i>+${d}</i>` : ""}</span>`;
+    return `<span class="chip ${top > 0 && p.score === top ? "lead" : ""} ${present(p) ? "" : "away"}">${av(p.id, "xs")}<b data-to="${p.score}"${d ? ` data-from="${p.score - d}"` : ""}>${p.score}</b>${d ? `<i>+${d}</i>` : ""}</span>`;
   }).join("")}</div>`;
 }
 // Points : 3 / 2 / 1 selon l'essai où le devineur trouve, +1 aux classeurs « dans le moule »
@@ -1308,8 +1371,9 @@ function aveuxCount(){
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const step = () => {
     if (!ui.ashow || ui.ashow.key !== key) return;
+    if (Date.now() < cdUntil){ setTimeout(step, cdUntil - Date.now() + 250); return; }
     if (reduce) ui.ashow.n = room.yes;
-    if (ui.ashow.n >= room.yes){ ui.ashow.done = true; const d = aveuxDelta(); sfx.win(ui.tv || !!d[me.id]); render(); return; }
+    if (ui.ashow.n >= room.yes){ ui.ashow.done = true; const d = aveuxDelta(); sfx.win(ui.tv || !!d[me.id]); render(); countUp(); if (ui.tv || d[me.id]) confetti(d[me.id] === 2); return; }
     ui.ashow.n++; sfx.tick(false); render();
     setTimeout(step, 600);
   };
@@ -1387,12 +1451,12 @@ const tvViews = {
       <div class="stack center"><div class="codebig">${esc(code)}</div>
       <p class="lead"><b>${esc(shortUrl())}</b></p></div>
       <div class="qr big">${qrSvg(joinUrl(code))}</div>
-      <div class="stack"><span class="label light">Joueurs · ${players.length}</span>${scoreList({ noScore: true })}
+      <div class="stack">${crowd(false)}
       ${wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}</div></div>`;
   },
   draw(){
     return `${tvHead()}<div class="tvgrid"><main class="stack center tvmain">
-      <p class="lead">Le juge de cette manche</p><div class="big-name pop">${esc(nameOf(room.judge))}</div>${wait("pioche une carte")}</main>${tvSide()}</div>`;
+      <div class="qcenter">${av(room.judge, "xl", "pulse")}<div class="big-name pop">${esc(nameOf(room.judge))}</div>${wait("pioche une carte")}</div></main>${tvSide()}</div>`;
   },
   writing(){
     const w = writers().length, n = writersDone();
@@ -1414,7 +1478,7 @@ const tvViews = {
   result(){
     const win = answers.find(a => a.id === room.winner);
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">
-      <p class="lead">Gagnant de la manche</p><div class="big-name pop">${win ? esc(nameOf(win.player)) : "Personne"}</div>
+      <div class="wbanner">Et le gagnant est…</div><div class="qcenter tight">${win ? av(win.player, "xl") : ""}<div class="big-name">${win ? esc(nameOf(win.player)) : "Personne"}</div></div>
       ${win ? `<div class="answer win pop">${fill(room.card, win.text)}</div>` : ""}
       ${favBlock()}</main>${tvSide()}</div>`;
   },
@@ -1510,7 +1574,7 @@ function render(){
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
   const key = screenKey(), app = $("#app");
-  if (key !== lastKey){ app.innerHTML = html; lastKey = key; }  // nouvel écran : on le dessine en entier (animations d'entrée)
+  if (key !== lastKey){ app.innerHTML = html; lastKey = key; fxOnScreen(); }  // nouvel écran : on le dessine en entier (animations d'entrée)
   else { const t = document.createElement("template"); t.innerHTML = html; morph(app, t.content); }
   lastHtml = html;
   const ans = $("#ans");

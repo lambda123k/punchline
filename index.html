@@ -288,6 +288,35 @@ body.tv .ybig{font-size:clamp(160px,18vw,260px)}
 .rline .arr{opacity:.4;font-size:11px}
 body.tv .camp h3{font-size:30px}body.tv .camp .who{font-size:22px}
 body.tv .rline .by{font-size:18px;width:130px}body.tv .lhead{padding-left:158px}
+/* Peps façon plateau télé (choix de Naim, 30/10) : rayons, compte à rebours, bandeau de manche, confettis, pastilles qui tombent */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 115%,rgba(255,255,255,.045) 0deg 7deg,transparent 7deg 14deg)}
+.app{position:relative;z-index:1}
+#fx{position:fixed;inset:0;z-index:40;pointer-events:none}
+.confetti{position:absolute;inset:0;width:100%;height:100%}
+.cd{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(90% 70% at 50% 50%,#1f3bd1,#14279a);transition:opacity .25s}
+.cd::before{content:"";position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.06) 0deg 8deg,transparent 8deg 16deg)}
+.cd.out{opacity:0}
+.cd span{position:relative;font-family:var(--display);font-weight:800;font-size:min(62vw,320px);line-height:1;color:var(--gold);text-shadow:0 12px 0 rgba(0,0,0,.25);animation:cdz .7s ease-out both}
+@keyframes cdz{0%{transform:scale(2.1);opacity:0}18%{opacity:1}40%{transform:scale(1)}88%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:0}}
+.rbanner{position:absolute;left:-10%;right:-10%;top:38%;display:flex;justify-content:center;background:var(--hot);box-shadow:0 8px 0 var(--hot-deep);transform:rotate(-4deg);animation:rban 1.7s cubic-bezier(.2,.9,.3,1) both}
+.rbanner span{font-family:var(--display);font-weight:800;font-size:clamp(40px,12vw,96px);color:#fff;padding:10px 0;letter-spacing:-.02em}
+@keyframes rban{0%{transform:translateX(-110%) rotate(-4deg)}22%,72%{transform:translateX(0) rotate(-4deg)}100%{transform:translateX(110%) rotate(-4deg)}}
+.wbanner{align-self:stretch;margin:0 -16px;background:var(--hot);color:#fff;font-family:var(--display);font-weight:800;font-size:24px;text-align:center;padding:10px 12px;transform:rotate(-2.5deg);box-shadow:0 5px 0 var(--hot-deep)}
+body.tv .wbanner{margin:0;font-size:40px}
+.chip.bump{background:var(--gold);color:var(--ink);transition:background .2s}
+.chip.bump b{animation:bmp .32s ease-out infinite}
+@keyframes bmp{50%{transform:scale(1.35)}}
+.crowd{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:14px 8px;justify-items:center}
+.cp{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;width:76px}
+.cp .cn{font-weight:800;font-size:13px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp.away{opacity:.45}
+.cp.empty .av{background:transparent;border:3px dashed rgba(255,247,232,.35);color:rgba(255,247,232,.4);box-shadow:none}
+.cp .cx{position:absolute;top:-6px;right:2px;width:24px;height:24px;padding:0;border-radius:50%;background:var(--ink);color:var(--card);font-size:15px;line-height:1}
+.cp:not(.empty){animation:cpin .6s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes cpin{from{transform:translateY(-90px) scale(.6);opacity:0}}
+.gamecard:nth-child(2){transform:rotate(-1deg)}.gamecard:nth-child(3){transform:rotate(.8deg)}
+.gamecard:active{transform:translateY(3px) scale(.99)}
+@media (prefers-reduced-motion:reduce){.cp:not(.empty),.chip.bump b,.rbanner,.cd span{animation:none}}
 /* Grand écran */
 body.tv .app{max-width:1500px;padding:28px 40px;gap:24px}
 body.tv{font-size:20px}
@@ -319,10 +348,10 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=21"></script>
-<script src="qui.js?v=21"></script>
-<script src="aveux.js?v=21"></script>
-<script src="app.js?v=21"></script>
+<script src="cards.js?v=22"></script>
+<script src="qui.js?v=22"></script>
+<script src="aveux.js?v=22"></script>
+<script src="app.js?v=22"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

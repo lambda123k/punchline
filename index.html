@@ -268,6 +268,25 @@ body.tv .acard{font-size:clamp(36px,3.8vw,60px);padding:36px}
 body.tv .acard.small{font-size:30px;padding:20px 26px}
 body.tv .ybig{font-size:clamp(160px,18vw,260px)}
 @media (prefers-reduced-motion:reduce){.acard{transition:none}}
+/* Qui a dit oui / qui a classé qui (choix A, 29/10) */
+.camps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.camp{border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.camp.y{background:rgba(47,191,113,.2);border:2px solid #2fbf71}
+.camp.n{background:rgba(255,90,54,.16);border:2px solid var(--hot)}
+.camp h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
+.camp.y h3{color:#2fbf71}.camp.n h3{color:var(--hot)}
+.camp .who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;min-width:0}
+.camp .who span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rlines{display:flex;flex-direction:column;gap:6px}
+.lhead{display:flex;align-items:center;gap:8px;padding:0 10px 0 104px}.lhead .arr{opacity:.5;font-size:12px}
+.rline{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 10px}
+.rline.me{background:rgba(255,255,255,.16)}
+.rline .by{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;width:80px;flex-shrink:0;min-width:0}
+.rline .by span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rline .seq{display:flex;align-items:center;gap:4px;flex-wrap:wrap;min-width:0}
+.rline .arr{opacity:.4;font-size:11px}
+body.tv .camp h3{font-size:30px}body.tv .camp .who{font-size:22px}
+body.tv .rline .by{font-size:18px;width:130px}body.tv .lhead{padding-left:158px}
 /* Grand écran */
 body.tv .app{max-width:1500px;padding:28px 40px;gap:24px}
 body.tv{font-size:20px}
@@ -299,9 +318,9 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=19"></script>
-<script src="qui.js?v=19"></script>
-<script src="aveux.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="cards.js?v=20"></script>
+<script src="qui.js?v=20"></script>
+<script src="aveux.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

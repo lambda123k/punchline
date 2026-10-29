@@ -126,6 +126,7 @@ const room = () => admin(`return db.rooms[0]`);
     check(await hasText(other, right ? "Bien vu" : "Raté"), "le résultat s'affiche");
     check((await txt(other)).includes(tail(rr.card)), "la vraie question est révélée");
     check(await hasText(TV, right ? "Bien vu" : "Raté"), "… aussi sur le grand écran");
+    check(await other.locator(".rline").count() === 3, "une ligne par joueur qui a classé");
     if (round === 1){ await other.screenshot({ path: S + "/qui-result.png", fullPage: true }); await TV.screenshot({ path: S + "/qui-tv-result.png" }); }
   }
 

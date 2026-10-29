@@ -60,6 +60,7 @@ const room = () => admin(`return db.rooms[0]`);
     const r = await room();
     console.log("  affirmation : " + r.card);
     for (const [, p] of humans) await hasText(p, r.card);
+    check(await admin(`return db.aveux_bets.filter(b=>b.round===${round}).every(b=>b.said==null)`), "avant le résultat, personne ne voit les réponses");
     check(await hasText(TV, r.card), "le grand écran montre l'affirmation");
     check(await A.locator("text=Juge").count() === 0, "pas de juge dans ce jeu");
     if (round === 1) await A.screenshot({ path: S + "/aveux-answer.png", fullPage: true });
@@ -83,7 +84,7 @@ const room = () => admin(`return db.rooms[0]`);
     check(await until(A, async () => (await room()).phase === "result", "révélation", 15000), "révélation dès que tout le monde (robot compris) a parié");
     const rr = await room();
     const bets = await admin(`return db.aveux_bets.filter(b=>b.round===${round})`);
-    check(bets.length === 4 && bets.every(b => !("yes" in b)), "4 paris enregistrés, sans la réponse oui/non");
+    check(bets.length === 4, "4 paris enregistrés");
     const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     const names = await admin(`return Object.fromEntries(db.players.map(p=>[p.id,p.name]))`);
     const botYes = rr.yes - 2;
@@ -93,7 +94,9 @@ const room = () => admin(`return db.rooms[0]`);
     check(JSON.stringify(diff) === JSON.stringify(Object.fromEntries(Object.keys(after).map(n => [n, expect[n] || 0]))), `points : ${JSON.stringify(diff)}`);
     check(await until(B, async () => (await B.locator(".ybig.done").count()) === 1, "compteur fini", 10000), "le compteur monte jusqu'au total");
     check(+(await B.locator(".ybig").innerText()).split("\n")[0] === rr.yes, "le bon nombre de oui s'affiche");
-    for (const [, p] of humans) check(!(await txt(p)).includes(" a dit oui"), "aucun écran ne dit qui a répondu oui");
+    await B.waitForSelector(".camps");
+    check(await B.locator(".camp.y .who").count() === rr.yes && await B.locator(".camp.n .who").count() === 4 - rr.yes, "les deux camps OUI / NON s'affichent à la fin du compteur");
+    check((await B.locator(".camp.y").innerText()).includes("Naim") && (await B.locator(".camp.n").innerText()).includes("Tom"), "chacun est dans le bon camp");
     await until(TV, async () => (await TV.locator(".ybig.done").count()) === 1, "compteur TV");
     if (round === 1){ await B.screenshot({ path: S + "/aveux-result.png", fullPage: true }); await TV.screenshot({ path: S + "/aveux-tv-result.png" }); }
   }

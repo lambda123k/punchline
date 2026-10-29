@@ -1239,6 +1239,7 @@ const quiViews = {
       <div class="qcenter tight">${av(room.judge, "lg")}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div></div>
       ${quiCard()}
       ${groupGauge(true)}
+      ${rankLines()}
       ${mouleIds().length ? `<div class="moule"><span class="gend">Dans le moule</span>${mouleIds().map(id => av(id, "sm")).join("")}<b>+1</b></div>` : ""}
       ${scoreChips(roundDelta())}
       ${reactBar()}
@@ -1247,6 +1248,13 @@ const quiViews = {
       ${footer()}`;
   }
 };
+// Qui a classé qui (choix A de Naim, 29/10) : une ligne par joueur, son classement du plus au moins
+function rankLines(){
+  const ks = roundRanks().slice().sort((a, b) => (byId(a.player) || {}).seat - (byId(b.player) || {}).seat);
+  if (!ks.length) return "";
+  return `<div class="rlines"><div class="lhead"><span class="gend hot">Le plus</span><span class="arr">› › ›</span><span class="gend cold">Le moins</span></div>
+    ${ks.map(k => `<div class="rline ${k.player === me.id && !ui.tv ? "me" : ""}"><span class="by">${av(k.player, "xs")}<span>${meName(k.player)}</span></span><span class="seq">${k.ranking.filter(byId).map(id => av(id, "xs")).join(`<span class="arr">›</span>`)}</span></div>`).join("")}</div>`;
+}
 const quiTv = {
   draw(){ return `${tvHead()}<div class="tvgrid"><main class="qcenter tvmain">${av(room.judge, "xl", "pulse")}<div class="big-name">${esc(nameOf(room.judge))} devine</div></main>${tvSide()}</div>`; },
   writing(){
@@ -1259,7 +1267,7 @@ const quiTv = {
   judging(){ return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain">${groupGauge(true)}${tiles(false)}</main>${tvSide()}</div>`; },
   result(){
     const right = room.guess === room.card;
-    return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain"><div class="stack">${quiCard()}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div>${scoreChips(roundDelta())}</div>${groupGauge(true)}</main>${tvSide()}</div>`;
+    return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain"><div class="stack">${quiCard()}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div>${scoreChips(roundDelta())}${rankLines()}</div>${groupGauge(true)}</main>${tvSide()}</div>`;
   }
 };
 
@@ -1286,6 +1294,13 @@ function aveuxCount(){
     setTimeout(step, 600);
   };
   setTimeout(step, 700);
+}
+// Qui a dit oui (choix A de Naim, 29/10) : deux camps, révélés à la fin du compteur
+function aveuCamps(){
+  const bs = roundBets().filter(b => b.said != null).sort((a, b) => (byId(a.player) || {}).seat - (byId(b.player) || {}).seat);
+  if (!bs.length) return "";
+  return `<div class="camps pop">${[true, false].map(y => `<div class="camp ${y ? "y" : "n"}"><h3>${y ? "OUI" : "NON"}</h3>
+    ${bs.filter(b => b.said === y).map(b => `<span class="who">${av(b.player, "sm")}<span>${meName(b.player)}</span></span>`).join("")}</div>`).join("")}</div>`;
 }
 const aveuCard = (cls) => `<div class="acard ${cls || ""}">${esc(room.card)}</div>`;
 const aveuWait = size => `<div class="waitrow">${rankPool().map(p => `<span class="wv ${doneIds().has(p.id) ? "ok" : ""}">${av(p.id, size || "sm")}</span>`).join("")}</div>`;
@@ -1318,7 +1333,8 @@ const aveuxViews = {
     return `${head()}
       ${aveuCard("small")}
       <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>
-      ${s.done ? `${scoreChips(aveuxDelta())}
+      ${s.done ? `${aveuCamps()}
+      ${scoreChips(aveuxDelta())}
       ${reactBar()}
       ${isLeader() ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}
       ${rateBlock()}` : ""}
@@ -1332,7 +1348,7 @@ const aveuxTv = {
     aveuxCount();
     const s = ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: room.yes, done: true };
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${aveuCard("small")}
-      <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>${s.done ? scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
+      <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>${s.done ? aveuCamps() + scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
   }
 };
 

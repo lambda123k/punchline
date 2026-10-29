@@ -1,0 +1,178 @@
+<title>Univers Punchline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : trois ambiances claires pour Punchline (1, 2, 3), chacune sur trois écrans : accueil (avec les deux autres jeux pour juger l'ensemble), carte en jeu, gagnant. Page sombre neutre, un seul thème voulu. */
+:root{
+  --bg:#0b1250; --card:#fff7e8; --ink:#16130f;
+  --hot:#ff5a36; --gold:#ffc83d; --cold:#6fb7ff; --pink:#ff4d8d; --violet:#7a3cff;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--card);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1220px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(30px,6vw,44px);letter-spacing:-.02em;margin:0}
+.top h1 span{color:var(--gold)}
+.top p{margin:6px 0 0;opacity:.8;max-width:64ch}
+.dir{display:flex;flex-direction:column;gap:14px}
+.dhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.letter{font-family:var(--display);font-weight:800;font-size:24px;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
+.dhead b{font-family:var(--display);font-size:24px;display:block;line-height:1.1}
+.dhead small{opacity:.8;font-size:14px}
+.dhead .txt{flex:1;min-width:220px}
+.play{background:var(--gold);color:var(--ink);font:inherit;font-weight:800;border:0;border-radius:12px;padding:10px 16px;cursor:pointer;box-shadow:0 4px 0 #b88a10}
+.play:active{transform:translateY(2px)}
+.play:focus-visible{outline:3px solid var(--card);outline-offset:2px}
+.phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px}
+.cap{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin:0 0 8px 6px}
+.ph{position:relative;overflow:hidden;border-radius:30px;min-height:540px;padding:18px 16px 20px;display:flex;flex-direction:column;gap:14px;border:2px solid rgba(255,255,255,.12);color:var(--fg)}
+.ph > *{position:relative;z-index:1}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:var(--tagbg);padding:5px 9px;border-radius:999px;font-weight:700}
+.av{--s:40px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s)*.46);color:var(--ink);background:var(--c);flex-shrink:0}
+h3{font-family:var(--display);font-weight:800;margin:0;letter-spacing:-.02em;font-size:32px;line-height:1}
+canvas.fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+/* cartes d'accueil communes */
+.gc{border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;box-shadow:0 7px 0 rgba(0,0,0,.22)}
+.gc b{font-family:var(--display);font-size:28px;line-height:1}
+.gc small{font-weight:700;opacity:.85}
+.gc.v{background:linear-gradient(120deg,#ff5a36,#ffc83d 50%,#6fb7ff);color:var(--ink)}
+.gc.a{background:linear-gradient(135deg,#2a0b4a,#7a3cff);color:var(--card)}
+.gc.a b span{color:var(--pink)}
+.home{background:linear-gradient(180deg,#1f3bd1,#14279a);--fg:var(--card)}
+/* carte à trous en jeu */
+.blk{border-radius:20px;padding:20px 18px;font-family:var(--display);font-weight:800;font-size:25px;line-height:1.15;box-shadow:0 8px 0 rgba(0,0,0,.2);text-wrap:balance}
+.blank{display:inline-block;min-width:3em;border-bottom:4px solid currentColor;height:.9em;vertical-align:baseline;opacity:.9}
+.timer{display:flex;align-items:center;gap:10px}
+.timer b{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums}
+.timer .tb{flex:1;height:10px;border-radius:999px;overflow:hidden}
+.timer .tb i{display:block;height:100%;width:64%;border-radius:999px}
+.ta{border-radius:16px;padding:14px;font-family:var(--display);font-size:19px;font-weight:600;min-height:100px;box-shadow:0 5px 0 rgba(0,0,0,.15)}
+.btn{border-radius:16px;padding:15px;font-family:var(--display);font-weight:800;font-size:20px;text-align:center}
+.who{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:10px}
+.who .av{--s:104px}
+.name{font-family:var(--display);font-weight:800;font-size:54px;line-height:1}
+.ans{border-radius:18px;padding:14px 16px;font-family:var(--display);font-size:19px;line-height:1.2;box-shadow:0 6px 0 rgba(0,0,0,.18)}
+.ans mark{background:none;font-weight:800}
+.chips{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px 4px 4px;font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
+.chip .av{--s:26px}
+.chip i{font-style:normal;font-family:var(--body);font-size:12px;border-radius:999px;padding:1px 6px}
+
+/* ---------- 1 : Corail (scène de spectacle, rouge chaud et or) ---------- */
+.s1{--fg:#fff;--tagbg:rgba(255,255,255,.22);background:radial-gradient(130% 80% at 50% 0%,#ff7a59 0%,#ff4b3e 45%,#e02a4f 100%)}
+.s1::before{content:"";position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% -10%,rgba(255,255,255,.09) 0deg 7deg,transparent 7deg 14deg)}
+.s1 .logo span,.s1 .gold{color:#ffe066}
+.gc.s1g{background:linear-gradient(135deg,#ff7a59,#e02a4f);color:#fff}
+.gc.s1g b span{color:#ffe066}
+.s1 .blk{background:#fff7e8;color:var(--ink)}
+.s1 .blk .blank{color:#e02a4f}
+.s1 .tb{background:rgba(255,255,255,.25)}.s1 .tb i{background:#ffe066}
+.s1 .ta{background:#fff;color:#8a7f72}
+.s1 .btn{background:#ffe066;color:var(--ink);box-shadow:0 5px 0 #c99a00}
+.s1 .who .av{box-shadow:0 0 0 5px #ffe066,0 8px 0 rgba(0,0,0,.2)}
+.s1 .name{color:#ffe066;text-shadow:0 4px 0 rgba(0,0,0,.18)}
+.s1 .ans{background:#fff7e8;color:var(--ink)}.s1 .ans mark{color:#e02a4f}
+.s1 .chip{background:rgba(255,255,255,.2)}.s1 .chip i{background:#ffe066;color:var(--ink)}
+
+/* ---------- 2 : Soleil (jaune vif, carte noire au centre, très « Limite Limite ») ---------- */
+.s2{--fg:var(--ink);--tagbg:rgba(22,19,15,.12);background:radial-gradient(130% 80% at 50% 0%,#ffe066 0%,#ffc83d 55%,#ffad1f 100%)}
+.s2::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(22,19,15,.09) 1.6px,transparent 1.7px);background-size:16px 16px}
+.s2 .logo span{color:#ff5a36}
+.gc.s2g{background:linear-gradient(135deg,#ffe066,#ffad1f);color:var(--ink)}
+.gc.s2g b span{color:#ff5a36}
+.s2 .blk{background:var(--ink);color:#fff7e8}
+.s2 .blk .blank{color:#ffc83d}
+.s2 .tb{background:rgba(22,19,15,.15)}.s2 .tb i{background:var(--ink)}
+.s2 .ta{background:#fff;color:#8a7f72;box-shadow:0 5px 0 rgba(22,19,15,.18)}
+.s2 .btn{background:#ff5a36;color:#fff;box-shadow:0 5px 0 #b8381d}
+.s2 .who .av{box-shadow:0 0 0 5px var(--ink),0 8px 0 rgba(0,0,0,.15)}
+.s2 .name{color:var(--ink)}
+.s2 .ans{background:#fff;color:var(--ink)}.s2 .ans mark{color:#ff5a36}
+.s2 .chip{background:rgba(22,19,15,.1)}.s2 .chip i{background:var(--ink);color:#ffc83d}
+
+/* ---------- 3 : Bonbon (dégradé mandarine vers rose, doux et pop) ---------- */
+.s3{--fg:#fff;--tagbg:rgba(255,255,255,.24);background:linear-gradient(160deg,#ffb347 0%,#ff7a6b 45%,#ff4d8d 100%)}
+.s3::before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-90px;top:-90px;background:rgba(255,255,255,.18)}
+.s3::after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;left:-70px;bottom:-60px;background:rgba(255,255,255,.14)}
+.s3 .logo span{color:#fff3b0}
+.gc.s3g{background:linear-gradient(135deg,#ffb347,#ff4d8d);color:#fff}
+.gc.s3g b span{color:#fff3b0}
+.s3 .blk{background:#fff;color:var(--ink)}
+.s3 .blk .blank{color:#ff4d8d}
+.s3 .tb{background:rgba(255,255,255,.3)}.s3 .tb i{background:#fff}
+.s3 .ta{background:rgba(255,255,255,.92);color:#8a7f72}
+.s3 .btn{background:#fff;color:#e0306f;box-shadow:0 5px 0 rgba(160,30,80,.35)}
+.s3 .who .av{box-shadow:0 0 0 5px #fff,0 8px 0 rgba(0,0,0,.15)}
+.s3 .name{color:#fff;text-shadow:0 4px 0 rgba(160,30,80,.3)}
+.s3 .ans{background:#fff;color:var(--ink)}.s3 .ans mark{color:#e0306f}
+.s3 .chip{background:rgba(255,255,255,.25)}.s3 .chip i{background:#fff;color:#e0306f}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>Un univers <span>plus clair</span> pour Punchline</h1>
+  <p>Le Verdict (dégradé chaud-froid) et Les Aveux (violet et rose néon) ne changent pas. Voici trois ambiances claires pour Punchline, sur l'accueil, pendant qu'on écrit et au moment du gagnant. Le bouton joue les confettis.</p>
+</header>
+</div>
+<div class="wrap" id="dirs"></div>
+
+<script>
+const DIRS = [
+  ["1", "s1", "Corail", "Rouge corail chaud avec des rayons, du jaune doré, la carte crème au centre. Ambiance scène de spectacle, mais lumineuse.", ["#ffe066", "#fff7e8", "#ffffff"]],
+  ["2", "s2", "Soleil", "Jaune vif avec de petits points, la carte noire au centre comme un vrai jeu de cartes, boutons orange. Le plus pétant des trois.", ["#16130f", "#ff5a36", "#ffffff"]],
+  ["3", "s3", "Bonbon", "Dégradé mandarine vers rose avec de grandes bulles claires, cartes blanches. Le plus doux et le plus « joli ».", ["#ffffff", "#fff3b0", "#ffb347"]]
+];
+const P = [["L","Léa","#b48cff"],["N","Naim","#ff5a36"],["T","Tom","#2fbf71"]];
+const av = p => `<span class="av" style="--c:${p[2]}">${p[0]}</span>`;
+document.getElementById("dirs").innerHTML = DIRS.map(([n, k, name, txt]) => `<section class="dir">
+  <div class="dhead"><span class="letter">${n}</span><div class="txt"><b>${name}</b><small>${txt}</small></div><button class="play" data-k="${k}">Jouer les confettis</button></div>
+  <div class="phones">
+    <div><p class="cap">Accueil</p><div class="ph home">
+      <div class="bar"><span class="logo">Da<span style="color:var(--gold)">wa</span></span></div>
+      <h3>À quoi voulez-vous jouer ?</h3>
+      <div class="gc ${k}g"><b>Punch<span>line</span></b><small>Une carte à trous, chacun écrit sa chute</small></div>
+      <div class="gc v"><b>Le Verdict</b><small>Une question secrète, tout le monde est classé</small></div>
+      <div class="gc a"><b>Les <span>Aveux</span></b><small>Chacun avoue en secret, pariez sur les oui</small></div>
+    </div></div>
+    <div><p class="cap">Pendant qu'on écrit</p><div class="ph ${k}">
+      <div class="bar"><span class="logo">Punch<span>line</span></span><span class="tag">Manche 3</span></div>
+      <div class="timer"><b>0:19</b><span class="tb"><i></i></span></div>
+      <div class="blk">Mon coloc et sa copine font <span class="blank"></span> toutes les nuits.</div>
+      <div class="ta">Complète la carte…</div>
+      <div class="btn">Envoyer</div>
+    </div></div>
+    <div><p class="cap">Gagnant</p><div class="ph ${k}" id="w-${k}">
+      <div class="bar"><span class="logo">Punch<span>line</span></span><span class="tag">Manche 3</span></div>
+      <div class="who">${av(P[0])}<span class="name">Léa</span></div>
+      <div class="ans">Mon coloc et sa copine font <mark>du karaoké de Céline Dion</mark> toutes les nuits.</div>
+      <div class="chips">${P.map((p, i) => `<span class="chip">${av(p)}<span>${[4, 3, 2][i]}</span>${i === 0 ? "<i>+1</i>" : ""}</span>`).join("")}</div>
+      <canvas class="fx"></canvas>
+    </div></div>
+  </div></section>`).join("");
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function burst(cv, colors){
+  if (reduce) return;
+  const ctx = cv.getContext("2d"), r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = r.width * dpr; cv.height = r.height * dpr; ctx.scale(dpr, dpr);
+  const parts = Array.from({ length: 130 }, () => ({ x: r.width / 2, y: r.height * .3, vx: (Math.random() - .5) * 9, vy: -4 - Math.random() * 7,
+    s: 4 + Math.random() * 6, rot: Math.random() * 6, vr: (Math.random() - .5) * .3, c: colors[Math.floor(Math.random() * colors.length)] }));
+  const t0 = performance.now();
+  (function frame(t){
+    ctx.clearRect(0, 0, r.width, r.height);
+    parts.forEach(p => { p.vy += .25; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vx *= .99;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (t - t0 < 3000) requestAnimationFrame(frame); else ctx.clearRect(0, 0, r.width, r.height);
+  })(t0);
+}
+document.addEventListener("click", e => { const b = e.target.closest(".play"); if (!b) return;
+  const d = DIRS.find(x => x[1] === b.dataset.k); burst(document.querySelector(`#w-${d[1]} canvas`), d[4]); });
+</script>

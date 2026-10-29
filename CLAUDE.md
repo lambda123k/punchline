@@ -76,6 +76,9 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Requêtes : `refresh()` ne charge que les tables du jeu en cours (réactions seulement au résultat / à la fin de Punchline). Rafraîchissement de secours toutes les 3 s seulement si le temps réel n'est pas connecté, sinon toutes les 15 s.
 - `sw.js` (service worker) : page réseau d'abord (cache si plus de 2,5 s), scripts / polices / libs en cache puis mis à jour en arrière-plan ; Supabase jamais en cache. Changer `CACHE` si la stratégie change. Les tests Playwright bloquent le service worker (`serviceWorkers: "block"`).
 
+## Peps (29/10/2026)
+- Naim trouve que l'appli manque de peps. Maquettes de 3 directions : https://claude.ai/artifact/K8J8XTMbs8V6pfqZTWddz3 (`design/maquettes-peps.html`) : A un univers par jeu (Punchline noir et or, Verdict dégradé chaud-froid, Aveux violet et rose néon), B plateau télé (bleu gardé, rayons, bandeau qui défile, joueurs qui tombent, compte à rebours 3-2-1, confettis, points qui défilent), C autocollants (fond clair, contours noirs, cartes penchées). Mélange possible. En attente de son choix. Aussi prévu : remettre Punchline au style des pastilles.
+
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
 - Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.

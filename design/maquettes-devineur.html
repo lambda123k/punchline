@@ -1,0 +1,117 @@
+<title>Verdict devineur</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : trois téléphones côte à côte (A, B, C), l'écran de devinette du Verdict ; seul le haut change. Palette de Dawa, un seul thème sombre voulu. */
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f;
+  --hot:#ff5a36; --hot-deep:#b8381d; --gold:#ffc83d; --gold-deep:#b88a10; --cold:#6fb7ff;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--card);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);letter-spacing:-.02em;margin:0}
+.top h1 span{color:var(--gold)}
+.top p{margin:6px 0 0;opacity:.85;max-width:64ch}
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+.controls button{font:inherit;font-weight:800;border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+.controls .bad{background:var(--hot);color:#fff;box-shadow:0 4px 0 var(--hot-deep)}
+.controls .reset{background:transparent;color:var(--card);border:2px solid rgba(255,247,232,.4)}
+.controls button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.colhead{display:flex;align-items:center;gap:12px}
+.letter{font-family:var(--display);font-weight:800;font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
+.colhead b{font-family:var(--display);font-size:19px;display:block;line-height:1.1}
+.colhead small{opacity:.8;font-size:13px}
+.phone{background:rgba(9,18,90,.5);border:2px solid rgba(255,247,232,.14);border-radius:28px;padding:16px 14px 18px;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px}
+.av{--s:40px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s)*.46);color:var(--ink);background:var(--c);flex-shrink:0}
+/* bas commun : thermomètre + tuiles (résumé) */
+.gauge{display:flex;gap:10px}
+.gbar{width:12px;border-radius:999px;background:linear-gradient(var(--hot),var(--gold) 45%,var(--cold))}
+.gcol{flex:1;display:flex;flex-direction:column;gap:6px}
+.gm{display:flex;align-items:center;gap:8px;font-weight:800}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{border-radius:14px;padding:10px;min-height:66px;display:flex;align-items:flex-end;font-weight:800;font-size:13px;line-height:1.2;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.25);transition:opacity .2s}
+.tile.off{opacity:.28;text-decoration:line-through;filter:grayscale(1)}
+
+/* A : grosse pastille + pièces */
+.A{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.1);border-radius:20px;padding:12px 14px}
+.A .av{--s:64px;box-shadow:0 0 0 4px var(--gold)}
+.A .who{flex:1;min-width:0}
+.A .who b{display:block;font-family:var(--display);font-size:28px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.A .who small{font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.coins{display:flex;gap:5px;margin-top:8px}
+.coin{width:26px;height:26px;border-radius:50%;background:var(--gold);box-shadow:inset 0 -3px 0 var(--gold-deep);transition:all .3s}
+.coin.gone{background:rgba(255,255,255,.15);box-shadow:none;transform:scale(.8)}
+
+/* B : bandeau penché + médaille */
+.B{position:relative;margin:0 -14px;background:var(--hot);box-shadow:0 5px 0 var(--hot-deep);transform:rotate(-2deg);display:flex;align-items:center;gap:12px;padding:10px 18px}
+.B .av{--s:52px;box-shadow:0 0 0 3px #fff}
+.B b{flex:1;min-width:0;font-family:var(--display);font-size:24px;line-height:1.05;color:#fff;text-wrap:balance}
+.medal{width:64px;height:64px;border-radius:50%;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;line-height:.9;text-align:center;box-shadow:0 4px 0 var(--gold-deep),0 0 0 4px #fff;transform:rotate(2deg);transition:transform .3s}
+.medal span{display:block;font-size:30px}
+.medal small{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.medal.drop{animation:md .5s}
+@keyframes md{30%{transform:rotate(2deg) scale(1.25)}}
+
+/* C : échelle de points */
+.C{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.C .row{display:flex;align-items:center;gap:10px}
+.C .av{--s:48px}
+.C b{font-family:var(--display);font-size:30px;line-height:1}
+.ladder{display:flex;gap:6px;width:100%}
+.step{flex:1;border-radius:12px;padding:8px 0;font-family:var(--display);font-weight:800;font-size:22px;background:rgba(255,255,255,.1);color:rgba(255,247,232,.45);transition:all .3s}
+.step.now{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 var(--gold-deep);transform:scale(1.08)}
+.step.past{text-decoration:line-through;opacity:.4}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>Qui <span>devine</span>, et pour combien</h1>
+  <p>L'écran où le devineur cherche la question. Seul le haut change. Touche « Mauvaise réponse » pour voir les points baisser à chaque erreur.</p>
+</header>
+<div class="controls"><button class="bad" id="bad">Mauvaise réponse</button><button class="reset" id="reset">Recommencer</button></div>
+<div class="cols" id="cols"></div>
+</div>
+
+<script>
+const P = [["J","Robot Josiane","#b48cff"],["N","Naim","#ff5a36"],["L","Léa","#ffc83d"],["T","Tom","#2fbf71"]];
+const av = (p, s) => `<span class="av" style="--c:${p[2]}${s ? ";--s:" + s + "px" : ""}">${p[0]}</span>`;
+const OPTS = [["#4cc9f0","Tient le moins bien l'alcool"],["#ff5a36","Finira en prison"],["#2fbf71","Ment le mieux"],["#b48cff","Drague le plus mal"]];
+let wrong = 0, prev = 0;
+const bottom = () => `<div class="gauge"><div class="gbar"></div><div class="gcol">${[P[2], P[1], P[3], P[0]].map((p, i) => `<div class="gm">${av(p, i ? 28 : 40)}<span>${p[1]}</span></div>`).join("")}</div></div>
+  <div class="tiles">${OPTS.map((o, i) => `<div class="tile ${i < wrong ? "off" : ""}" style="background:${o[0]}">${o[1]}</div>`).join("")}</div>`;
+const pts = () => Math.max(0, 3 - wrong);
+const HEAD = {
+  A: () => `<div class="A">${av(P[0])}<div class="who"><small>devine</small><b>${P[0][1]}</b><div class="coins">${[0, 1, 2].map(i => `<span class="coin ${i >= pts() ? "gone" : ""}"></span>`).join("")}</div></div></div>`,
+  B: () => `<div class="B">${av(P[0])}<b>${P[0][1]} devine</b><span class="medal ${wrong !== prev ? "drop" : ""}"><span>+${pts()}</span><small>pts</small></span></div>`,
+  C: () => `<div class="C"><div class="row">${av(P[0])}<b>${P[0][1]} devine</b></div><div class="ladder">${[3, 2, 1].map((v, i) => `<span class="step ${i === wrong ? "now" : i < wrong ? "past" : ""}">+${v}</span>`).join("")}</div></div>`
+};
+const INFO = {
+  A: ["Grosse pastille + pièces", "Le devineur en grand avec un anneau doré ; 3 pièces d'or qui s'éteignent à chaque erreur"],
+  B: ["Bandeau + médaille", "Le bandeau orange penché des autres écrans, avec une médaille dorée « +3 » qui baisse à chaque erreur"],
+  C: ["Échelle de points", "Le prénom en grand, et dessous +3 · +2 · +1 : la case en or montre ce qu'on peut encore gagner"]
+};
+function draw(){
+  document.getElementById("cols").innerHTML = ["A", "B", "C"].map(k => `<div class="col">
+    <div class="colhead"><span class="letter">${k}</span><div><b>${INFO[k][0]}</b><small>${INFO[k][1]}</small></div></div>
+    <div class="phone"><div class="bar"><span class="logo">Le <span>Verdict</span></span><span class="tag">Manche 2</span></div>${HEAD[k]()}${bottom()}</div></div>`).join("");
+  prev = wrong;
+}
+document.getElementById("bad").onclick = () => { if (wrong < 3){ wrong++; draw(); } };
+document.getElementById("reset").onclick = () => { wrong = 0; prev = 0; draw(); };
+draw();
+</script>

@@ -814,6 +814,8 @@ function head(){
 }
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
+// À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
+const APP_VERSION = 24;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -997,6 +999,7 @@ const views = {
       <button class="mrow" data-a="showTv"><span><b>Afficher sur un grand écran</b><small>La télé ou l'ordi montre la carte et les réponses, chacun écrit sur son téléphone</small></span><span class="chev">›</span></button>
       <button class="mrow" data-a="help"><span><b>Comment jouer</b><small>Les règles des trois jeux</small></span><span class="chev">›</span></button>
       <button class="mrow" data-a="stats"><span><b>Notes des cartes</b><small>Quels styles de cartes vous font rire</small></span><span class="chev">›</span></button>
+      <p class="ver">Version ${APP_VERSION}</p>
     </div>` : ui.tvAsk ? `
     <div class="card stack pop">
       <h2>Grand écran</h2>

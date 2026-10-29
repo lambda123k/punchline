@@ -12,6 +12,7 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 
 ## Fichiers
 - `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N`, `qui.js?v=N` et `aveux.js?v=N` : monter N à chaque mise en ligne (cache).
+- `APP_VERSION` dans app.js = le N du `?v=N` : à monter ensemble à chaque mise en ligne ; affiché en bas des Paramètres (« Version N ») pour vérifier qu'un téléphone a bien la dernière version.
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
 - `icon-*.png`, `apple-touch-icon.png`, `manifest.json` — icône Dawa choisie par Naim le 27/10 (proposition A) : DA / WA en blanc très gras sur deux lignes, WA en or, fond bleu de l'appli. Source : `design/icones-dawa.html`. Ne pas changer sans lui montrer des options d'abord.

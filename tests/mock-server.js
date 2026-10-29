@@ -16,12 +16,13 @@ const defaults = {
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
   card_ratings: () => ({ updated_at: now() }),
   rankings: () => ({ id: crypto.randomUUID(), created_at: now() }),
-  aveux_bets: () => ({ created_at: now() })
+  aveux_bets: () => ({ created_at: now(), said: null })
 };
 function hook(oldR, r){
   if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)){ r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null; r.writing_at = now(); }
   else if (r.phase !== "writing") r.deadline = null;
   if (r.phase === "judging" && oldR.phase !== "judging") r.revealed = 0;
+  if (r.phase === "lobby" && oldR.phase !== "lobby") db.aveux_bets.filter(b => b.room === r.code).forEach(b => { b.said = null; });
 }
 function match(row, filters){
   return filters.every(([op, col, val]) => op === "eq" ? String(row[col]) === String(val) : op === "in" ? val.map(String).includes(String(row[col])) : true);
@@ -111,6 +112,7 @@ const rpc = {
     if (db.aveux_bets.some(b => b.room === p_code && b.round === r.round && b.player === p_player)) return false;
     db.aveux_bets.push({ ...defaults.aveux_bets(), room: p_code, round: r.round, player: p_player, bet: Math.max(0, Math.min(30, p_bet)) });
     const k = p_code + ":" + r.round; secret[k] = (secret[k] || 0) + (p_yes ? 1 : 0);
+    secret["said:" + p_code + ":" + r.round + ":" + p_player] = !!p_yes;
     return true;
   },
   aveu_reveal({ p_code, p_round }){
@@ -120,6 +122,7 @@ const rpc = {
     db.aveux_bets.filter(b => b.room === p_code && b.round === p_round).forEach(b => {
       const p = db.players.find(x => x.id === b.player && x.room === p_code); const e = Math.abs(b.bet - y);
       if (p) p.score += e === 0 ? 2 : e === 1 ? 1 : 0;
+      b.said = secret["said:" + p_code + ":" + p_round + ":" + b.player];
     });
     const old = { ...r }; Object.assign(r, { phase: "result", yes: y, updated_at: now() }); hook(old, r);
     return null;

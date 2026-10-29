@@ -1,0 +1,231 @@
+<title>Tri Les Aveux 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout : une colonne, la question à trier en grande carte sur la table cobalt de Punchline, la liste complète dessous */
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f; --muted:#5d564c; --line:#e6dcc8;
+  --hot:#ff5a36; --hot-deep:#b8381d; --gold:#ffc83d; --keep:#2fbf71; --keep-deep:#1d8a50; --drop:#5d6680; --redo:#7a5cff;
+  --soft:rgba(255,255,255,.1); --soft2:rgba(255,255,255,.18); --onTable:#fff7e8;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--onTable);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--soft);padding:6px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+h1,h2{font-family:var(--display);font-weight:800;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,7.5vw,38px);line-height:1.05}
+h2{font-size:20px}
+p{margin:0}
+.lead{opacity:.88}
+.label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+.prog{display:flex;flex-direction:column;gap:8px}
+.bar{height:10px;border-radius:999px;background:var(--soft2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .k{background:var(--keep)}.bar .r{background:var(--redo)}.bar .d{background:var(--drop)}
+.counts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;font-variant-numeric:tabular-nums}
+.counts b{font-family:var(--display);font-size:17px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.q{background:var(--ink);color:var(--card);border-radius:20px;padding:22px 22px 18px;box-shadow:0 10px 0 rgba(0,0,0,.25);min-height:190px;display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.q .txt{font-family:var(--display);font-weight:800;font-size:clamp(24px,6.6vw,31px);line-height:1.16;text-wrap:pretty}
+.q .meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65;font-variant-numeric:tabular-nums}
+.q .was{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.04em;text-transform:none;opacity:1}
+.pop{animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.96) rotate(-1deg);opacity:.5}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:15px 16px;cursor:pointer;color:inherit;transition:transform .08s}
+button:active{transform:translateY(2px)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{background:var(--card);color:var(--ink);box-shadow:0 5px 0 #b8ab92;font-size:18px}
+.keep{background:var(--keep);color:#04230f;box-shadow:0 5px 0 var(--keep-deep);font-size:18px}
+.redo{grid-column:1/-1;background:transparent;border:2px solid rgba(255,247,232,.4);padding:11px 14px;font-size:15px}
+.redo.on,.keep.on,.drop.on{outline:3px solid var(--gold);outline-offset:3px}
+.note{display:flex;flex-direction:column;gap:8px}
+textarea,input[type=text]{font:inherit;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+textarea{min-height:76px;resize:vertical;font-weight:600}
+.small{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.link{background:none;padding:6px 2px;font-weight:600;font-size:14px;color:rgba(255,247,232,.8);text-decoration:underline;text-underline-offset:3px}
+.done{background:var(--soft);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:8px;text-align:center}
+.done h2{font-size:24px;color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:var(--soft);padding:8px 12px;font-size:14px;border-radius:999px;font-weight:600}
+.chips button.on{background:var(--gold);color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--soft);border-radius:12px;padding:10px 12px;text-align:left;font-weight:500;width:100%}
+.row.cur{background:var(--soft2);outline:2px solid var(--gold)}
+.row .t{min-width:0;font-size:15px}
+.row small{display:block;font-size:13px;opacity:.75;margin-top:2px}
+.pill{flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:var(--soft2)}
+.pill.garder{background:var(--keep);color:#04230f}.pill.jeter{background:var(--drop);color:#fff}.pill.reecrire{background:var(--redo);color:#fff}
+.add{display:flex;gap:8px}
+.add input{flex:1;min-width:0}
+.add button{background:var(--hot);color:#fff;box-shadow:0 4px 0 var(--hot-deep);padding:12px 16px}
+.err{background:#ffe0d8;color:#7a1c06;border-radius:12px;padding:10px 14px;font-weight:600;font-size:15px}
+.hint{font-size:13px;opacity:.72}
+.keys{display:none}
+@media (hover:hover) and (pointer:fine){.keys{display:block}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+</style>
+
+<div class="wrap">
+  <header><div class="logo">DA<span>WA</span></div><div class="tag" id="tag">Les Aveux · tri 2</div></header>
+  <div class="stack">
+    <h1>Garde seulement ce qui coûte vraiment à avouer.</h1>
+  </div>
+  <p class="lead">Maintenant tout le monde verra qui a dit oui. Les nouvelles d'abord, puis celles déjà dans le jeu : jette celles qui ne font pas assez mal à avouer. Si une idée est bonne mais mal tournée, mets « À réécrire » et écris ta version : je la reprendrai.</p>
+  <div id="err" class="err" hidden></div>
+  <div class="prog" aria-live="polite">
+    <div class="bar" id="bar"></div>
+    <div class="counts" id="counts"></div>
+  </div>
+  <section id="main" aria-label="Affirmation à trier"></section>
+  <section class="stack" style="display:flex;flex-direction:column;gap:10px">
+    <span class="label">Toutes les affirmations</span>
+    <div class="chips" id="filters"></div>
+    <div class="list" id="list"></div>
+  </section>
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <span class="label">Tes propres affirmations</span>
+    <p class="hint">Une idée qui manque ? Écris-la, elle sera ajoutée au jeu.</p>
+    <form class="add" id="addf"><input type="text" id="idea" maxlength="140" placeholder="J'ai déjà…" autocomplete="off" aria-label="Ton affirmation"><button type="submit">Ajouter</button></form>
+    <div class="list" id="ideas"></div>
+  </section>
+</div>
+
+<script id="data" type="application/json">{"types": {"aici": "Les Aveux · dans cette pièce", "asexe": "Les Aveux · sexe", "atrahison": "Les Aveux · trahisons & mensonges", "ahonte": "Les Aveux · la honte", "adingue": "Les Aveux · interdit", "asoiree": "Les Aveux · soirées & alcool", "aex": "Les Aveux · amour & ex", "aboulot": "Les Aveux · boulot & argent"}, "list": [{"id": "nici0", "q": "J'ai déjà été attiré par quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici1", "q": "J'ai déjà rêvé de coucher avec quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici2", "q": "J'ai déjà embrassé quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici3", "q": "J'ai déjà dit du mal de quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici4", "q": "J'ai déjà été jaloux de quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici5", "q": "J'ai déjà fait semblant d'apprécier quelqu'un dans cette pièce", "t": "aici"}, {"id": "nici6", "q": "Il y a quelqu'un dans cette pièce que je ne supporte pas vraiment", "t": "aici"}, {"id": "nici7", "q": "J'ai déjà répété un secret que quelqu'un ici m'avait confié", "t": "aici"}, {"id": "nici8", "q": "J'ai déjà inventé une excuse pour éviter quelqu'un ici", "t": "aici"}, {"id": "nici9", "q": "J'ai déjà fouillé dans les affaires de quelqu'un ici", "t": "aici"}, {"id": "nici10", "q": "J'ai déjà stalké quelqu'un ici en remontant très loin sur ses photos", "t": "aici"}, {"id": "nici11", "q": "J'ai déjà fait une capture d'écran d'un message de quelqu'un ici pour me moquer", "t": "aici"}, {"id": "nici12", "q": "J'ai déjà eu honte d'être vu avec quelqu'un ici", "t": "aici"}, {"id": "nici13", "q": "J'ai déjà menti à quelqu'un ici aujourd'hui", "t": "aici"}, {"id": "nsex0", "q": "J'ai déjà couché avec quelqu'un que je trouvais moche", "t": "asexe"}, {"id": "nsex1", "q": "J'ai déjà couché avec quelqu'un par pitié", "t": "asexe"}, {"id": "nsex2", "q": "J'ai déjà regretté de coucher avec quelqu'un dès le lendemain matin", "t": "asexe"}, {"id": "nsex3", "q": "J'ai déjà fait l'amour en pensant à quelqu'un d'autre", "t": "asexe"}, {"id": "nsex4", "q": "J'ai déjà dit le mauvais prénom pendant l'amour", "t": "asexe"}, {"id": "nsex5", "q": "J'ai déjà été nul au lit et je le savais", "t": "asexe"}, {"id": "nsex6", "q": "J'ai déjà couché avec deux personnes du même groupe d'amis", "t": "asexe"}, {"id": "nsex7", "q": "J'ai déjà couché avec quelqu'un pour obtenir quelque chose", "t": "asexe"}, {"id": "nsex8", "q": "J'ai déjà payé pour du sexe", "t": "asexe"}, {"id": "nsex9", "q": "J'ai déjà fait l'amour chez mes parents pendant qu'ils étaient là", "t": "asexe"}, {"id": "nsex10", "q": "J'ai déjà eu une MST", "t": "asexe"}, {"id": "nsex11", "q": "J'ai déjà fait un test de grossesse en panique", "t": "asexe"}, {"id": "nsex12", "q": "J'ai déjà regardé un porno que j'ai honte d'avoir aimé", "t": "asexe"}, {"id": "nsex13", "q": "J'ai déjà couché avec un ex alors que j'étais en couple", "t": "asexe"}, {"id": "ntra0", "q": "J'ai déjà trompé quelqu'un et il ne l'a jamais su", "t": "atrahison"}, {"id": "ntra1", "q": "J'ai déjà dit je t'aime juste pour coucher", "t": "atrahison"}, {"id": "ntra2", "q": "J'ai déjà gardé quelqu'un sous le coude au cas où", "t": "atrahison"}, {"id": "ntra3", "q": "J'ai déjà quitté quelqu'un pour une autre personne sans lui dire la vraie raison", "t": "atrahison"}, {"id": "ntra4", "q": "J'ai déjà continué à parler à un ex en cachette de mon couple", "t": "atrahison"}, {"id": "ntra5", "q": "J'ai déjà menti à mon copain ou ma copine sur l'endroit où j'étais", "t": "atrahison"}, {"id": "ntra6", "q": "J'ai déjà dragué le copain ou la copine d'un ami", "t": "atrahison"}, {"id": "ntra7", "q": "J'ai déjà été content qu'un pote se fasse larguer", "t": "atrahison"}, {"id": "ntra8", "q": "J'ai déjà souhaité qu'un ami rate quelque chose", "t": "atrahison"}, {"id": "ntra9", "q": "J'ai déjà balancé un pote pour me couvrir", "t": "atrahison"}, {"id": "ntra10", "q": "J'ai déjà accusé quelqu'un d'autre pour un truc que j'avais fait", "t": "atrahison"}, {"id": "ntra11", "q": "J'ai déjà fait pleurer quelqu'un exprès", "t": "atrahison"}, {"id": "ntra12", "q": "J'ai déjà lu un journal intime qui n'était pas le mien", "t": "atrahison"}, {"id": "ntra13", "q": "J'ai déjà écouté une conversation en cachette derrière une porte", "t": "atrahison"}, {"id": "nhon0", "q": "J'ai déjà fait pipi au lit une fois adulte", "t": "ahonte"}, {"id": "nhon1", "q": "J'ai déjà fait dans mon pantalon une fois adulte", "t": "ahonte"}, {"id": "nhon2", "q": "J'ai déjà pleuré pour obtenir ce que je voulais", "t": "ahonte"}, {"id": "nhon3", "q": "J'ai déjà ri à un enterrement", "t": "ahonte"}, {"id": "nhon4", "q": "J'ai déjà été jaloux du bonheur d'un ami", "t": "ahonte"}, {"id": "nhon5", "q": "J'ai déjà raconté un souvenir qui ne m'était jamais arrivé", "t": "ahonte"}, {"id": "nhon6", "q": "J'ai déjà mis une fausse photo de moi sur une appli de rencontre", "t": "ahonte"}, {"id": "nhon7", "q": "J'ai déjà relancé trois fois quelqu'un qui m'avait ghosté", "t": "ahonte"}, {"id": "nhon8", "q": "J'ai déjà menti sur mon salaire pour impressionner", "t": "ahonte"}, {"id": "nhon9", "q": "J'ai déjà été méchant avec un serveur pour me sentir supérieur", "t": "ahonte"}, {"id": "nhon10", "q": "J'ai déjà mangé un truc que j'avais jeté à la poubelle", "t": "ahonte"}, {"id": "nhon11", "q": "J'ai déjà fait semblant d'être malade pour qu'on s'occupe de moi", "t": "ahonte"}, {"id": "ndin0", "q": "J'ai déjà conduit bourré", "t": "adingue"}, {"id": "ndin1", "q": "J'ai déjà volé de l'argent à mes parents", "t": "adingue"}, {"id": "ndin2", "q": "J'ai déjà volé de l'argent à un ami", "t": "adingue"}, {"id": "ndin3", "q": "J'ai déjà gardé la monnaie d'une course qu'on m'avait confiée", "t": "adingue"}, {"id": "ndin4", "q": "J'ai déjà revendu un cadeau qu'on m'avait offert", "t": "adingue"}, {"id": "ndin5", "q": "J'ai déjà offert un cadeau qu'on m'avait offert", "t": "adingue"}, {"id": "ndin6", "q": "J'ai déjà triché à un examen important", "t": "adingue"}, {"id": "ndin7", "q": "J'ai déjà pris une drogue que je ne connaissais pas en soirée", "t": "adingue"}, {"id": "ndin8", "q": "J'ai déjà fait une fausse déclaration à l'assurance", "t": "adingue"}, {"id": "ndin9", "q": "J'ai déjà cassé un truc exprès et dit que c'était un accident", "t": "adingue"}, {"id": "ndin10", "q": "J'ai déjà ouvert le courrier de quelqu'un d'autre", "t": "adingue"}, {"id": "ndin11", "q": "J'ai déjà payé quelqu'un pour faire un travail à ma place", "t": "adingue"}, {"id": "osoi0", "q": "J'ai déjà vomi sur quelqu'un", "t": "asoiree", "old": 1}, {"id": "osoi1", "q": "J'ai déjà dormi dans une baignoire après une soirée", "t": "asoiree", "old": 1}, {"id": "osoi2", "q": "J'ai déjà oublié comment j'étais rentré chez moi", "t": "asoiree", "old": 1}, {"id": "osoi3", "q": "J'ai déjà fait une soirée sans me souvenir de rien le lendemain", "t": "asoiree", "old": 1}, {"id": "osoi4", "q": "J'ai déjà bu au point de pleurer sans raison", "t": "asoiree", "old": 1}, {"id": "osoi5", "q": "J'ai déjà appelé mon ex bourré", "t": "asoiree", "old": 1}, {"id": "osoi6", "q": "J'ai déjà dansé sur une table", "t": "asoiree", "old": 1}, {"id": "osoi7", "q": "J'ai déjà fini une soirée aux urgences", "t": "asoiree", "old": 1}, {"id": "osoi8", "q": "J'ai déjà volé une bouteille dans une soirée", "t": "asoiree", "old": 1}, {"id": "osoi9", "q": "J'ai déjà dormi chez un inconnu après une soirée", "t": "asoiree", "old": 1}, {"id": "osoi10", "q": "J'ai déjà été trop bourré pour coucher", "t": "asoiree", "old": 1}, {"id": "osoi11", "q": "J'ai déjà enchaîné deux nuits blanches de soirée", "t": "asoiree", "old": 1}, {"id": "osex0", "q": "J'ai déjà couché le premier soir", "t": "asexe", "old": 1}, {"id": "osex1", "q": "J'ai déjà couché avec quelqu'un dont je ne connaissais pas le prénom", "t": "asexe", "old": 1}, {"id": "osex2", "q": "J'ai déjà fait l'amour dans une voiture", "t": "asexe", "old": 1}, {"id": "osex3", "q": "J'ai déjà fait l'amour dehors", "t": "asexe", "old": 1}, {"id": "osex4", "q": "J'ai déjà fait l'amour dans les toilettes d'un bar", "t": "asexe", "old": 1}, {"id": "osex5", "q": "J'ai déjà fait un plan à trois", "t": "asexe", "old": 1}, {"id": "osex6", "q": "J'ai déjà envoyé un nude", "t": "asexe", "old": 1}, {"id": "osex7", "q": "J'ai déjà envoyé un nude à la mauvaise personne", "t": "asexe", "old": 1}, {"id": "osex8", "q": "J'ai déjà simulé un orgasme", "t": "asexe", "old": 1}, {"id": "osex9", "q": "J'ai déjà été surpris en train de faire l'amour", "t": "asexe", "old": 1}, {"id": "osex10", "q": "J'ai déjà couché avec quelqu'un rencontré le soir même sur une appli", "t": "asexe", "old": 1}, {"id": "osex11", "q": "J'ai déjà eu un plan cul régulier", "t": "asexe", "old": 1}, {"id": "osex12", "q": "J'ai déjà couché avec un collègue", "t": "asexe", "old": 1}, {"id": "osex13", "q": "J'ai déjà couché avec quelqu'un de plus de dix ans de plus que moi", "t": "asexe", "old": 1}, {"id": "osex14", "q": "J'ai déjà acheté un sextoy", "t": "asexe", "old": 1}, {"id": "osex15", "q": "J'ai déjà regardé un porno avec quelqu'un", "t": "asexe", "old": 1}, {"id": "osex16", "q": "J'ai déjà fait l'amour au travail", "t": "asexe", "old": 1}, {"id": "osex17", "q": "J'ai déjà couché avec deux personnes dans la même journée", "t": "asexe", "old": 1}, {"id": "osex18", "q": "J'ai déjà fait l'amour pendant que quelqu'un dormait dans la même pièce", "t": "asexe", "old": 1}, {"id": "osex19", "q": "J'ai déjà couché avec quelqu'un juste pour rendre jaloux un autre", "t": "asexe", "old": 1}, {"id": "osex20", "q": "J'ai déjà fait un strip-tease", "t": "asexe", "old": 1}, {"id": "osex21", "q": "J'ai déjà payé pour voir quelqu'un se déshabiller", "t": "asexe", "old": 1}, {"id": "oex0", "q": "J'ai déjà fouillé le téléphone de mon ex", "t": "aex", "old": 1}, {"id": "oex1", "q": "J'ai déjà trompé quelqu'un", "t": "aex", "old": 1}, {"id": "oex2", "q": "J'ai déjà été trompé et je l'ai su", "t": "aex", "old": 1}, {"id": "oex3", "q": "J'ai déjà recouché avec un ex", "t": "aex", "old": 1}, {"id": "oex4", "q": "J'ai déjà couché avec l'ex d'un pote", "t": "aex", "old": 1}, {"id": "oex5", "q": "J'ai déjà largué quelqu'un par message", "t": "aex", "old": 1}, {"id": "oex6", "q": "J'ai déjà ghosté quelqu'un après un rendez-vous", "t": "aex", "old": 1}, {"id": "oex7", "q": "J'ai déjà stalké le nouveau copain ou la nouvelle copine de mon ex", "t": "aex", "old": 1}, {"id": "oex8", "q": "J'ai déjà dit je t'aime sans le penser", "t": "aex", "old": 1}, {"id": "oex9", "q": "J'ai déjà eu deux relations en même temps", "t": "aex", "old": 1}, {"id": "oex10", "q": "J'ai déjà embrassé quelqu'un qui était en couple", "t": "aex", "old": 1}, {"id": "oex11", "q": "J'ai déjà été amoureux du copain ou de la copine d'un pote", "t": "aex", "old": 1}, {"id": "oex12", "q": "J'ai déjà pleuré pour quelqu'un qui ne le méritait pas", "t": "aex", "old": 1}, {"id": "oex13", "q": "J'ai déjà fait un faux profil pour espionner quelqu'un", "t": "aex", "old": 1}, {"id": "oex14", "q": "J'ai déjà gardé des photos de mon ex", "t": "aex", "old": 1}, {"id": "oex15", "q": "J'ai déjà menti sur mon nombre de partenaires", "t": "aex", "old": 1}, {"id": "ohon0", "q": "J'ai déjà fait caca chez quelqu'un et bouché les toilettes", "t": "ahonte", "old": 1}, {"id": "ohon1", "q": "J'ai déjà pété pendant un moment intime", "t": "ahonte", "old": 1}, {"id": "ohon2", "q": "J'ai déjà fait pipi dans ma piscine", "t": "ahonte", "old": 1}, {"id": "ohon3", "q": "J'ai déjà mangé un truc tombé par terre devant tout le monde", "t": "ahonte", "old": 1}, {"id": "ohon4", "q": "J'ai déjà envoyé un message sur quelqu'un à cette même personne", "t": "ahonte", "old": 1}, {"id": "ohon5", "q": "J'ai déjà été pris en train de parler tout seul", "t": "ahonte", "old": 1}, {"id": "ohon6", "q": "J'ai déjà fait semblant de connaître quelqu'un pendant toute une conversation", "t": "ahonte", "old": 1}, {"id": "ohon7", "q": "J'ai déjà fait semblant d'être au téléphone pour éviter quelqu'un", "t": "ahonte", "old": 1}, {"id": "ohon8", "q": "J'ai déjà liké une vieille photo en stalkant quelqu'un", "t": "ahonte", "old": 1}, {"id": "ohon9", "q": "J'ai déjà pleuré devant un dessin animé", "t": "ahonte", "old": 1}, {"id": "ohon10", "q": "J'ai déjà raté une marche devant une foule", "t": "ahonte", "old": 1}, {"id": "ohon11", "q": "J'ai déjà porté le même slip plusieurs jours", "t": "ahonte", "old": 1}, {"id": "ohon12", "q": "J'ai déjà reniflé mes chaussettes pour savoir si je pouvais les remettre", "t": "ahonte", "old": 1}, {"id": "ohon13", "q": "J'ai déjà reçu un message gênant pendant que quelqu'un regardait mon écran", "t": "ahonte", "old": 1}, {"id": "ohon14", "q": "J'ai déjà dit au revoir à quelqu'un puis marché dans la même direction", "t": "ahonte", "old": 1}, {"id": "obou0", "q": "J'ai déjà menti sur mon CV", "t": "aboulot", "old": 1}, {"id": "obou1", "q": "J'ai déjà fait semblant d'être malade pour ne pas aller bosser", "t": "aboulot", "old": 1}, {"id": "obou2", "q": "J'ai déjà été viré", "t": "aboulot", "old": 1}, {"id": "obou3", "q": "J'ai déjà démissionné sur un coup de tête", "t": "aboulot", "old": 1}, {"id": "obou4", "q": "J'ai déjà dormi au travail", "t": "aboulot", "old": 1}, {"id": "obou5", "q": "J'ai déjà envoyé à mon patron un message qui parlait de lui", "t": "aboulot", "old": 1}, {"id": "obou6", "q": "J'ai déjà volé des fournitures au boulot", "t": "aboulot", "old": 1}, {"id": "obou7", "q": "J'ai déjà été bourré au travail", "t": "aboulot", "old": 1}, {"id": "obou8", "q": "J'ai déjà fait un entretien d'embauche avec la gueule de bois", "t": "aboulot", "old": 1}, {"id": "obou9", "q": "J'ai déjà emprunté de l'argent sans le rendre", "t": "aboulot", "old": 1}, {"id": "obou10", "q": "J'ai déjà perdu plus de 100 euros en une soirée de jeux d'argent", "t": "aboulot", "old": 1}, {"id": "obou11", "q": "J'ai déjà acheté un truc cher juste pour le retourner après", "t": "aboulot", "old": 1}, {"id": "obou12", "q": "J'ai déjà fait une soirée entière sans payer une seule tournée", "t": "aboulot", "old": 1}, {"id": "odin0", "q": "J'ai déjà volé dans un magasin", "t": "adingue", "old": 1}, {"id": "odin1", "q": "J'ai déjà pris le train sans billet", "t": "adingue", "old": 1}, {"id": "odin2", "q": "J'ai déjà été embarqué par la police", "t": "adingue", "old": 1}, {"id": "odin3", "q": "J'ai déjà conduit sans permis", "t": "adingue", "old": 1}, {"id": "odin4", "q": "J'ai déjà menti à la police", "t": "adingue", "old": 1}, {"id": "odin5", "q": "J'ai déjà lu les messages de quelqu'un en cachette", "t": "adingue", "old": 1}, {"id": "odin6", "q": "J'ai déjà fait un tatouage sur un coup de tête", "t": "adingue", "old": 1}, {"id": "odin7", "q": "J'ai déjà pris un avion sans savoir où j'allais dormir", "t": "adingue", "old": 1}, {"id": "odin8", "q": "J'ai déjà fait du naturisme", "t": "adingue", "old": 1}, {"id": "odin9", "q": "J'ai déjà couru tout nu dehors", "t": "adingue", "old": 1}, {"id": "odin10", "q": "J'ai déjà fugué", "t": "adingue", "old": 1}, {"id": "odin11", "q": "J'ai déjà imité la voix de quelqu'un au téléphone pour me faire excuser", "t": "adingue", "old": 1}, {"id": "odin12", "q": "J'ai déjà été dans un endroit interdit en pleine nuit", "t": "adingue", "old": 1}, {"id": "odin13", "q": "J'ai déjà gardé un portefeuille trouvé", "t": "adingue", "old": 1}, {"id": "odin14", "q": "J'ai déjà fait exprès de rayer une voiture", "t": "adingue", "old": 1}, {"id": "odin15", "q": "J'ai déjà été en garde à vue", "t": "adingue", "old": 1}]}</script>
+<script>
+(function(){
+"use strict";
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const LIST = DATA.list, TYPES = DATA.types;
+const LABEL = { garder: "Gardée", jeter: "Jetée", reecrire: "À réécrire" };
+const typeName = t => (TYPES[t] || "").replace(/^Les Aveux · /, "");
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let db = null, votes = {}, ideas = [], cur = null, filter = "todo", lastId = null, loaded = false, noteDraft = {};
+
+function toast(m){ const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+function showErr(m){ const e = $("err"); e.textContent = m; e.hidden = !m; }
+const firstTodo = () => LIST.find(x => !votes[x.id]);
+
+function stats(){
+  const c = { garder: 0, jeter: 0, reecrire: 0 };
+  Object.values(votes).forEach(v => { if (c[v.v] != null) c[v.v]++; });
+  return { ...c, done: c.garder + c.jeter + c.reecrire, total: LIST.length };
+}
+
+function renderProg(){
+  const s = stats(), w = n => (n / s.total * 100).toFixed(2) + "%";
+  $("bar").innerHTML = `<i class="k" style="width:${w(s.garder)}"></i><i class="r" style="width:${w(s.reecrire)}"></i><i class="d" style="width:${w(s.jeter)}"></i>`;
+  $("counts").innerHTML = `<span><b>${s.done}</b> / ${s.total} triées</span>
+    <span><i class="dot" style="background:var(--keep)"></i>${s.garder} gardées</span>
+    <span><i class="dot" style="background:var(--redo)"></i>${s.reecrire} à réécrire</span>
+    <span><i class="dot" style="background:var(--drop)"></i>${s.jeter} jetées</span>`;
+}
+
+function renderMain(){
+  const m = $("main");
+  if (!loaded){ m.innerHTML = `<div class="done"><p>Chargement de ton tri…</p></div>`; return; }
+  const item = cur ? LIST.find(x => x.id === cur) : null;
+  if (!item){
+    m.innerHTML = `<div class="done pop"><h2>Tout est trié</h2><p>Dis-moi « c'est trié » dans la conversation et je mets à jour le jeu. Tu peux encore changer d'avis en touchant une affirmation dans la liste.</p></div>`;
+    return;
+  }
+  const v = votes[item.id], idx = LIST.indexOf(item) + 1;
+  const note = noteDraft[item.id] != null ? noteDraft[item.id] : (v && v.note) || "";
+  m.innerHTML = `<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="q pop"><div class="txt">${esc(item.q)}</div>
+      <div class="meta"><span>${esc(typeName(item.t))}${item.old ? " · déjà dans le jeu" : " · nouvelle"}</span>${v ? `<span class="was">Déjà ${esc(LABEL[v.v].toLowerCase())}</span>` : `<span>${idx} / ${LIST.length}</span>`}</div></div>
+    <div class="verdicts">
+      <button class="drop ${v && v.v === "jeter" ? "on" : ""}" data-v="jeter">Jeter</button>
+      <button class="keep ${v && v.v === "garder" ? "on" : ""}" data-v="garder">Garder</button>
+      <button class="redo ${v && v.v === "reecrire" ? "on" : ""}" data-v="reecrire">À réécrire avec ta version</button>
+    </div>
+    <div class="note" id="notebox" ${v && v.v === "reecrire" || note ? "" : "hidden"}>
+      <label class="label" for="note">Ta version (facultatif)</label>
+      <textarea id="note" maxlength="200" placeholder="J'ai déjà…">${esc(note)}</textarea>
+    </div>
+    <div class="small">
+      <button class="link" id="back" ${lastId ? "" : "disabled"}>Revenir à la précédente</button>
+      <button class="link" id="skip">Passer pour l'instant</button>
+    </div>
+    <p class="hint keys">Clavier : flèche gauche pour jeter, flèche droite pour garder.</p>
+  </div>`;
+}
+
+const FILTERS = [["todo", "À trier"], ["garder", "Gardées"], ["reecrire", "À réécrire"], ["jeter", "Jetées"], ["all", "Toutes"]];
+function renderList(){
+  const s = stats(), n = { todo: s.total - s.done, garder: s.garder, reecrire: s.reecrire, jeter: s.jeter, all: s.total };
+  $("filters").innerHTML = FILTERS.map(([k, l]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}" aria-pressed="${filter === k}">${l} · ${n[k]}</button>`).join("");
+  const rows = LIST.filter(x => filter === "all" ? true : filter === "todo" ? !votes[x.id] : votes[x.id] && votes[x.id].v === filter);
+  $("list").innerHTML = rows.length ? rows.map(x => { const v = votes[x.id];
+    return `<button class="row ${x.id === cur ? "cur" : ""}" data-id="${x.id}"><span class="t">${esc(x.q)}${v && v.note ? `<small>Ta version : ${esc(v.note)}</small>` : ""}</span>${v ? `<span class="pill ${v.v}">${LABEL[v.v]}</span>` : `<span class="pill">${esc(typeName(x.t))}</span>`}</button>`; }).join("")
+    : `<p class="hint">Rien ici pour l'instant.</p>`;
+  $("ideas").innerHTML = ideas.map(i => `<div class="row"><span class="t">${esc(i.q)}</span><button class="link" data-del="${esc(i.id)}">Retirer</button></div>`).join("");
+}
+function render(){ renderProg(); renderMain(); renderList(); }
+
+async function decide(v){
+  const item = LIST.find(x => x.id === cur); if (!item) return;
+  const box = $("note"), note = (box ? box.value : "").trim();
+  if (v === "reecrire" && $("notebox").hidden){ $("notebox").hidden = false; $("note").focus(); return; }
+  const prev = votes[item.id];
+  votes[item.id] = { q: item.q, type: item.t, v, note: v === "reecrire" ? note : "" };
+  delete noteDraft[item.id];
+  lastId = item.id;
+  const next = LIST.slice(LIST.indexOf(item) + 1).find(x => !votes[x.id]) || firstTodo();
+  cur = next ? next.id : null;
+  render();
+  if (!db){ toast("Pas enregistré : ouvre la page en étant connecté à claude.ai"); return; }
+  try { await db.collection("atri2").doc(item.id).set({ ...votes[item.id], at: new Date().toISOString() }); }
+  catch(e){ if (prev) votes[item.id] = prev; else delete votes[item.id]; render(); toast("Pas enregistré, réessaie."); }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.v){ decide(b.dataset.v); return; }
+  if (b.dataset.f){ filter = b.dataset.f; renderList(); return; }
+  if (b.dataset.id){ cur = b.dataset.id; render(); $("main").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (b.dataset.del){ if (db) db.collection("aidees2").doc(b.dataset.del).delete().catch(() => toast("Pas retiré, réessaie.")); return; }
+  if (b.id === "back" && lastId){ cur = lastId; lastId = null; render(); return; }
+  if (b.id === "skip"){ const i = LIST.findIndex(x => x.id === cur); const n = LIST.slice(i + 1).find(x => !votes[x.id]) || LIST.find(x => !votes[x.id] && x.id !== cur); if (n){ cur = n.id; render(); } return; }
+});
+document.addEventListener("input", e => { if (e.target.id === "note" && cur) noteDraft[cur] = e.target.value; });
+document.addEventListener("keydown", e => {
+  if (/^(TEXTAREA|INPUT)$/.test(e.target.tagName)) return;
+  if (e.key === "ArrowLeft"){ e.preventDefault(); decide("jeter"); }
+  if (e.key === "ArrowRight"){ e.preventDefault(); decide("garder"); }
+});
+$("addf").addEventListener("submit", async e => {
+  e.preventDefault();
+  const q = $("idea").value.trim(); if (!q) return;
+  if (!db){ toast("Pas enregistré : ouvre la page en étant connecté à claude.ai"); return; }
+  try { await db.collection("aidees2").add({ q, at: new Date().toISOString() }); $("idea").value = ""; toast("Affirmation ajoutée"); }
+  catch(x){ toast("Pas ajoutée, réessaie."); }
+});
+
+cur = LIST[0].id; render();
+(async () => {
+  db = await (window.claude && window.claude.use ? window.claude.use("db") : null);
+  if (!db){ loaded = true; showErr("Ton tri ne peut pas être enregistré ici. Ouvre cette page dans claude.ai en étant connecté."); render(); return; }
+  db.collection("atri2").limit(1000).onSnapshot(snap => {
+    const v = {}; snap.docs.forEach(d => { const x = d.data(); if (x && LABEL[x.v]) v[d.id] = x; });
+    const first = !loaded; votes = v; loaded = true;
+    if (first){ const t = firstTodo(); cur = t ? t.id : null; }
+    render();
+  }, () => { loaded = true; showErr("Impossible de charger ton tri. Recharge la page."); render(); });
+  db.collection("aidees2").limit(500).onSnapshot(snap => {
+    ideas = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    renderList();
+  }, () => {});
+})();
+})();
+</script>

@@ -289,12 +289,10 @@ body.tv .ybig{font-size:clamp(160px,18vw,260px)}
 body.tv .camp h3{font-size:30px}body.tv .camp .who{font-size:22px}
 body.tv .rline .by{font-size:18px;width:130px}body.tv .lhead{padding-left:158px}
 /* Peps façon plateau télé (choix de Naim, 30/10) : rayons, compte à rebours, bandeau de manche, confettis, pastilles qui tombent */
-body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-conic-gradient(from 0deg at 50% 115%,rgba(255,255,255,.045) 0deg 7deg,transparent 7deg 14deg)}
 .app{position:relative;z-index:1}
 #fx{position:fixed;inset:0;z-index:40;pointer-events:none}
 .confetti{position:absolute;inset:0;width:100%;height:100%}
 .cd{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(90% 70% at 50% 50%,#1f3bd1,#14279a);transition:opacity .25s}
-.cd::before{content:"";position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.06) 0deg 8deg,transparent 8deg 16deg)}
 .cd.out{opacity:0}
 .cd span{position:relative;font-family:var(--display);font-weight:800;font-size:min(62vw,320px);line-height:1;color:var(--gold);text-shadow:0 12px 0 rgba(0,0,0,.25);animation:cdz .7s ease-out both}
 @keyframes cdz{0%{transform:scale(2.1);opacity:0}18%{opacity:1}40%{transform:scale(1)}88%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:0}}
@@ -348,10 +346,10 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=22"></script>
-<script src="qui.js?v=22"></script>
-<script src="aveux.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="cards.js?v=23"></script>
+<script src="qui.js?v=23"></script>
+<script src="aveux.js?v=23"></script>
+<script src="app.js?v=23"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

@@ -105,7 +105,8 @@ const room = () => admin(`return db.rooms[0]`);
         await J.click("[data-a=confirmGuess]");
         check(await until(J, async () => (await J.locator(".tile.wrong").count()) === 1, "tuile éteinte"), "une mauvaise réponse éteint la tuile");
         check((await room()).phase === "judging", "le devineur peut réessayer");
-        check(await hasText(J, "2 pts"), "il ne reste que 2 points à gagner");
+        check(await until(J, async () => (await J.locator(".gpts").innerText()).trim() === "+2", "+2"), "il ne reste que 2 points à gagner");
+        check(await J.locator(".gbanner").count() === 1, "le bandeau du devineur est là");
       }
       await J.click(`[data-a=guessPick][data-v="${r.options.indexOf(r.card)}"]`);
       await J.click("[data-a=confirmGuess]");

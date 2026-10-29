@@ -815,7 +815,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -1290,6 +1290,11 @@ function rankingGauge(){
   }).join("");
   return `<div class="gauge"><div class="gbar"></div><div class="gcol slots"><span class="gend hot">Le plus</span>${slots}<span class="gend cold">Le moins</span></div></div>`;
 }
+// Bandeau du devineur (choix B de Naim, 30/10) : pastille, prénom en entier, case dorée des points qui baisse à chaque erreur
+function guessBar(guesser){
+  const name = guesser ? "Tu devines" : esc(nameOf(room.judge).replace(/^Robot\s+/i, "")) + " devine";
+  return `<div class="gbanner">${av(room.judge, "", "ring")}<b>${name}</b><span class="gpts" aria-label="${triesLeft()} points à gagner">+${triesLeft()}</span></div>`;
+}
 const quiViews = {
   draw(){
     return `${head()}<div class="qcenter">${av(room.judge, "xl", "pulse")}<div class="big-name">${isJudge() ? "Tu devines" : esc(nameOf(room.judge)) + " devine"}</div>${wait("")}</div>${footer()}`;
@@ -1313,7 +1318,7 @@ const quiViews = {
   },
   judging(){
     const guesser = isJudge();
-    return `${head()}<div class="qtop" style="justify-content:center"><span class="rnd hotpill">${guesser ? "Tu devines" : esc(nameOf(room.judge)) + " devine"} · ${triesLeft()} pt${triesLeft() > 1 ? "s" : ""}</span></div>
+    return `${head()}${guessBar(guesser)}
       ${groupGauge()}
       ${tiles(guesser)}
       ${guesser ? `<button class="btn" data-a="confirmGuess" ${ui.sel == null ? "disabled" : ""}>Valider</button>` : reactBar()}
@@ -1350,7 +1355,7 @@ const quiTv = {
       <div class="waitrow">${w.map(p => `<span class="wv ${done.has(p.id) ? "ok" : ""}">${av(p.id, "lg")}</span>`).join("")}</div>
       <div class="big-name" style="font-size:44px">${esc(nameOf(room.judge))} devine ensuite</div></main>${tvSide()}</div>`;
   },
-  judging(){ return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain">${groupGauge(true)}${tiles(false)}</main>${tvSide()}</div>`; },
+  judging(){ return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${guessBar(false)}<div class="tv2">${groupGauge(true)}${tiles(false)}</div></main>${tvSide()}</div>`; },
   result(){
     const right = room.guess === room.card;
     return `${tvHead()}<div class="tvgrid"><main class="tv2 tvmain"><div class="stack">${quiCard()}<div class="big ${right ? "" : "miss"}">${right ? "Bien vu !" : "Raté !"}</div>${scoreChips(roundDelta())}${rankLines()}</div>${groupGauge(true)}</main>${tvSide()}</div>`;

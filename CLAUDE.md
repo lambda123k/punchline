@@ -70,6 +70,12 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Affirmations : `aveux.js` (`AVEUX_DECK`, `AVEUX_TYPES` préfixe `a` : asoiree, asexe, aex, ahonte, aboulot, adingue). 98 écrites par Claude le 27/10, triées par Naim (page https://claude.ai/artifact/81fRtNeU9Q77iLTQ9zt3Wv, collection `atri`, idées perso `aidees`) : 94 gardées, 4 jetées (vomi dans un taxi, incruster un mariage, pipi dans la rue, viré d'une boîte). Ici la forme « J'ai déjà… » est voulue. Notation nulle/top et page des notes partagées.
 - Test : `node tests/test-aveux.js` (serveur neuf).
 
+## Fluidité (29/10/2026, diagnostic demandé par Naim)
+- Réaction immédiate : `local(fn)` applique le changement chez soi avant la réponse du serveur (lancer, garder la carte, envoyer une réponse / un classement / un pari, retourner une carte, changer de phase) ; en cas d'erreur on revient en arrière. Attention à calculer les valeurs (ex. `round + 1`) avant `local`, sinon elles sont comptées deux fois. Bouton en cours : `data-busy` (enfoncé, pas grisé).
+- Rendu partiel : `render()` dessine l'écran en entier seulement quand `screenKey()` change (jeu, phase, manche) ; sinon `morph()` ne modifie que ce qui a changé, donc les animations `.pop` ne se rejouent plus à chaque événement.
+- Requêtes : `refresh()` ne charge que les tables du jeu en cours (réactions seulement au résultat / à la fin de Punchline). Rafraîchissement de secours toutes les 3 s seulement si le temps réel n'est pas connecté, sinon toutes les 15 s.
+- `sw.js` (service worker) : page réseau d'abord (cache si plus de 2,5 s), scripts / polices / libs en cache puis mis à jour en arrière-plan ; Supabase jamais en cache. Changer `CACHE` si la stratégie change. Les tests Playwright bloquent le service worker (`serviceWorkers: "block"`).
+
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
 - Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.

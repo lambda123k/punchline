@@ -11,7 +11,7 @@ let ok = 0, fail = 0;
 function check(c, msg){ if (c){ ok++; console.log("  ✓ " + msg); } else { fail++; console.log("  ✗ " + msg); } }
 
 async function phone(browser, name, opts){
-  const ctx = await browser.newContext(opts || { viewport: { width: 390, height: 844 }, hasTouch: true });
+  const ctx = await browser.newContext({ serviceWorkers: "block", ...(opts || { viewport: { width: 390, height: 844 }, hasTouch: true }) });
   await ctx.route(/fonts\.(googleapis|gstatic)/, r => r.abort());
   await ctx.route(/supabase-js/, r => r.fulfill({ body: CLIENT, contentType: "application/javascript" }));
   await ctx.route(/qrcode-generator/, r => r.fulfill({ body: QR, contentType: "application/javascript" }));

@@ -52,6 +52,7 @@ button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:15px 18p
 button:active{transform:translateY(2px)}
 button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+button[data-busy]:disabled{opacity:1;cursor:progress;transform:translateY(2px);filter:brightness(.9)}
 .btn{background:var(--hot);color:#fff;font-size:18px;width:100%;box-shadow:0 5px 0 var(--hot-deep)}
 .btn.gold{background:var(--gold);color:var(--ink);box-shadow:0 5px 0 #b88a10}
 .ghost{background:transparent;color:var(--card);border:2px solid rgba(255,247,232,.4);width:100%}
@@ -318,9 +319,10 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=20"></script>
-<script src="qui.js?v=20"></script>
-<script src="aveux.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="cards.js?v=21"></script>
+<script src="qui.js?v=21"></script>
+<script src="aveux.js?v=21"></script>
+<script src="app.js?v=21"></script>
+<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

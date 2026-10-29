@@ -33,7 +33,7 @@ const urlTv = (qs.get("tv") || "").replace(/\D/g, "").slice(0, 4);
 const urlCode = urlTv || (qs.get("c") || "").replace(/\D/g, "").slice(0, 4);
 
 let code = null, room = null, players = [], answers = [], votes = [], reacts = [], gameRatings = [], rankings = [], bets = [];
-let channel = null, pollTimer = null, pingTimer = null, refreshTimer = null, busy = false;
+let live = false, channel = null, pollTimer = null, pingTimer = null, refreshTimer = null, busy = false;
 let clock = 0; // décalage horloge serveur - horloge locale (ms)
 const savedTimer = store.get("timer");
 const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
@@ -135,24 +135,28 @@ function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeou
 async function refresh(){
   if (!code) return;
   const c = code;
+  // On ne charge que les tables du jeu en cours (avant : 7 requêtes à chaque fois)
+  const g = room && room.code === c ? room.game : null, none = Promise.resolve({ data: null, error: "skip" });
+  const pl = !g || g === "punchline";
   const [r, p, a, v, x, k, b] = await Promise.all([
     sb.from("rooms").select("*").eq("code", c).maybeSingle(),
     sb.from("players").select("*").eq("room", c).order("seat"),
-    sb.from("answers").select("*").eq("room", c),
-    sb.from("votes").select("*").eq("room", c),
-    sb.from("reactions").select("round,answer,player").eq("room", c),
-    sb.from("rankings").select("*").eq("room", c),
-    sb.from("aveux_bets").select("*").eq("room", c)
+    pl ? sb.from("answers").select("*").eq("room", c) : none,
+    pl ? sb.from("votes").select("*").eq("room", c) : none,
+    pl && (!room || ["result", "end"].includes(room.phase)) ? sb.from("reactions").select("round,answer,player").eq("room", c) : none,
+    !g || g === "qui" ? sb.from("rankings").select("*").eq("room", c) : none,
+    !g || g === "aveux" ? sb.from("aveux_bets").select("*").eq("room", c) : none
   ]);
   if (c !== code) return;
-  if (r.error || p.error || a.error){ return; } // réseau instable : le prochain passage réessaiera
+  if (!r.error && r.data && g && r.data.game !== g){ room = r.data; return refresh(); } // jeu changé : on recharge tout
+  if (r.error || p.error){ return; } // réseau instable : le prochain passage réessaiera
   if (!r.data){ leaveLocal("La partie n'existe plus."); return; }
   const prev = room;
-  room = r.data; players = p.data || []; answers = a.data || []; votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []); bets = b.error ? bets : (b.data || []);
+  room = r.data; players = p.data || []; answers = a.error ? answers : (a.data || []); votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []); bets = b.error ? bets : (b.data || []);
   if (!ui.tv && !byId(me.id)){ leaveLocal("Tu n'es plus dans la partie."); return; }
   if (!prev || prev.round !== room.round || prev.phase !== room.phase){
     ui.sel = null; ui.confirmLeave = false;
-    if (!prev || prev.round !== room.round){ ui.editing = false; ui.draft = ""; ui.rank = []; ui.ayes = null; ui.abet = null; }
+    if (!prev || prev.round !== room.round) resetRoundUi();
   }
   if (prev) soundsFor(prev, room);
   if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
@@ -160,6 +164,7 @@ async function refresh(){
   autoActions();
 }
 
+function resetRoundUi(){ ui.editing = false; ui.draft = ""; ui.rank = []; ui.ayes = null; ui.abet = null; ui.sel = null; }
 async function loadGameRatings(){
   const c = code;
   let q = sb.from("card_ratings").select("player,updated_at").eq("room", c);
@@ -349,7 +354,10 @@ async function autoActions(){
   });
 }
 
+// Affichage immédiat : on applique le changement chez soi, le serveur confirme (ou le prochain rechargement corrige)
+function local(fn){ try { fn(); } catch(e){} render(); }
 async function setPhase(phase, from){
+  if (room && (!from || room.phase === from)) local(() => { room.phase = phase; if (phase === "judging") room.revealed = 0; if (phase !== "writing") room.deadline = null; });
   const q = sb.from("rooms").update({ phase, updated_at: new Date().toISOString() }).eq("code", code).eq("round", room.round);
   const { error } = from ? await q.eq("phase", from) : await q;
   if (error) toast("Connexion perdue, réessaie.");
@@ -401,8 +409,10 @@ function subscribe(c){
     .on("postgres_changes", { event: "*", schema: "public", table: "rankings", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "aveux_bets", filter: "room=eq." + c }, scheduleRefresh)
     .on("broadcast", { event: "react" }, msg => { const p = msg && msg.payload; if (p) showReaction(p.e, p.n); })
-    .subscribe();
-  pollTimer = setInterval(refresh, 3000); // filet de sécurité si le temps réel décroche
+    .subscribe(st => { live = st === "SUBSCRIBED"; });
+  // filet de sécurité si le temps réel décroche : toutes les 3 s sans temps réel, toutes les 15 s sinon
+  let n = 0; live = false;
+  pollTimer = setInterval(() => { n++; if (!live || n % 5 === 0) refresh(); }, 3000);
   pingTimer = setInterval(ping, PING_MS);
 }
 function unsubscribe(){
@@ -464,6 +474,7 @@ async function commitCard(idx){
   let used = (room.used || []).filter(i => i < C.length);
   if (used.length >= C.length - 1) used = [];
   used.push(idx);
+  local(() => { room.card = C[idx]; room.phase = "writing"; }); sfx.card();
   busy = true;
   const { error } = await sb.from("rooms").update({ card: C[idx], used, phase: "writing", updated_at: new Date().toISOString() })
     .eq("code", code).eq("round", room.round).in("phase", ["draw", "writing"]);
@@ -512,20 +523,24 @@ const betMax = () => Math.max(1, rankPool().length);
 const curBet = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet, betMax());
 async function sendAveu(){
   if (!room || room.phase !== "writing" || ui.ayes == null || myBet()) return;
+  const mine = { room: code, round: room.round, player: me.id, bet: curBet(), local: true };
+  local(() => { bets = bets.concat([mine]); });
   busy = true;
-  const { error } = await sb.rpc("aveu_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: curBet() });
+  const { error } = await sb.rpc("aveu_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: mine.bet });
   busy = false;
-  if (error){ toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
+  if (error){ bets = bets.filter(b => b !== mine); render(); toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
   buzz(20); scheduleRefresh();
 }
 async function sendRanking(order){
   if (!room || room.phase !== "writing" || !order.length) return;
   const pool = rankPool().map(p => p.id);
   const full = order.filter(id => pool.includes(id)).concat(pool.filter(id => !order.includes(id)));
+  const r0 = room.round, prev = rankings;
+  local(() => { rankings = rankings.filter(k => !(k.round === r0 && k.player === me.id)).concat([{ room: code, round: r0, player: me.id, ranking: full }]); ui.editing = false; });
   busy = true;
   const { error } = await sb.from("rankings").upsert({ room: code, round: room.round, player: me.id, ranking: full }, { onConflict: "room,round,player" });
   busy = false;
-  if (error){ toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
+  if (error){ rankings = prev; render(); toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
   ui.editing = false;
   scheduleRefresh();
 }
@@ -620,7 +635,9 @@ const actions = {
   },
   async flip(){
     if (!room || room.phase !== "judging") return;
-    await sb.from("rooms").update({ revealed: room.revealed + 1 }).eq("code", code).eq("phase", "judging").eq("revealed", room.revealed);
+    const n = room.revealed || 0;
+    local(() => { room.revealed = n + 1; }); sfx.flip();
+    await sb.from("rooms").update({ revealed: n + 1 }).eq("code", code).eq("phase", "judging").eq("revealed", n);
     scheduleRefresh();
   },
   async share(){
@@ -641,9 +658,10 @@ const actions = {
   async start(){
     const pool = players.filter(present);
     if (pool.length < MIN_PLAYERS) return;
-    const j = pickOne(pool).id;
+    const j = pickOne(pool).id, nr = room.round + 1;
+    local(() => { Object.assign(room, { phase: "draw", round: nr, judge: j, card: null, winner: null, fav: null }); resetRoundUi(); });
     busy = true;
-    await sb.from("rooms").update({ phase: "draw", round: room.round + 1, start_round: room.round + 1, started_at: new Date().toISOString(), judge: j, card: null, winner: null, fav: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
+    await sb.from("rooms").update({ phase: "draw", round: nr, start_round: nr, started_at: new Date().toISOString(), judge: j, card: null, winner: null, fav: null, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
     busy = false; scheduleRefresh();
   },
   // Le juge voit d'abord la carte seul sur son téléphone, peut en piocher une autre, puis la garde
@@ -667,10 +685,12 @@ const actions = {
   async send(){
     const t = cleanAnswer(ui.draft);
     if (!t) return;
+    const r0 = room.round, prev = answers, keep = ui.draft;
+    local(() => { answers = answers.filter(a => !(a.round === r0 && a.player === me.id)).concat([{ id: "local", room: code, round: r0, player: me.id, text: t.slice(0, 120) }]); ui.editing = false; ui.draft = ""; });
     busy = true;
     const { error } = await sb.from("answers").upsert({ room: code, round: room.round, player: me.id, text: t.slice(0, 120) }, { onConflict: "room,round,player" });
     busy = false;
-    if (error){ toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
+    if (error){ answers = prev; ui.draft = keep; render(); toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
     ui.editing = false; ui.draft = "";
     scheduleRefresh();
   },
@@ -1458,7 +1478,30 @@ function qrSvg(url){
 }
 
 /* ---------- rendu ---------- */
-let lastHtml = "";
+let lastHtml = "", lastKey = "";
+// Met à jour le DOM en ne touchant que ce qui change : les animations ne se rejouent plus à chaque événement
+function syncAttrs(a, b){
+  for (const at of [...a.attributes]) if (!b.hasAttribute(at.name)) a.removeAttribute(at.name);
+  for (const at of [...b.attributes]) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+}
+function morph(a, b){
+  const an = [...a.childNodes], bn = [...b.childNodes];
+  for (let i = 0; i < bn.length; i++){
+    const x = an[i], y = bn[i];
+    if (!x){ a.appendChild(y); continue; }
+    if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName){ a.replaceChild(y, x); continue; }
+    if (x.nodeType === 3 || x.nodeType === 8){ if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue; }
+    if (x.nodeType !== 1) continue;
+    syncAttrs(x, y);
+    if (x.tagName === "TEXTAREA") continue;
+    morph(x, y);
+  }
+  for (let i = an.length - 1; i >= bn.length; i--) a.removeChild(an[i]);
+}
+function screenKey(){
+  if (!room) return ["home", ui.page, ui.game, !!ui.menu, !!ui.tvAsk, !!ui.creating].join("|");
+  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round].join("|");
+}
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
@@ -1466,7 +1509,9 @@ function render(){
   else { const v = !room ? "home" : room.phase; html = ((isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
-  $("#app").innerHTML = html;
+  const key = screenKey(), app = $("#app");
+  if (key !== lastKey){ app.innerHTML = html; lastKey = key; }  // nouvel écran : on le dessine en entier (animations d'entrée)
+  else { const t = document.createElement("template"); t.innerHTML = html; morph(app, t.content); }
   lastHtml = html;
   const ans = $("#ans");
   if (ans){ ans.value = ui.draft; updatePreview(); }
@@ -1488,8 +1533,9 @@ document.addEventListener("click", async ev => {
   const fn = actions[b.dataset.a];
   if (!fn) return;
   unlockAudio();
-  b.disabled = true;
-  try { await fn(b.dataset.v); } finally { if (document.body.contains(b)) b.disabled = false; }
+  b.disabled = true; b.dataset.busy = "1"; buzz(8);
+  try { await fn(b.dataset.v); }
+  finally { if (document.body.contains(b)){ b.disabled = false; delete b.dataset.busy; } lastHtml = ""; render(); }
 });
 document.addEventListener("input", ev => {
   const t = ev.target;

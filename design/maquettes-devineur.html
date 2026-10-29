@@ -25,7 +25,7 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-d
 .controls .bad{background:var(--hot);color:#fff;box-shadow:0 4px 0 var(--hot-deep)}
 .controls .reset{background:transparent;color:var(--card);border:2px solid rgba(255,247,232,.4)}
 .controls button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px}
 .col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .colhead{display:flex;align-items:center;gap:12px}
 .letter{font-family:var(--display);font-weight:800;font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
@@ -46,34 +46,31 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-d
 .tile{border-radius:14px;padding:10px;min-height:66px;display:flex;align-items:flex-end;font-weight:800;font-size:13px;line-height:1.2;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.25);transition:opacity .2s}
 .tile.off{opacity:.28;text-decoration:line-through;filter:grayscale(1)}
 
-/* A : grosse pastille + pièces */
-.A{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.1);border-radius:20px;padding:12px 14px}
-.A .av{--s:64px;box-shadow:0 0 0 4px var(--gold)}
-.A .who{flex:1;min-width:0}
-.A .who b{display:block;font-family:var(--display);font-size:28px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.A .who small{font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
-.coins{display:flex;gap:5px;margin-top:8px}
-.coin{width:26px;height:26px;border-radius:50%;background:var(--gold);box-shadow:inset 0 -3px 0 var(--gold-deep);transition:all .3s}
-.coin.gone{background:rgba(255,255,255,.15);box-shadow:none;transform:scale(.8)}
-
-/* B : bandeau penché + médaille */
-.B{position:relative;margin:0 -14px;background:var(--hot);box-shadow:0 5px 0 var(--hot-deep);transform:rotate(-2deg);display:flex;align-items:center;gap:12px;padding:10px 18px}
-.B .av{--s:52px;box-shadow:0 0 0 3px #fff}
-.B b{flex:1;min-width:0;font-family:var(--display);font-size:24px;line-height:1.05;color:#fff;text-wrap:balance}
-.medal{width:64px;height:64px;border-radius:50%;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;line-height:.9;text-align:center;box-shadow:0 4px 0 var(--gold-deep),0 0 0 4px #fff;transform:rotate(2deg);transition:transform .3s}
-.medal span{display:block;font-size:30px}
-.medal small{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+/* Ancien : petite pastille jaune centrée */
+.OLD{display:flex;justify-content:center}
+.OLD span{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:6px 10px;border-radius:999px}
+/* A : barre + pièces */
+.A{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 14px 6px 6px}
+.A .av{--s:36px;box-shadow:0 0 0 3px var(--gold)}
+.A b{flex:1;min-width:0;font-family:var(--display);font-size:19px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.A b em{font-style:normal;color:var(--gold)}
+.coins{display:flex;gap:4px;flex-shrink:0}
+.coin{width:18px;height:18px;border-radius:50%;background:var(--gold);box-shadow:inset 0 -2px 0 var(--gold-deep);transition:all .3s}
+.coin.gone{background:rgba(255,255,255,.18);box-shadow:none;transform:scale(.8)}
+/* B : bandeau orange droit + pastille de points */
+.B{display:flex;align-items:center;gap:10px;background:var(--hot);border-radius:16px;padding:6px 6px 6px 6px;box-shadow:0 4px 0 var(--hot-deep)}
+.B .av{--s:36px;box-shadow:0 0 0 2px #fff}
+.B b{flex:1;min-width:0;font-family:var(--display);font-size:19px;line-height:1.1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.medal{flex-shrink:0;min-width:52px;height:36px;border-radius:12px;background:var(--gold);color:var(--ink);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:20px;box-shadow:0 3px 0 var(--gold-deep)}
 .medal.drop{animation:md .5s}
-@keyframes md{30%{transform:rotate(2deg) scale(1.25)}}
-
-/* C : échelle de points */
-.C{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
-.C .row{display:flex;align-items:center;gap:10px}
-.C .av{--s:48px}
-.C b{font-family:var(--display);font-size:30px;line-height:1}
-.ladder{display:flex;gap:6px;width:100%}
-.step{flex:1;border-radius:12px;padding:8px 0;font-family:var(--display);font-weight:800;font-size:22px;background:rgba(255,255,255,.1);color:rgba(255,247,232,.45);transition:all .3s}
-.step.now{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 var(--gold-deep);transform:scale(1.08)}
+@keyframes md{30%{transform:scale(1.2)}}
+/* C : ligne + mini échelle */
+.C{display:flex;align-items:center;gap:10px}
+.C .av{--s:36px}
+.C b{flex:1;min-width:0;font-family:var(--display);font-size:19px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ladder{display:flex;gap:4px;flex-shrink:0}
+.step{border-radius:9px;padding:4px 7px;font-family:var(--display);font-weight:800;font-size:14px;background:rgba(255,255,255,.1);color:rgba(255,247,232,.45);transition:all .3s}
+.step.now{background:var(--gold);color:var(--ink);box-shadow:0 3px 0 var(--gold-deep)}
 .step.past{text-decoration:line-through;opacity:.4}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -81,7 +78,7 @@ body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-d
 <div class="wrap">
 <header class="top">
   <h1>Qui <span>devine</span>, et pour combien</h1>
-  <p>L'écran où le devineur cherche la question. Seul le haut change. Touche « Mauvaise réponse » pour voir les points baisser à chaque erreur.</p>
+  <p>Version compacte, sur une seule ligne. L'écran où le devineur cherche la question, seul le haut change. Touche « Mauvaise réponse » pour voir les points baisser à chaque erreur.</p>
 </header>
 <div class="controls"><button class="bad" id="bad">Mauvaise réponse</button><button class="reset" id="reset">Recommencer</button></div>
 <div class="cols" id="cols"></div>
@@ -95,19 +92,22 @@ let wrong = 0, prev = 0;
 const bottom = () => `<div class="gauge"><div class="gbar"></div><div class="gcol">${[P[2], P[1], P[3], P[0]].map((p, i) => `<div class="gm">${av(p, i ? 28 : 40)}<span>${p[1]}</span></div>`).join("")}</div></div>
   <div class="tiles">${OPTS.map((o, i) => `<div class="tile ${i < wrong ? "off" : ""}" style="background:${o[0]}">${o[1]}</div>`).join("")}</div>`;
 const pts = () => Math.max(0, 3 - wrong);
+const short = n => n.replace(/^Robot /, "");
 const HEAD = {
-  A: () => `<div class="A">${av(P[0])}<div class="who"><small>devine</small><b>${P[0][1]}</b><div class="coins">${[0, 1, 2].map(i => `<span class="coin ${i >= pts() ? "gone" : ""}"></span>`).join("")}</div></div></div>`,
-  B: () => `<div class="B">${av(P[0])}<b>${P[0][1]} devine</b><span class="medal ${wrong !== prev ? "drop" : ""}"><span>+${pts()}</span><small>pts</small></span></div>`,
-  C: () => `<div class="C"><div class="row">${av(P[0])}<b>${P[0][1]} devine</b></div><div class="ladder">${[3, 2, 1].map((v, i) => `<span class="step ${i === wrong ? "now" : i < wrong ? "past" : ""}">+${v}</span>`).join("")}</div></div>`
+  OLD: () => `<div class="OLD"><span>${P[0][1]} devine · ${pts()} pt${pts() > 1 ? "s" : ""}</span></div>`,
+  A: () => `<div class="A">${av(P[0])}<b>${short(P[0][1])} <em>devine</em></b><span class="coins">${[0, 1, 2].map(i => `<span class="coin ${i >= pts() ? "gone" : ""}"></span>`).join("")}</span></div>`,
+  B: () => `<div class="B">${av(P[0])}<b>${short(P[0][1])} devine</b><span class="medal ${wrong !== prev ? "drop" : ""}">+${pts()}</span></div>`,
+  C: () => `<div class="C">${av(P[0])}<b>${short(P[0][1])} devine</b><span class="ladder">${[3, 2, 1].map((v, i) => `<span class="step ${i === wrong ? "now" : i < wrong ? "past" : ""}">+${v}</span>`).join("")}</span></div>`
 };
 const INFO = {
-  A: ["Grosse pastille + pièces", "Le devineur en grand avec un anneau doré ; 3 pièces d'or qui s'éteignent à chaque erreur"],
-  B: ["Bandeau + médaille", "Le bandeau orange penché des autres écrans, avec une médaille dorée « +3 » qui baisse à chaque erreur"],
-  C: ["Échelle de points", "Le prénom en grand, et dessous +3 · +2 · +1 : la case en or montre ce qu'on peut encore gagner"]
+  OLD: ["Avant", "La petite pastille actuelle, pour comparer"],
+  A: ["Barre + pièces", "Pastille du devineur, prénom, et 3 petites pièces d'or qui s'éteignent à chaque erreur"],
+  B: ["Bandeau orange + points", "Une barre orange avec le prénom et une case dorée « +3 » qui baisse à chaque erreur"],
+  C: ["Ligne + mini échelle", "Sans fond, le prénom, et à droite +3 · +2 · +1 avec la case en or sur ce qu'on peut gagner"]
 };
 function draw(){
-  document.getElementById("cols").innerHTML = ["A", "B", "C"].map(k => `<div class="col">
-    <div class="colhead"><span class="letter">${k}</span><div><b>${INFO[k][0]}</b><small>${INFO[k][1]}</small></div></div>
+  document.getElementById("cols").innerHTML = ["OLD", "A", "B", "C"].map(k => `<div class="col">
+    <div class="colhead"><span class="letter" ${k === "OLD" ? 'style="background:rgba(255,255,255,.2);color:var(--card)"' : ""}>${k === "OLD" ? "·" : k}</span><div><b>${INFO[k][0]}</b><small>${INFO[k][1]}</small></div></div>
     <div class="phone"><div class="bar"><span class="logo">Le <span>Verdict</span></span><span class="tag">Manche 2</span></div>${HEAD[k]()}${bottom()}</div></div>`).join("");
   prev = wrong;
 }

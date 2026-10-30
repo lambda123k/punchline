@@ -628,9 +628,10 @@ const actions = {
     if (data === "name_taken"){ ui.err = "Ce prénom est déjà pris dans cette partie. Ajoute une initiale."; render(); return; }
     await enterRoom(c);
   },
+  swap(){ ui.swap = !ui.swap; },
   async game(v){
     if (!room || !isLeader() || room.phase !== "lobby" || !GAME_IDS.includes(v)) return;
-    room.game = v; render();
+    ui.swap = false; room.game = v; try { localStorage.setItem("pl-game", v); } catch (e) {} ui.game = v; render();
     await sb.from("rooms").update({ game: v }).eq("code", code).eq("phase", "lobby");
     scheduleRefresh();
   },
@@ -814,12 +815,12 @@ function head(){
   const snd = room ? sndBtn() : `<button class="snd" data-a="menu" aria-label="Paramètres" title="Paramètres">${ICON.gear}</button>`;
   const g = room ? room.game : ui.game;
   const back = !room && ui.game && ui.page === "home" && !ui.menu && !ui.tvAsk ? `<button class="snd back" data-a="chooseGame" aria-label="Changer de jeu" title="Changer de jeu">${ICON.back}</button>` : "";
-  return `<header><div class="hl">${back}${g || room ? gameLogo(g) : APP_NAME ? `<div class="logo">Da<span>wa</span></div>` : "<span></span>"}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
+  return `<header><div class="hl">${back}${room && room.phase === "lobby" ? `<div class="logo">Da<span>wa</span></div>` : g || room ? gameLogo(g) : APP_NAME ? `<div class="logo">Da<span>wa</span></div>` : "<span></span>"}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${snd}</div></header>`;
 }
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 27;
+const APP_VERSION = 28;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -1074,7 +1075,14 @@ const views = {
 
   lobby(){
     const n = players.length, missing = Math.max(0, MIN_PLAYERS - players.filter(present).length);
+    const lead = isLeader();
     return `${head()}
+    <div class="stack center lobbygame">
+      <div class="biglogo">${gameLogo(room.game)}</div>
+      ${lead ? (ui.swap
+        ? `<div class="nextgames">${GAMES.filter(g => g[0] !== room.game).map(g => `<button class="mg" data-a="game" data-v="${g[0]}">${gameLogo(g[0])}</button>`).join("")}</div>`
+        : `<button class="swap" data-a="swap">Changer de jeu</button>`) : ""}
+    </div>
     <div class="stack center">
       <div class="codebig">${esc(code)}</div>
       <div class="qr" id="qr" aria-label="QR code pour rejoindre la partie">${qrSvg(joinUrl(code))}</div>

@@ -125,7 +125,16 @@ const room = () => admin(`return db.rooms[0]`);
   await A.click(".mg[data-v=qui]");
   check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "qui"; }, "lobby verdict"), "passer au Verdict : même salle, salle d'attente");
   check(await until(A, async () => (await admin("return db.players.map(p => p.score)")).every(x => x === 0), "scores"), "scores remis à zéro");
-  check(await until(B, () => B.locator(".logo").first().innerText().then(t => /Verdict/.test(t)), "logo chez B"), "les autres joueurs passent au Verdict");
+  check(await until(B, () => B.locator(".biglogo").innerText().then(t => /Verdict/.test(t)), "logo chez B"), "les autres joueurs passent au Verdict");
+
+  console.log("Changer de jeu dans la salle d'attente");
+  check(await B.locator("[data-a=swap]").count() === 0, "seul l'hôte voit « Changer de jeu »");
+  await A.click("[data-a=swap]");
+  await until(A, () => A.locator(".mg[data-a=game]").count().then(n => n === 2), "choix ouvert");
+  await A.screenshot({ path: S + "/attente-changer-jeu.png", fullPage: true });
+  await A.click(".mg[data-v=punchline]");
+  check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "punchline"; }, "punchline"), "l'hôte passe à Punchline depuis la salle d'attente");
+  check(await until(C, () => C.locator(".biglogo").innerText().then(t => /Punch/.test(t)), "logo chez C"), "le gros logo change chez les autres");
 
   console.log(`\n${ok} réussis, ${fail} ratés`);
   if (errors.length) console.log("Erreurs JS :\n" + [...new Set(errors)].join("\n"));

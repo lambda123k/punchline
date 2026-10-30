@@ -501,6 +501,11 @@ function leaveLocal(msg){
 }
 
 /* ---------- pioche pondérée par les notes ---------- */
+/* Soft / Trash (tri validé par Naim le 30/10) : en mode « soft », ces types entiers et ces cartes sont écartés */
+const TRASH_TYPES = new Set(["couple", "corps", "qcouple", "asexe", "aici", "adingue"]);
+const TRASH_CARDS = new Set(["Je me suis réveillé chez un inconnu avec ____.","____, ma passion depuis que je suis célibataire.","____ dans un sachet congélation, ça passe.","Qui de nous est le plus susceptible d'être acteur porno ?","Qui de nous est le plus susceptible d'être un détraqué sexuel ?","Qui de nous est le plus susceptible d'être zoophile en cachette ?","Qui de nous est le plus susceptible d'avoir un compte OnlyFans secret ?","Qui de nous est le plus susceptible d'avoir un donjon SM dans sa cave ?","Qui de nous est le plus susceptible de coucher avec son patron ?","Qui de nous est le plus susceptible de coucher avec l'ex d'un pote ?","Qui de nous est le plus susceptible de tromper son copain ou sa copine ?","Qui de nous est le plus susceptible de se faire payer pour coucher ?","Qui de nous est le plus susceptible de vendre ses culottes sur internet ?","Qui de nous est le plus susceptible d'envoyer un nude au mauvais destinataire ?","Qui de nous est le plus susceptible de se faire surprendre en pleine branlette ?","Qui de nous est le plus susceptible de faire l'amour dans les toilettes d'un bar ?","Qui de nous est le plus susceptible de cacher une poupée gonflable sous son lit ?","Qui de nous est le plus susceptible de faire de l'échangisme ?","Qui de nous est le plus susceptible de dépasser les 100 partenaires ?","Qui de nous est le plus susceptible d'avoir un plan cul avec son voisin ?","Qui de nous est le plus susceptible de se faire tatouer le prénom d'un coup d'un soir ?","Qui de nous est le plus susceptible de se faire arrêter tout nu dans la rue ?","Qui de nous est le plus susceptible de coucher avec une star ?","J'ai déjà pété pendant un moment intime","J'ai déjà recouché avec un ex","J'ai déjà couché avec l'ex d'un pote","J'ai déjà menti sur mon nombre de partenaires","J'ai déjà dit je t'aime juste pour coucher","J'ai déjà dormi chez un inconnu après une soirée","J'ai déjà été trop bourré pour coucher"]);
+const isTrash = t => TRASH_TYPES.has(cardType(t)) || TRASH_CARDS.has(t);
+const okCard = t => !room || room.mode !== "soft" || !isTrash(t);
 async function cardWeights(){
   try {
     const { data, error } = await sb.from("card_scores").select("card,up,down");
@@ -519,7 +524,7 @@ function weightedPick(list, w, deck){
 }
 
 async function pickCard(skip){
-  const C = window.CARDS, pool = C.map((_, i) => i);
+  const C = window.CARDS, all = C.map((_, i) => i), soft = all.filter(i => okCard(C[i])), pool = soft.length ? soft : all;
   const used = (room.used || []).filter(i => i < C.length);
   let free = pool.filter(i => !used.includes(i) && !skip.includes(i) && C[i] !== room.card);
   if (!free.length) free = pool.filter(i => !skip.includes(i) && C[i] !== room.card);
@@ -546,9 +551,11 @@ async function quiDraw(){
   if (Q.length < 4) return;
   let used = (room.qused || []).filter(i => i < Q.length);
   if (used.length >= Q.length - 4) used = [];
-  const free = Q.map((_, i) => i).filter(i => !used.includes(i));
+  const ok = Q.map((_, i) => i).filter(i => okCard(Q[i])), base = ok.length >= 4 ? ok : Q.map((_, i) => i);
+  let free = base.filter(i => !used.includes(i));
+  if (!free.length){ used = []; free = base; }
   const idx = weightedPick(free, await cardWeights(), Q), q = Q[idx];
-  const opts = [q], shuffled = Q.map((_, i) => i).filter(i => i !== idx).sort(() => Math.random() - .5);
+  const opts = [q], shuffled = base.filter(i => i !== idx).sort(() => Math.random() - .5);
   for (const i of shuffled){ if (opts.length < 4 && !opts.some(o => T[o] === T[Q[i]])) opts.push(Q[i]); }
   for (const i of shuffled){ if (opts.length < 4 && !opts.includes(Q[i])) opts.push(Q[i]); }
   opts.sort(() => Math.random() - .5);
@@ -566,7 +573,9 @@ async function aveuxDraw(){
   if (!A.length) return;
   let used = (room.aused || []).filter(i => i < A.length);
   if (used.length >= A.length - 1) used = [];
-  const free = A.map((_, i) => i).filter(i => !used.includes(i));
+  const ok = A.map((_, i) => i).filter(i => okCard(A[i])), base = ok.length ? ok : A.map((_, i) => i);
+  let free = base.filter(i => !used.includes(i));
+  if (!free.length){ used = []; free = base; }
   const idx = weightedPick(free, await cardWeights(), A);
   used.push(idx);
   busy = true;
@@ -823,7 +832,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 29;
+const APP_VERSION = 30;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [

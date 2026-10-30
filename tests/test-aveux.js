@@ -110,8 +110,9 @@ const room = () => admin(`return db.rooms[0]`);
   }
 
   check(await until(D, async () => (await D.locator("[data-a=ayes]").count()) === 0 && !(await txt(D)).includes("prochaine manche"), "Zoé voit le résultat"), "Zoé voit le résultat de la manche");
-  console.log("Temps limité : la réponse part toute seule");
+  console.log("Temps limité : la réponse part toute seule (mode soft)");
   await D.waitForSelector("[data-a=next]", { state: "detached" }).catch(() => {});
+  await admin(`db.rooms[0].mode = "soft"`);
   await A.click("[data-a=next]");
   await until(A, async () => (await room()).phase === "writing", "manche 3");
   await admin(`const r=db.rooms[0]; r.timer=3; r.deadline=new Date(Date.now()+3000).toISOString()`);
@@ -119,6 +120,12 @@ const room = () => admin(`return db.rooms[0]`);
   await A.click(`[data-a=ayes][data-v="1"]`);
   check(await until(A, async () => (await room()).phase === "result", "révélation au bout du temps", 12000), "à la fin du temps, le pari part et on révèle");
   check(await admin(`return db.aveux_bets.filter(b=>b.round===3).some(b=>b.player===db.players[0].id)`), "le pari de Naim est parti seul");
+  const c3 = (await room()).card;
+  const APP = require("fs").readFileSync(__dirname + "/../app.js", "utf8");
+  const TT = new Set(JSON.parse(APP.match(/TRASH_TYPES = new Set\((\[.*?\])\)/)[1])), TC = new Set(JSON.parse(APP.match(/TRASH_CARDS = new Set\((\[.*?\])\)/s)[1]));
+  const atype = await A.evaluate(t => (window.AVEUX_TYPE || {})[t], c3);
+  check(!TT.has(atype) && !TC.has(c3), "en soft, l'affirmation tirée n'est pas trash (" + c3 + ")");
+  await admin(`db.rooms[0].mode = "mix"`);
 
   console.log("Fin et rejouer");
   await admin(`db.rooms[0].target = 1; db.players[0].score = Math.max(1, db.players[0].score)`);

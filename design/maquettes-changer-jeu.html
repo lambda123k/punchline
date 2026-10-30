@@ -1,0 +1,191 @@
+<title>Dawa changer de jeu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f;
+  --hot:#ff5a36; --hot-deep:#b8381d; --gold:#ffc83d; --yes:#2fbf71; --yes-deep:#1d7d49; --cold:#6fb7ff;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--card);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);letter-spacing:-.02em;margin:0}
+.top h1 span{color:var(--gold)}
+.top p{margin:6px 0 0;opacity:.8;font-size:14px}
+h2{font-family:var(--display);font-weight:800;font-size:26px;margin:0;letter-spacing:-.02em}
+h2 span{color:var(--gold)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.colhead{display:flex;align-items:center;gap:12px}
+.letter{font-family:var(--display);font-weight:800;font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
+.colhead b{font-family:var(--display);font-size:19px;display:block;line-height:1.1}
+.colhead small{opacity:.75;font-size:13px}
+.phone{background:rgba(9,18,90,.55);border:2px solid rgba(255,247,232,.14);border-radius:28px;padding:16px 14px 18px;display:flex;flex-direction:column;gap:14px}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px}
+.acard{background:var(--card);color:var(--ink);border-radius:18px;padding:14px 16px;font-family:var(--display);font-weight:800;font-size:18px;line-height:1.15;text-align:center;text-wrap:balance;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.qcard{background:var(--ink);border-radius:18px;padding:14px 16px;font-family:var(--display);font-weight:800;font-size:19px;line-height:1.15;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.qcard small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.55;margin-bottom:4px}
+.ybig{font-family:var(--display);font-weight:800;font-size:84px;line-height:.9;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
+.ybig small{display:block;font-size:18px;color:var(--card);opacity:.85;margin-top:4px}
+.av{--s:34px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s)*.46);color:var(--ink);background:var(--c);flex-shrink:0}
+.av.xs{--s:22px}.av.sm{--s:28px}.av.lg{--s:46px}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border-radius:999px;padding:4px 10px 4px 4px;font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums}
+.chip i{font-style:normal;font-family:var(--body);font-weight:800;font-size:12px;background:var(--gold);color:var(--ink);border-radius:999px;padding:1px 6px}
+button{font:inherit;border:0;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.replay{background:transparent;border:2px solid rgba(255,247,232,.35);border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;align-self:flex-start}
+.note{font-size:13px;opacity:.8;border-left:3px solid var(--gold);padding-left:10px}
+.camps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.camp{border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:90px}
+.camp.y{background:rgba(47,191,113,.2);border:2px solid var(--yes)}
+.camp.n{background:rgba(255,90,54,.16);border:2px solid var(--hot)}
+.camp h3{margin:0;font-family:var(--display);font-size:20px;font-weight:800}
+.camp.y h3{color:var(--yes)}.camp.n h3{color:var(--hot)}
+.camp .who{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.flips{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.fl{display:flex;flex-direction:column;align-items:center;gap:5px;width:54px}
+.fl .face{width:54px;height:66px;border-radius:12px;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:15px;background:repeating-linear-gradient(135deg,var(--ink) 0 8px,#221e19 8px 16px);transition:transform .3s}
+.fl .face.y{background:var(--yes);color:#04230f}
+.fl .face.n{background:var(--hot);color:#fff}
+.fl span{font-size:12px;font-weight:700}
+@media (prefers-reduced-motion:no-preference){.fl .face.pop{animation:fp .35s}@keyframes fp{0%{transform:rotateY(90deg)}100%{transform:none}}}
+.chip.y{box-shadow:inset 0 0 0 2px var(--yes)}
+.chip.n{box-shadow:inset 0 0 0 2px var(--hot)}
+.chip .yn{font-family:var(--body);font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:999px;padding:1px 6px}
+.chip.y .yn{background:var(--yes);color:#04230f}.chip.n .yn{background:var(--hot);color:#fff}
+.chip .bet{font-family:var(--body);font-size:12px;opacity:.75}
+.gauge{display:flex;gap:10px}
+.gbar{width:12px;border-radius:999px;background:linear-gradient(var(--hot),var(--gold) 45%,var(--cold));flex-shrink:0}
+.gcol{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.gend{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.gend.hot{color:var(--hot)}.gend.cold{color:var(--cold)}
+.gm{display:flex;align-items:center;gap:8px;font-weight:800}
+.gm .vs{margin-left:auto;display:flex;gap:3px}
+.lines{display:flex;flex-direction:column;gap:6px}
+.line{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 8px}
+.line .by{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;width:70px;flex-shrink:0;overflow:hidden}
+.line .seq{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.line .seq .arr{opacity:.4;font-size:11px}
+.lhead{display:flex;justify-content:space-between;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:0 8px 0 86px}
+.pick{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.pick button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;padding:2px;font-size:11px;font-weight:700;opacity:.55;border-radius:12px}
+.pick button.on{opacity:1}
+.pick button.on .av{box-shadow:0 0 0 3px var(--card)}
+.pick .grp{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--card);color:var(--ink);font-family:var(--display);font-weight:800;font-size:12px}
+.who-title{text-align:center;font-family:var(--display);font-weight:800;font-size:17px}
+.minis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mini{background:rgba(255,255,255,.07);border-radius:14px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.mini .head{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;padding-bottom:4px;border-bottom:1px solid rgba(255,247,232,.2);width:100%}
+.mini .stk{display:flex;flex-direction:column;gap:4px;align-items:center;position:relative;padding-left:10px}
+.mini .stk::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:5px;border-radius:999px;background:linear-gradient(var(--hot),var(--gold) 45%,var(--cold))}
+.mini.match{outline:2px solid var(--gold)}
+.mini .plus{position:absolute;top:6px;right:6px;font-family:var(--display);font-weight:800;font-size:12px;background:var(--gold);color:var(--ink);border-radius:999px;padding:0 6px}
+.wb{align-self:center;background:var(--gold);color:var(--ink);font-family:var(--display);font-weight:800;font-size:20px;padding:6px 16px;transform:rotate(-3deg);box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.champ{display:flex;flex-direction:column;align-items:center;gap:6px}
+.champ b{font-family:var(--display);font-size:22px}
+.btn{background:var(--hot);color:#fff;border-radius:16px;padding:14px;font-family:var(--display);font-weight:800;font-size:18px;box-shadow:0 5px 0 var(--hot-deep);width:100%}
+.ghost{background:transparent;border:2px solid rgba(255,247,232,.35);border-radius:14px;padding:10px;font-weight:700;width:100%}
+.lbl{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.7;text-align:center}
+.minis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mg{background:var(--card);color:var(--ink);border-radius:14px;padding:10px 6px;font-family:var(--display);font-weight:800;font-size:16px;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.mg span{color:var(--hot)}
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tg{position:relative;background:var(--card);color:var(--ink);border-radius:16px;padding:14px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:var(--display);font-weight:800;font-size:15px;line-height:1.05;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.tg span{color:var(--hot)}
+.tg small{font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--hot-deep)}
+.tg.cur{outline:3px solid var(--gold);outline-offset:2px}
+.tg.cur small{color:var(--ink);background:var(--gold);border-radius:999px;padding:1px 7px}
+.sheet{background:var(--card);color:var(--ink);border-radius:22px 22px 14px 14px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -6px 20px rgba(0,0,0,.3)}
+.sheet h4{margin:0 0 2px;font-family:var(--display);font-size:18px;text-align:center}
+.row{display:flex;align-items:center;justify-content:space-between;border-radius:12px;padding:10px 12px;background:rgba(22,19,15,.06);font-family:var(--display);font-weight:800;font-size:17px}
+.row span{color:var(--hot)}
+.row em{font-style:normal;font-family:var(--body);font-size:12px;font-weight:800;background:var(--gold);border-radius:999px;padding:2px 8px}
+.dim{opacity:.35;filter:blur(1px);display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.1);border-radius:14px;padding:4px;gap:4px}
+.seg button{border-radius:10px;padding:8px 2px;font-family:var(--display);font-weight:800;font-size:13px;line-height:1.05}
+.seg button span{color:var(--gold)}
+.seg button.on{background:var(--card);color:var(--ink)}
+.seg button.on span{color:var(--hot)}
+.code{font-family:var(--display);font-weight:800;font-size:56px;text-align:center;letter-spacing:.06em;line-height:1}
+.qr{width:96px;height:96px;margin:0 auto;border-radius:10px;background:repeating-conic-gradient(var(--ink) 0 25%,var(--card) 0 50%) 0 0/16px 16px;border:6px solid var(--card)}
+.biglogo{text-align:center;font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.02em}
+.biglogo span{color:var(--gold)}
+.swap{align-self:center;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px}
+</style>
+<div class="wrap">
+<div class="top"><h1>Changer <span>de jeu</span></h1><p>Même salle, mêmes joueurs, scores remis à zéro. Choisis un style pour la fin de partie, puis un pour la salle d'attente.</p></div>
+
+<h2>Fin de partie <span>(vue de l'hôte)</span></h2>
+<div class="cols">
+ <div class="col"><div class="colhead"><div class="letter">A</div><div><b>Rejouer + deux raccourcis</b><small>Rejouer reste le gros bouton, les deux autres jeux en dessous</small></div></div>
+  <div class="phone">
+   <div class="bar"><div class="logo">Les <span>Aveux</span></div><div class="tag">Fin de partie</div></div>
+   <div class="wb">Champion de la soirée</div>
+   <div class="champ"><span class="av lg" style="--c:#ffc83d">S</span><b>Sarah</b></div>
+   <button class="btn">Rejouer aux Aveux</button>
+   <div class="lbl">ou passer à</div>
+   <div class="minis"><button class="mg">Punch<span>line</span></button><button class="mg">Le <span>Verdict</span></button></div>
+   <button class="ghost">Quitter</button>
+  </div></div>
+
+ <div class="col"><div class="colhead"><div class="letter">B</div><div><b>Trois cartes égales</b><small>Le jeu en cours entouré d'or, une touche lance la salle d'attente</small></div></div>
+  <div class="phone">
+   <div class="bar"><div class="logo">Les <span>Aveux</span></div><div class="tag">Fin de partie</div></div>
+   <div class="wb">Champion de la soirée</div>
+   <div class="champ"><span class="av lg" style="--c:#ffc83d">S</span><b>Sarah</b></div>
+   <div class="lbl">On joue à quoi ?</div>
+   <div class="tri">
+    <button class="tg cur">Les<br><span>Aveux</span><small>Rejouer</small></button>
+    <button class="tg">Punch<br><span>line</span><small>Changer</small></button>
+    <button class="tg">Le<br><span>Verdict</span><small>Changer</small></button>
+   </div>
+   <button class="ghost">Quitter</button>
+  </div></div>
+
+ <div class="col"><div class="colhead"><div class="letter">C</div><div><b>Un bouton, puis un tiroir</b><small>« Partie suivante » ouvre la liste des jeux</small></div></div>
+  <div class="phone">
+   <div class="bar"><div class="logo">Les <span>Aveux</span></div><div class="tag">Fin de partie</div></div>
+   <div class="dim"><div class="wb">Champion de la soirée</div><div class="champ"><span class="av lg" style="--c:#ffc83d">S</span><b>Sarah</b></div></div>
+   <div class="sheet"><h4>Partie suivante</h4>
+    <button class="row">Les <span>&nbsp;Aveux</span><em style="margin-left:auto">Rejouer</em></button>
+    <button class="row">Punch<span>line</span></button>
+    <button class="row">Le <span>&nbsp;Verdict</span></button>
+   </div>
+  </div></div>
+</div>
+<p class="note">Les autres joueurs voient comme aujourd'hui « Naim peut relancer une partie », puis arrivent tous ensemble dans la salle d'attente du jeu choisi.</p>
+
+<h2>Salle d'attente <span>(vue de l'hôte)</span></h2>
+<div class="cols">
+ <div class="col"><div class="colhead"><div class="letter">1</div><div><b>Sélecteur en haut</b><small>Les trois jeux toujours visibles, une touche suffit</small></div></div>
+  <div class="phone">
+   <div class="bar"><div class="logo">Da<span>wa</span></div><div class="tag">Salle d'attente</div></div>
+   <div class="seg"><button>Punch<span>line</span></button><button class="on">Le <span>Verdict</span></button><button>Les <span>Aveux</span></button></div>
+   <div class="code">4821</div><div class="qr"></div>
+   <div class="chips"><span class="chip"><span class="av sm" style="--c:#ffc83d">S</span>Sarah</span><span class="chip"><span class="av sm" style="--c:#6fb7ff">N</span>Naim</span><span class="chip"><span class="av sm" style="--c:#2fbf71">L</span>Léo</span></div>
+   <button class="btn">Lancer la partie</button>
+  </div></div>
+
+ <div class="col"><div class="colhead"><div class="letter">2</div><div><b>Gros logo + « Changer »</b><small>Plus calme : le jeu choisi en grand, un petit bouton ouvre le choix</small></div></div>
+  <div class="phone">
+   <div class="bar"><div class="logo">Da<span>wa</span></div><div class="tag">Salle d'attente</div></div>
+   <div class="biglogo">Le <span>Verdict</span></div>
+   <button class="swap">Changer de jeu</button>
+   <div class="code">4821</div><div class="qr"></div>
+   <div class="chips"><span class="chip"><span class="av sm" style="--c:#ffc83d">S</span>Sarah</span><span class="chip"><span class="av sm" style="--c:#6fb7ff">N</span>Naim</span><span class="chip"><span class="av sm" style="--c:#2fbf71">L</span>Léo</span></div>
+   <button class="btn">Lancer la partie</button>
+  </div></div>
+</div>
+<p class="note">Les autres joueurs voient seulement le logo du jeu choisi, qui change en direct quand l'hôte touche un autre jeu. Le grand écran suit aussi.</p>
+</div>

@@ -783,7 +783,11 @@ const actions = {
     await rpc("next_round", { p_code: code, p_from: room.round });
   },
   async skip(){ ui.confirmLeave = false; await rpc("next_round", { p_code: code, p_from: room.round }); },
-  async restart(){ await rpc("restart_room", { p_code: code }); },
+  async restart(v){
+    if (!room || !isLeader()) return;
+    if (GAME_IDS.includes(v) && v !== room.game){ await rpc("restart_room", { p_code: code, p_game: v }); try { localStorage.setItem("pl-game", v); } catch (e) {} ui.game = v; }
+    else await rpc("restart_room", { p_code: code });
+  },
   askLeave(){ ui.confirmLeave = true; render(); },
   cancelLeave(){ ui.confirmLeave = false; render(); },
   async leave(){
@@ -815,7 +819,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 26;
+const APP_VERSION = 27;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -1201,7 +1205,9 @@ const views = {
       <div class="qcenter tight"><div class="row" style="justify-content:center;gap:10px">${champs.map(p => av(p.id, "xl")).join("")}</div><div class="big-name">${champs.map(p => esc(p.name)).join(" & ")}</div><span class="rnd hotpill">${top} point${top > 1 ? "s" : ""}</span></div>
       ${scoreChips()}
       ${endBadgeBlock()}
-      ${isLeader() ? `<button class="btn" data-a="restart">Rejouer avec les mêmes</button>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
+      ${isLeader() ? `<button class="btn" data-a="restart" data-v="${room.game}">Rejouer ${gameTo(room.game)}</button>
+      <span class="label light" style="text-align:center">ou passer à</span>
+      <div class="nextgames">${GAMES.filter(g => g[0] !== room.game).map(g => `<button class="mg" data-a="restart" data-v="${g[0]}">${gameLogo(g[0])}</button>`).join("")}</div>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
       <button class="ghost" data-a="leave">Quitter</button>`;
   }
 };
@@ -1212,6 +1218,7 @@ const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
 };
+const gameTo = g => g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : "à Punchline";
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
 // Pastille de couleur + initiale par joueur (couleur fixe selon l'ordre d'arrivée)

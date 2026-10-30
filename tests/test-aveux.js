@@ -117,6 +117,16 @@ const room = () => admin(`return db.rooms[0]`);
   await hasText(A, "Rejouer"); await A.click("[data-a=restart]");
   check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "aveux"; }, "lobby"), "« Rejouer » garde Les Aveux");
 
+  console.log("Changer de jeu depuis la fin");
+  await admin(`db.rooms[0].phase = "end"; db.players.forEach(p => p.score = 2)`);
+  await until(A, () => A.locator(".mg").count().then(n => n === 2), "deux autres jeux");
+  check(await A.locator(".mg[data-v=aveux]").count() === 0, "le jeu en cours n'est pas dans les raccourcis");
+  await A.screenshot({ path: S + "/fin-changer-jeu.png", fullPage: true });
+  await A.click(".mg[data-v=qui]");
+  check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "qui"; }, "lobby verdict"), "passer au Verdict : même salle, salle d'attente");
+  check(await until(A, async () => (await admin("return db.players.map(p => p.score)")).every(x => x === 0), "scores"), "scores remis à zéro");
+  check(await until(B, () => B.locator(".logo").first().innerText().then(t => /Verdict/.test(t)), "logo chez B"), "les autres joueurs passent au Verdict");
+
   console.log(`\n${ok} réussis, ${fail} ratés`);
   if (errors.length) console.log("Erreurs JS :\n" + [...new Set(errors)].join("\n"));
   await browser.close();

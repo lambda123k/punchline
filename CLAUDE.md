@@ -87,6 +87,17 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
   - Punchline remis au style des pastilles : salle d'attente en pastilles qui tombent avec places vides en pointillés jusqu'à 3 (`crowd`, partagée par les 3 jeux et le grand écran), scores en `scoreChips`, juge en grosse pastille, bandeau penché « Et le gagnant est… » (`wbanner`) avec la pastille du gagnant ;
   - tout est coupé si le téléphone demande moins d'animations.
 
+## Prochain chantier choisi par Naim (30/10/2026) — à faire dans une nouvelle conversation
+Ordre conseillé : 1, 2, 3, 4, 8, puis 5 (le plus gros). Visuel → maquettes d'abord (règle habituelle).
+1. Changer de jeu sans recréer de partie : depuis la fin de partie (et la salle d'attente), l'hôte choisit le jeu suivant ; même salle, mêmes joueurs, scores remis à zéro (`restart_room` + `rooms.game`).
+2. Réglage « Soft / Trash » à la création de la partie, valable pour les 3 jeux (il peut jouer avec son père). Réutiliser `rooms.mode` (inutilisé, contrainte actuelle soft|limite|mix). Il faudra marquer les cartes / questions / affirmations trash (par type ou par carte) ; montrer la liste des types classés à Naim avant.
+3. Rejoindre en cours de partie : celui qui arrive entre à la manche suivante (aujourd'hui il peut rejoindre mais vérifier qu'il n'est attendu qu'à partir de la manche suivante, et qu'on ne bloque pas la manche en cours).
+4. Cartes perso pendant la partie : dans la salle d'attente, l'hôte tape quelques affirmations / questions / cartes à trous sur le groupe ; mélangées au paquet pour cette partie seulement, effacées ensuite (règle « rien ne reste stocké »).
+5. Selfie à la place de l'initiale dans la pastille : photo prise en rejoignant, effacée à la fin de la partie (Supabase Storage ou base64 réduit ; penser à l'effacement comme pour les réponses).
+8. Aider à installer l'appli : écran affiché une seule fois au premier lancement dans le navigateur (pas en appli installée), qui montre comment l'ajouter à l'écran d'accueil sur iPhone (Safari → Partager → Sur l'écran d'accueil) et Android.
+Écartés pour l'instant : 6 (partager une image du moment), 7 (4e jeu : « Qui a écrit ça ? » ou « Même Cerveau »).
+Toujours en attente : fin du 2e tri des Aveux (`atri2`).
+
 ## Insignes (25/10/2026, choisis par Naim)
 - Insignes en médailles rondes colorées (style choisi par Naim, pas les pastilles) : `BADGE_DEF` dans app.js, calcul dans `roundBadges` / `gameBadges`
 - Révélés uniquement au classement final (Naim, 25/10 : plus d'annonce en fin de manche, trop chargé). 11 insignes : Doublé, Juge en or, Dernière seconde, Droit au but, En feu, Chouchou du public, Incompris, Gâchette rapide, Le romancier, Faiseur de rires, Le fantôme. « Le critique » retiré avec la notation devenue discrète.

@@ -1,29 +1,47 @@
-// Affirmations du jeu « Les Aveux » (27/10/2026). Chacun répond oui ou non en secret, puis parie sur le nombre de oui.
-// Paquet écrit par Claude, trié par Naim le 27/10 : 94 gardées, 4 jetées (page de tri https://claude.ai/artifact/81fRtNeU9Q77iLTQ9zt3Wv, collection atri).
+// Affirmations du jeu « Les Aveux ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui.
+// 27/10 : 98 écrites par Claude, 94 gardées au 1er tri. 29/10 : 66 nouvelles qui font plus mal à avouer (retour de Naim : « rater le bus » n'est pas un aveu).
+// 30/10 : Naim demande de tout mettre en attendant son 2e tri (page https://claude.ai/artifact/GhF7Xfeau4pdFoPMBhPSBK, collection atri2) ; seule la carte déjà jetée est retirée.
 window.AVEUX_TYPES = {
- "asoiree": "Aveux · soirées & alcool",
+ "aici": "Aveux · dans cette pièce",
  "asexe": "Aveux · sexe",
+ "atrahison": "Aveux · trahisons & mensonges",
  "aex": "Aveux · amour & ex",
  "ahonte": "Aveux · la honte",
+ "asoiree": "Aveux · soirées & alcool",
  "aboulot": "Aveux · boulot & argent",
  "adingue": "Aveux · interdit"
 };
 window.AVEUX_DECK = {
-asoiree: [
-"J'ai déjà vomi sur quelqu'un",
-"J'ai déjà dormi dans une baignoire après une soirée",
-"J'ai déjà oublié comment j'étais rentré chez moi",
-"J'ai déjà fait une soirée sans me souvenir de rien le lendemain",
-"J'ai déjà bu au point de pleurer sans raison",
-"J'ai déjà appelé mon ex bourré",
-"J'ai déjà dansé sur une table",
-"J'ai déjà fini une soirée aux urgences",
-"J'ai déjà volé une bouteille dans une soirée",
-"J'ai déjà dormi chez un inconnu après une soirée",
-"J'ai déjà été trop bourré pour coucher",
-"J'ai déjà enchaîné deux nuits blanches de soirée"
+aici: [
+"J'ai déjà été attiré par quelqu'un dans cette pièce",
+"J'ai déjà rêvé de coucher avec quelqu'un dans cette pièce",
+"J'ai déjà embrassé quelqu'un dans cette pièce",
+"J'ai déjà dit du mal de quelqu'un dans cette pièce",
+"J'ai déjà été jaloux de quelqu'un dans cette pièce",
+"J'ai déjà fait semblant d'apprécier quelqu'un dans cette pièce",
+"Il y a quelqu'un dans cette pièce que je ne supporte pas vraiment",
+"J'ai déjà répété un secret que quelqu'un ici m'avait confié",
+"J'ai déjà inventé une excuse pour éviter quelqu'un ici",
+"J'ai déjà fouillé dans les affaires de quelqu'un ici",
+"J'ai déjà stalké quelqu'un ici en remontant très loin sur ses photos",
+"J'ai déjà fait une capture d'écran d'un message de quelqu'un ici pour me moquer",
+"J'ai déjà eu honte d'être vu avec quelqu'un ici",
+"J'ai déjà menti à quelqu'un ici aujourd'hui"
 ],
 asexe: [
+"J'ai déjà couché avec quelqu'un que je trouvais moche",
+"J'ai déjà couché avec quelqu'un par pitié",
+"J'ai déjà regretté de coucher avec quelqu'un dès le lendemain matin",
+"J'ai déjà fait l'amour en pensant à quelqu'un d'autre",
+"J'ai déjà été nul au lit et je le savais",
+"J'ai déjà couché avec deux personnes du même groupe d'amis",
+"J'ai déjà couché avec quelqu'un pour obtenir quelque chose",
+"J'ai déjà payé pour du sexe",
+"J'ai déjà fait l'amour chez mes parents pendant qu'ils étaient là",
+"J'ai déjà eu une MST",
+"J'ai déjà fait un test de grossesse en panique",
+"J'ai déjà regardé un porno que j'ai honte d'avoir aimé",
+"J'ai déjà couché avec un ex alors que j'étais en couple",
 "J'ai déjà couché le premier soir",
 "J'ai déjà couché avec quelqu'un dont je ne connaissais pas le prénom",
 "J'ai déjà fait l'amour dans une voiture",
@@ -47,6 +65,22 @@ asexe: [
 "J'ai déjà fait un strip-tease",
 "J'ai déjà payé pour voir quelqu'un se déshabiller"
 ],
+atrahison: [
+"J'ai déjà trompé quelqu'un et il ne l'a jamais su",
+"J'ai déjà dit je t'aime juste pour coucher",
+"J'ai déjà gardé quelqu'un sous le coude au cas où",
+"J'ai déjà quitté quelqu'un pour une autre personne sans lui dire la vraie raison",
+"J'ai déjà continué à parler à un ex en cachette de mon couple",
+"J'ai déjà menti à mon copain ou ma copine sur l'endroit où j'étais",
+"J'ai déjà dragué le copain ou la copine d'un ami",
+"J'ai déjà été content qu'un pote se fasse larguer",
+"J'ai déjà souhaité qu'un ami rate quelque chose",
+"J'ai déjà balancé un pote pour me couvrir",
+"J'ai déjà accusé quelqu'un d'autre pour un truc que j'avais fait",
+"J'ai déjà fait pleurer quelqu'un exprès",
+"J'ai déjà lu un journal intime qui n'était pas le mien",
+"J'ai déjà écouté une conversation en cachette derrière une porte"
+],
 aex: [
 "J'ai déjà fouillé le téléphone de mon ex",
 "J'ai déjà trompé quelqu'un",
@@ -66,6 +100,18 @@ aex: [
 "J'ai déjà menti sur mon nombre de partenaires"
 ],
 ahonte: [
+"J'ai déjà fait pipi au lit une fois adulte",
+"J'ai déjà fait dans mon pantalon une fois adulte",
+"J'ai déjà pleuré pour obtenir ce que je voulais",
+"J'ai déjà ri à un enterrement",
+"J'ai déjà été jaloux du bonheur d'un ami",
+"J'ai déjà raconté un souvenir qui ne m'était jamais arrivé",
+"J'ai déjà mis une fausse photo de moi sur une appli de rencontre",
+"J'ai déjà relancé trois fois quelqu'un qui m'avait ghosté",
+"J'ai déjà menti sur mon salaire pour impressionner",
+"J'ai déjà été méchant avec un serveur pour me sentir supérieur",
+"J'ai déjà mangé un truc que j'avais jeté à la poubelle",
+"J'ai déjà fait semblant d'être malade pour qu'on s'occupe de moi",
 "J'ai déjà fait caca chez quelqu'un et bouché les toilettes",
 "J'ai déjà pété pendant un moment intime",
 "J'ai déjà fait pipi dans ma piscine",
@@ -81,6 +127,20 @@ ahonte: [
 "J'ai déjà reniflé mes chaussettes pour savoir si je pouvais les remettre",
 "J'ai déjà reçu un message gênant pendant que quelqu'un regardait mon écran",
 "J'ai déjà dit au revoir à quelqu'un puis marché dans la même direction"
+],
+asoiree: [
+"J'ai déjà vomi sur quelqu'un",
+"J'ai déjà dormi dans une baignoire après une soirée",
+"J'ai déjà oublié comment j'étais rentré chez moi",
+"J'ai déjà fait une soirée sans me souvenir de rien le lendemain",
+"J'ai déjà bu au point de pleurer sans raison",
+"J'ai déjà appelé mon ex bourré",
+"J'ai déjà dansé sur une table",
+"J'ai déjà fini une soirée aux urgences",
+"J'ai déjà volé une bouteille dans une soirée",
+"J'ai déjà dormi chez un inconnu après une soirée",
+"J'ai déjà été trop bourré pour coucher",
+"J'ai déjà enchaîné deux nuits blanches de soirée"
 ],
 aboulot: [
 "J'ai déjà menti sur mon CV",
@@ -98,6 +158,18 @@ aboulot: [
 "J'ai déjà fait une soirée entière sans payer une seule tournée"
 ],
 adingue: [
+"J'ai déjà conduit bourré",
+"J'ai déjà volé de l'argent à mes parents",
+"J'ai déjà volé de l'argent à un ami",
+"J'ai déjà gardé la monnaie d'une course qu'on m'avait confiée",
+"J'ai déjà revendu un cadeau qu'on m'avait offert",
+"J'ai déjà offert un cadeau qu'on m'avait offert",
+"J'ai déjà triché à un examen important",
+"J'ai déjà pris une drogue que je ne connaissais pas en soirée",
+"J'ai déjà fait une fausse déclaration à l'assurance",
+"J'ai déjà cassé un truc exprès et dit que c'était un accident",
+"J'ai déjà ouvert le courrier de quelqu'un d'autre",
+"J'ai déjà payé quelqu'un pour faire un travail à ma place",
 "J'ai déjà volé dans un magasin",
 "J'ai déjà pris le train sans billet",
 "J'ai déjà été embarqué par la police",

@@ -815,7 +815,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [

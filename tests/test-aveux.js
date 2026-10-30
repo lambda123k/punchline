@@ -34,7 +34,7 @@ const room = () => admin(`return db.rooms[0]`);
   const browser = await chromium.launch();
   const A = await phone(browser, "Naim"), B = await phone(browser, "Léa"), C = await phone(browser, "Tom");
   const TV = await phone(browser, "TV", { viewport: { width: 1600, height: 900 } });
-  const humans = [["Naim", A], ["Léa", B], ["Tom", C]];
+  const humans = [["Naim", A], ["Léa", B], ["Tom", C]]; let D = null;
 
   console.log("Accueil et salle d'attente");
   await A.goto(BASE);
@@ -59,6 +59,14 @@ const room = () => admin(`return db.rooms[0]`);
     check(await until(A, async () => { const r = await room(); return r.phase === "writing" && r.round === round; }, "affirmation tirée"), "l'affirmation est tirée toute seule");
     const r = await room();
     console.log("  affirmation : " + r.card);
+    if (round === 2){
+      console.log("  Zoé arrive en cours de manche");
+      D = await phone(browser, "Zoé");
+      await D.goto(BASE + "?c=" + code); await D.fill("#name", "Zoé"); await D.click("[data-a=join]");
+      check(await hasText(D, "prochaine manche"), "Zoé attend la manche suivante");
+      check(await D.locator("[data-a=ayes]").count() === 0, "Zoé ne peut pas répondre à la manche en cours");
+      await D.screenshot({ path: S + "/aveux-late.png", fullPage: true });
+    }
     for (const [, p] of humans) await hasText(p, r.card);
     check(await admin(`return db.aveux_bets.filter(b=>b.round===${round}).every(b=>b.said==null)`), "avant le résultat, personne ne voit les réponses");
     check(await hasText(TV, r.card), "le grand écran montre l'affirmation");
@@ -101,10 +109,13 @@ const room = () => admin(`return db.rooms[0]`);
     if (round === 1){ await B.screenshot({ path: S + "/aveux-result.png", fullPage: true }); await TV.screenshot({ path: S + "/aveux-tv-result.png" }); }
   }
 
+  check(await until(D, async () => (await D.locator("[data-a=ayes]").count()) === 0 && !(await txt(D)).includes("prochaine manche"), "Zoé voit le résultat"), "Zoé voit le résultat de la manche");
   console.log("Temps limité : la réponse part toute seule");
+  await D.waitForSelector("[data-a=next]", { state: "detached" }).catch(() => {});
   await A.click("[data-a=next]");
   await until(A, async () => (await room()).phase === "writing", "manche 3");
   await admin(`const r=db.rooms[0]; r.timer=3; r.deadline=new Date(Date.now()+3000).toISOString()`);
+  check(await until(D, () => D.locator("[data-a=ayes]").count().then(n => n > 0), "Zoé joue"), "Zoé joue dès la manche suivante");
   await A.click(`[data-a=ayes][data-v="1"]`);
   check(await until(A, async () => (await room()).phase === "result", "révélation au bout du temps", 12000), "à la fin du temps, le pari part et on révèle");
   check(await admin(`return db.aveux_bets.filter(b=>b.round===3).some(b=>b.player===db.players[0].id)`), "le pari de Naim est parti seul");

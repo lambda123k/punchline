@@ -82,7 +82,10 @@ const isLeader = () => !ui.tv && !!leader() && leader().id === me.id;
 const isJudge = () => !ui.tv && room && room.judge === me.id;
 const judgeGone = () => room && room.judge && (!byId(room.judge) || !present(byId(room.judge)));
 const roundAnswers = () => room ? answers.filter(a => a.round === room.round && byId(a.player)) : [];
-const writers = () => players.filter(p => room && (p.id !== room.judge || room.game === "aveux") && present(p));
+// Arrivé pendant la manche (après le début de l'écriture) : il joue à partir de la manche suivante
+const inRound = p => !room || !["writing", "judging", "result"].includes(room.phase) || !room.writing_at || !p.joined_at || !(parseTs(p.joined_at) > parseTs(room.writing_at));
+const lateMe = () => !ui.tv && !!room && room.phase === "writing" && !!byId(me.id) && !inRound(byId(me.id));
+const writers = () => players.filter(p => room && (p.id !== room.judge || room.game === "aveux") && present(p) && inRound(p));
 const writersDone = () => { const ids = doneIds(); return writers().filter(p => ids.has(p.id)).length; };
 const myAnswer = () => roundAnswers().find(a => a.player === me.id);
 const roundVotes = () => room ? votes.filter(v => v.round === room.round) : [];
@@ -99,7 +102,7 @@ const roundBets = () => room ? bets.filter(b => b.round === room.round && byId(b
 const myBet = () => roundBets().find(b => b.player === me.id);
 const doneIds = () => new Set((isAveux() ? roundBets() : isQui() ? roundRanks() : roundAnswers()).map(a => a.player));
 const iDone = () => isAveux() ? !!myBet() : isQui() ? !!myRanking() : !!myAnswer();
-const rankPool = () => players.filter(present).sort((a, b) => a.seat - b.seat);
+const rankPool = () => players.filter(p => present(p) && inRound(p)).sort((a, b) => a.seat - b.seat);
 
 /* ---------- sons et vibrations ---------- */
 let actx = null;
@@ -820,7 +823,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 28;
+const APP_VERSION = 29;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -1098,6 +1101,13 @@ const views = {
       : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
     ${isLeader() ? `<button class="ghost small" data-a="addBot">Ajouter un robot</button>` : ""}
     ${footer()}`;
+  },
+
+  late(){
+    return `${head()}
+      <div class="qcenter">${av(me.id, "xl", "pulse")}${wait("Tu entres à la prochaine manche")}</div>
+      ${scoreChips()}
+      ${footer()}`;
   },
 
   draw(){
@@ -1587,12 +1597,13 @@ function morph(a, b){
 }
 function screenKey(){
   if (!room) return ["home", ui.page, ui.game, !!ui.menu, !!ui.tvAsk, !!ui.creating].join("|");
-  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round].join("|");
+  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round, lateMe()].join("|");
 }
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
   if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
+  else if (lateMe()) html = views.late();
   else { const v = !room ? "home" : room.phase; html = ((isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;

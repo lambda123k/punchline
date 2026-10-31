@@ -1,0 +1,290 @@
+<title>Le Dilemme maquettes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout : trois colonnes (A, B, C), chacune = trois écrans de téléphone empilés : choisir, deviner au curseur, révélation. Palette Dawa, un seul thème sombre voulu. Rouge corail et bleu ciel pour ressortir sur la table cobalt. */
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f;
+  --red:#ff3b4e; --red-deep:#a8162a; --blue:#3fb6ff; --blue-deep:#0f6aa8;
+  --gold:#ffc83d; --hot:#ff5a36; --hot-deep:#b8381d; --night:#0e1a6e;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(120% 60% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--card);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{max-width:1180px;margin:0 auto 22px;display:flex;flex-direction:column;gap:6px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);letter-spacing:-.02em;margin:0;text-wrap:balance}
+.top h1 span{color:var(--gold)}
+.top p{margin:0;opacity:.82;font-size:14px;max-width:62ch}
+.cols{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.colhead{display:flex;align-items:center;gap:12px}
+.letter{font-family:var(--display);font-weight:800;font-size:22px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--ink);flex-shrink:0}
+.colhead b{font-family:var(--display);font-size:20px;display:block;line-height:1.1}
+.colhead small{opacity:.75;font-size:13px}
+.step{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.65;margin:6px 0 -6px 4px}
+.phone{background:rgba(9,18,90,.55);border:2px solid rgba(255,247,232,.14);border-radius:28px;padding:16px 14px 18px;display:flex;flex-direction:column;gap:14px;min-height:400px;overflow:hidden;position:relative}
+.bar{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.12);padding:5px 9px;border-radius:999px;font-variant-numeric:tabular-nums}
+.timer{height:8px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
+.timer i{display:block;height:100%;width:62%;background:var(--gold);border-radius:999px}
+button{font:inherit;font-weight:800;border:0;cursor:pointer;color:inherit;transition:transform .08s}
+button:active{transform:translateY(2px)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn{background:var(--hot);color:#fff;border-radius:14px;padding:14px;font-size:17px;width:100%;box-shadow:0 5px 0 var(--hot-deep)}
+.av{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--c);color:var(--ink);font-family:var(--display);font-weight:800;font-size:13px;flex-shrink:0;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.av.lg{width:44px;height:44px;font-size:19px}
+.mine{outline:3px solid #fff;outline-offset:2px}
+.pick{transition:transform .2s cubic-bezier(.2,1.4,.4,1),opacity .2s}
+.dim{opacity:.35}
+
+/* ---------- A : écran coupé ---------- */
+.splitA{display:flex;flex-direction:column;gap:0;border-radius:22px;overflow:hidden;flex:1;box-shadow:0 8px 0 rgba(0,0,0,.25)}
+.half{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:22px 18px;font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15;text-wrap:balance;width:100%;border-radius:0}
+.half.r{background:var(--red);color:#fff}
+.half.b{background:var(--blue);color:var(--ink)}
+.half.on{box-shadow:inset 0 0 0 5px #fff}
+.ou{align-self:center;margin:-17px 0;z-index:2;background:var(--ink);color:var(--card);font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.08em;padding:7px 12px;border-radius:999px;position:relative}
+.qA{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.1;text-align:center;text-wrap:balance}
+.meterA{position:relative;height:86px;border-radius:20px;overflow:hidden;display:flex;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.meterA .rr{background:var(--red)}.meterA .bb{background:var(--blue);flex:1}
+.meterA .knob{position:absolute;top:0;bottom:0;width:6px;background:#fff;transform:translateX(-3px);box-shadow:0 0 0 2px var(--ink)}
+.meterA .pct{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-family:var(--display);font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;pointer-events:none}
+.meterA .pct span:first-child{color:#fff}.meterA .pct span:last-child{color:var(--ink)}
+.range{width:100%;accent-color:#fff;height:28px}
+.minis{display:flex;gap:6px;justify-content:center}
+.mini{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700}
+.chip{width:12px;height:12px;border-radius:4px}
+.rulerA{position:relative;height:150px;margin-top:6px}
+.rulerA .track{position:absolute;left:0;right:0;top:58px;height:34px;border-radius:12px;overflow:hidden;display:flex}
+.rulerA .track .rr{background:var(--red)}.rulerA .track .bb{background:var(--blue);flex:1}
+.rulerA .truth{position:absolute;top:44px;height:62px;width:4px;background:#fff;transform:translateX(-2px);border-radius:2px;box-shadow:0 0 0 2px var(--ink)}
+.rulerA .truth b{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-family:var(--display);font-size:22px;white-space:nowrap;margin-bottom:2px}
+.rulerA .g{position:absolute;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.rulerA .g.up{top:0}.rulerA .g.dn{top:100px;flex-direction:column-reverse}
+.crown{width:16px;height:12px;display:block}
+.win{display:flex;align-items:center;gap:10px;background:var(--gold);color:var(--ink);border-radius:16px;padding:10px 14px;font-family:var(--display);font-weight:800;font-size:18px;transform:rotate(-2deg);box-shadow:0 5px 0 var(--gold-deep,#b88a10)}
+.win small{font-family:var(--body);font-size:13px;margin-left:auto;font-weight:700}
+
+/* ---------- B : deux cartes ---------- */
+.cardsB{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-items:stretch}
+.cB{border-radius:20px;padding:16px 12px;font-family:var(--display);font-weight:800;font-size:19px;line-height:1.15;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:12px;box-shadow:0 7px 0 var(--d);text-wrap:balance;min-height:220px}
+.cB.r{background:var(--red);color:#fff;--d:var(--red-deep);transform:rotate(-3deg)}
+.cB.b{background:var(--blue);color:var(--ink);--d:var(--blue-deep);transform:rotate(3deg)}
+.cB .lab{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.cB.on{transform:rotate(0) scale(1.04);outline:4px solid #fff;outline-offset:3px}
+.cB.r.on~.cB.b,.cardsB.pickedR .cB.b{opacity:.4}
+.bigpct{display:flex;justify-content:center;align-items:baseline;gap:4px;font-family:var(--display);font-weight:800;font-size:84px;line-height:1;color:var(--blue);font-variant-numeric:tabular-nums;text-shadow:0 5px 0 rgba(0,0,0,.25)}
+.bigpct small{font-size:36px}
+.recap{display:flex;gap:8px;align-items:center;justify-content:center;font-size:13px;font-weight:700;opacity:.9}
+.recap .tiny{background:var(--blue);color:var(--ink);border-radius:8px;padding:4px 8px;font-family:var(--display);font-weight:800;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;align-items:center}
+.stepper button{height:56px;border-radius:16px;background:var(--card);color:var(--ink);font-size:28px;box-shadow:0 4px 0 #b8ab92}
+.thermoB{display:flex;gap:14px;align-items:stretch;flex:1}
+.tube{width:58px;border-radius:30px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.tube .rr{background:var(--red);flex:1}.tube .bb{background:var(--blue)}
+.tube b{position:absolute;left:0;right:0;text-align:center;font-family:var(--display);font-size:18px;color:var(--ink);bottom:8px}
+.guesses{flex:1;display:flex;flex-direction:column;gap:7px;justify-content:center}
+.gl{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 10px;font-weight:700;font-variant-numeric:tabular-nums}
+.gl .n{flex:1}
+.gl .d{font-size:12px;opacity:.75}
+.gl.best{background:var(--gold);color:var(--ink)}
+.gl.best .d{opacity:1}
+.plus{font-family:var(--display);font-weight:800;background:var(--ink);color:var(--gold);border-radius:8px;padding:2px 7px;font-size:13px}
+
+/* ---------- C : la balance ---------- */
+.qC{background:var(--card);color:var(--ink);border-radius:20px;padding:14px 16px;font-family:var(--display);font-weight:800;font-size:15px;text-align:center;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.optsC{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:center}
+.oC{display:flex;align-items:center;gap:12px;border-radius:18px;padding:16px;text-align:left;font-family:var(--display);font-weight:800;font-size:19px;line-height:1.15;box-shadow:0 6px 0 var(--d);text-wrap:balance}
+.oC .dot{width:26px;height:26px;border-radius:50%;border:4px solid currentColor;flex-shrink:0}
+.oC.on .dot{background:currentColor}
+.oC.r{background:var(--red);color:#fff;--d:var(--red-deep)}
+.oC.b{background:var(--blue);color:var(--ink);--d:var(--blue-deep)}
+.scale{position:relative;height:150px;margin-top:4px}
+.scale svg{width:100%;height:100%;overflow:visible}
+.beam{transition:transform .25s ease}
+.sides{display:flex;justify-content:space-between;font-family:var(--display);font-weight:800;font-size:30px;font-variant-numeric:tabular-nums}
+.sides .l{color:var(--red)}.sides .r{color:var(--blue)}
+.pansC{display:flex;justify-content:space-between;gap:12px}
+.pan{flex:1;border-radius:16px;padding:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:52px;align-content:flex-start}
+.pan.r{background:rgba(255,59,78,.22);border:2px solid var(--red)}
+.pan.b{background:rgba(63,182,255,.2);border:2px solid var(--blue)}
+
+@media (prefers-reduced-motion:reduce){.pick,.beam{transition:none}}
+.foot{max-width:1180px;margin:30px auto 0;font-size:13px;opacity:.75}
+</style>
+
+<div class="top">
+  <h1>Le <span>Dilemme</span> · trois façons de jouer</h1>
+  <p>Chacun choisit rouge ou bleu en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche gagne 1 point. Les curseurs bougent pour de vrai : essaie-les.</p>
+</div>
+
+<div class="cols">
+
+<!-- ================= A ================= -->
+<section class="col">
+  <div class="colhead"><span class="letter">A</span><div><b>L'écran coupé</b><small>Le téléphone se coupe en deux, on touche sa moitié</small></div></div>
+
+  <div class="step">1 · Choisir</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="splitA">
+      <button class="half r pick" data-g="A" data-v="r">Pouvoir voler, mais à 5 km/h</button>
+      <span class="ou">OU</span>
+      <button class="half b pick" data-g="A" data-v="b">Te téléporter, mais tout nu à l'arrivée</button>
+    </div>
+  </div>
+
+  <div class="step">2 · Deviner</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i style="width:40%"></i></div>
+    <div class="qA">Combien ont pris <span style="color:var(--blue)">bleu</span> ?</div>
+    <div class="meterA" id="mA"><i class="rr" id="mAr" style="width:45%"></i><i class="bb"></i><i class="knob" id="mAk" style="left:45%"></i>
+      <div class="pct"><span id="mAl">45 %</span><span id="mAb">55 %</span></div></div>
+    <input class="range" type="range" id="rA" min="0" max="100" value="55" aria-label="Pourcentage de bleu">
+    <div class="minis">
+      <span class="mini"><span class="av" style="--c:#ff5a36">N</span>Toi : bleu</span>
+    </div>
+    <button class="btn">Valider</button>
+  </div>
+
+  <div class="step">3 · Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="rulerA">
+      <div class="track"><i class="rr" style="width:40%"></i><i class="bb"></i></div>
+      <div class="truth" style="left:60%"><b>60 %</b></div>
+      <div class="g up" style="left:40%"><span class="av" style="--c:#2fbf71">Y</span>40</div>
+      <div class="g up" style="left:80%"><span class="av" style="--c:#4cc9f0">T</span>80</div>
+      <div class="g dn" style="left:55%"><span class="av" style="--c:#ff5a36">N</span>55</div>
+      <div class="g dn" style="left:70%"><span class="av" style="--c:#ffc83d">L</span>70</div>
+      <div class="g up" style="left:62%"><svg class="crown" viewBox="0 0 16 12"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="#ffc83d" stroke="#16130f" stroke-width="1.2"/></svg><span class="av" style="--c:#b48cff">I</span>62</div>
+    </div>
+    <div class="win"><span class="av lg" style="--c:#b48cff">I</span>Inès<small>à 2 % · +1</small></div>
+  </div>
+</section>
+
+<!-- ================= B ================= -->
+<section class="col">
+  <div class="colhead"><span class="letter">B</span><div><b>Les deux cartes</b><small>Deux cartes penchées, gros pourcentage, thermomètre</small></div></div>
+
+  <div class="step">1 · Choisir</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="cardsB" id="cB">
+      <button class="cB r pick" data-g="B" data-v="r"><span class="lab">Rouge</span>Pouvoir voler, mais à 5 km/h</button>
+      <button class="cB b pick" data-g="B" data-v="b"><span class="lab">Bleu</span>Te téléporter, mais tout nu à l'arrivée</button>
+    </div>
+  </div>
+
+  <div class="step">2 · Deviner</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i style="width:40%"></i></div>
+    <div class="recap"><span class="tiny">Bleu · Te téléporter…</span></div>
+    <div class="bigpct" id="bB">55<small>%</small></div>
+    <input class="range" type="range" id="rB" min="0" max="100" value="55" aria-label="Pourcentage de bleu" style="accent-color:var(--blue)">
+    <div class="stepper"><button id="bm" aria-label="Moins">−</button><span></span><button id="bp" aria-label="Plus">+</button></div>
+    <button class="btn">Valider</button>
+  </div>
+
+  <div class="step">3 · Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="thermoB">
+      <div class="tube"><i class="rr"></i><i class="bb" style="height:60%"></i><b>60 %</b></div>
+      <div class="guesses">
+        <div class="gl best"><span class="av" style="--c:#b48cff">I</span><span class="n">Inès</span><span>62</span><span class="plus">+1</span></div>
+        <div class="gl"><span class="av" style="--c:#ff5a36">N</span><span class="n">Naim</span><span>55</span><span class="d">à 5</span></div>
+        <div class="gl"><span class="av" style="--c:#ffc83d">L</span><span class="n">Léa</span><span>70</span><span class="d">à 10</span></div>
+        <div class="gl"><span class="av" style="--c:#2fbf71">Y</span><span class="n">Yanis</span><span>40</span><span class="d">à 20</span></div>
+        <div class="gl"><span class="av" style="--c:#4cc9f0">T</span><span class="n">Tom</span><span>80</span><span class="d">à 20</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= C ================= -->
+<section class="col">
+  <div class="colhead"><span class="letter">C</span><div><b>La balance</b><small>Le curseur fait pencher une balance, les pastilles tombent dans les plateaux</small></div></div>
+
+  <div class="step">1 · Choisir</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i></i></div>
+    <div class="qC">Tu préfères</div>
+    <div class="optsC">
+      <button class="oC r pick" data-g="C" data-v="r"><span class="dot"></span>Pouvoir voler, mais à 5 km/h</button>
+      <button class="oC b pick" data-g="C" data-v="b"><span class="dot"></span>Te téléporter, mais tout nu à l'arrivée</button>
+    </div>
+  </div>
+
+  <div class="step">2 · Deviner</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="timer"><i style="width:40%"></i></div>
+    <div class="scale">
+      <svg viewBox="0 0 300 150" aria-hidden="true">
+        <path d="M150 140V40" stroke="#fff7e8" stroke-width="6" stroke-linecap="round"/>
+        <path d="M118 144h64" stroke="#fff7e8" stroke-width="8" stroke-linecap="round"/>
+        <g class="beam" id="beam" style="transform-origin:150px 40px">
+          <path d="M30 40h240" stroke="#fff7e8" stroke-width="7" stroke-linecap="round"/>
+          <path d="M40 40l-18 52M40 40l18 52M260 40l-18 52M260 40l18 52" stroke="#fff7e8" stroke-width="2"/>
+          <path d="M10 92h60a30 14 0 0 1-60 0z" fill="#ff3b4e"/>
+          <path d="M230 92h60a30 14 0 0 1-60 0z" fill="#3fb6ff"/>
+        </g>
+        <circle cx="150" cy="40" r="9" fill="#ffc83d"/>
+      </svg>
+    </div>
+    <div class="sides"><span class="l" id="cl">45 %</span><span class="r" id="cr">55 %</span></div>
+    <input class="range" type="range" id="rC" min="0" max="100" value="55" aria-label="Pourcentage de bleu">
+    <button class="btn">Valider</button>
+  </div>
+
+  <div class="step">3 · Révélation</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">DA<span>WA</span></span><span class="tag">Manche 3</span></div>
+    <div class="sides"><span class="l">40 %</span><span class="r">60 %</span></div>
+    <div class="pansC">
+      <div class="pan r"><span class="av" style="--c:#2fbf71">Y</span><span class="av" style="--c:#4cc9f0">T</span></div>
+      <div class="pan b"><span class="av" style="--c:#ff5a36">N</span><span class="av" style="--c:#ffc83d">L</span><span class="av" style="--c:#b48cff">I</span></div>
+    </div>
+    <div class="guesses">
+      <div class="gl best"><span class="av" style="--c:#b48cff">I</span><span class="n">Inès a dit 62</span><span class="plus">+1</span></div>
+      <div class="gl"><span class="av" style="--c:#ff5a36">N</span><span class="n">Naim a dit 55</span><span class="d">à 5</span></div>
+    </div>
+  </div>
+</section>
+
+</div>
+<p class="foot">Dans les trois, la révélation garde ce que tes potes ont aimé dans les Aveux : on voit qui a pris quoi. Le compte à rebours 3-2-1 et les confettis restent comme dans les autres jeux.</p>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+document.addEventListener("click", e => {
+  const b = e.target.closest(".pick"); if (!b) return;
+  document.querySelectorAll(`.pick[data-g="${b.dataset.g}"]`).forEach(x => { x.classList.toggle("on", x === b); x.classList.toggle("dim", x !== b); });
+});
+const A = v => { $("mAr").style.width = (100 - v) + "%"; $("mAk").style.left = (100 - v) + "%"; $("mAl").textContent = (100 - v) + " %"; $("mAb").textContent = v + " %"; };
+$("rA").addEventListener("input", e => A(+e.target.value));
+const B = v => { v = Math.max(0, Math.min(100, v)); $("rB").value = v; $("bB").innerHTML = v + "<small>%</small>"; };
+$("rB").addEventListener("input", e => B(+e.target.value));
+$("bm").addEventListener("click", () => B(+$("rB").value - 1));
+$("bp").addEventListener("click", () => B(+$("rB").value + 1));
+const C = v => { $("cl").textContent = (100 - v) + " %"; $("cr").textContent = v + " %"; $("beam").style.transform = `rotate(${(v - 50) * .3}deg)`; };
+$("rC").addEventListener("input", e => C(+e.target.value));
+A(55); B(55); C(55);
+})();
+</script>

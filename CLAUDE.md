@@ -72,6 +72,14 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Affirmations : `aveux.js` (`AVEUX_DECK`, `AVEUX_TYPES` préfixe `a` : asoiree, asexe, aex, ahonte, aboulot, adingue). 98 écrites par Claude le 27/10, triées par Naim (page https://claude.ai/artifact/81fRtNeU9Q77iLTQ9zt3Wv, collection `atri`, idées perso `aidees`) : 94 gardées, 4 jetées (vomi dans un taxi, incruster un mariage, pipi dans la rue, viré d'une boîte). Ici la forme « J'ai déjà… » est voulue. Notation nulle/top et page des notes partagées.
 - Test : `node tests/test-aveux.js` (serveur neuf).
 
+## Jeu 4 : Le Dilemme (idée de Naim le 01/11/2026, code interne prévu `dilemme`) — pas encore codé
+- Principe : un « tu préfères » rouge ou bleu avec des dilemmes de ouf. Chacun choisit rouge ou bleu en secret, puis devine au curseur le % du groupe qui a pris bleu. Révélation : vrai %, curseurs de chacun, qui a pris quoi.
+- Points (Naim, 01/11) : seul le plus proche gagne 1 point (ex aequo tous à 1). Nom choisi : « Le Dilemme » (écartés : Tu préfères, Rouge ou Bleu).
+- Couleurs proposées : rouge #ff3b4e, bleu ciel #3fb6ff (pour ressortir sur le fond cobalt).
+- Maquettes (3 styles : A écran coupé, B deux cartes + thermomètre, C balance) : https://claude.ai/artifact/DYS36tUrCeS4gyhnun4C7i (`design/maquettes-dilemme.html`). En attente de son choix.
+- 82 dilemmes écrits par Claude, à trier : https://claude.ai/artifact/Ji5RQg9gTTEyZ54FgW8H1z (`design/tri-dilemme.html`, collection `dtri` doc id = id du dilemme, champs v garder|jeter|reecrire, note ; `didees` = ses dilemmes « rouge / bleu »). Types prévus (préfixe `d`) : dsexe, dcouple, dici, dsoiree, ddegueu, dargent, ddingue, dvie. Soft probable : ddingue, dvie, dargent ; trash : dsexe, dici ; à voir : dcouple, dsoiree, ddegueu.
+- Base à prévoir sur le modèle des Aveux : choix secret (table sans RLS) + curseur lisible, fonction de révélation qui compte le % et donne le point.
+
 ## Fluidité (29/10/2026, diagnostic demandé par Naim)
 - Réaction immédiate : `local(fn)` applique le changement chez soi avant la réponse du serveur (lancer, garder la carte, envoyer une réponse / un classement / un pari, retourner une carte, changer de phase) ; en cas d'erreur on revient en arrière. Attention à calculer les valeurs (ex. `round + 1`) avant `local`, sinon elles sont comptées deux fois. Bouton en cours : `data-busy` (enfoncé, pas grisé).
 - Rendu partiel : `render()` dessine l'écran en entier seulement quand `screenKey()` change (jeu, phase, manche) ; sinon `morph()` ne modifie que ce qui a changé, donc les animations `.pop` ne se rejouent plus à chaque événement.

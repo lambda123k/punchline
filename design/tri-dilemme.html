@@ -1,0 +1,240 @@
+<title>Tri Le Dilemme</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout : une colonne, le dilemme à trier en carte rouge / bleu sur la table cobalt de Dawa, la liste complète dessous */
+:root{
+  --table:#1f3bd1; --table-deep:#14279a; --card:#fff7e8; --ink:#16130f; --muted:#5d564c; --line:#e6dcc8;
+  --hot:#ff5a36; --hot-deep:#b8381d; --gold:#ffc83d; --keep:#2fbf71; --keep-deep:#1d8a50; --drop:#5d6680; --redo:#7a5cff;
+  --red:#ff3b4e; --blue:#3fb6ff; --soft:rgba(255,255,255,.1); --soft2:rgba(255,255,255,.18); --onTable:#fff7e8;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--table) 0%,var(--table-deep) 100%) fixed;background-color:var(--table-deep);color:var(--onTable);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.logo{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em}
+.logo span{color:var(--gold)}
+.tag{font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--soft);padding:6px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+h1,h2{font-family:var(--display);font-weight:800;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1{font-size:clamp(28px,7.5vw,38px);line-height:1.05}
+h2{font-size:20px}
+p{margin:0}
+.lead{opacity:.88}
+.label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+.prog{display:flex;flex-direction:column;gap:8px}
+.bar{height:10px;border-radius:999px;background:var(--soft2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .k{background:var(--keep)}.bar .r{background:var(--redo)}.bar .d{background:var(--drop)}
+.counts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;font-variant-numeric:tabular-nums}
+.counts b{font-family:var(--display);font-size:17px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.q{background:var(--ink);color:var(--card);border-radius:20px;padding:22px 22px 18px;box-shadow:0 10px 0 rgba(0,0,0,.25);min-height:190px;display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.q .txt{font-family:var(--display);font-weight:800;font-size:clamp(24px,6.6vw,31px);line-height:1.16;text-wrap:pretty}
+.q .meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65;font-variant-numeric:tabular-nums}
+.q .was{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.04em;text-transform:none;opacity:1}
+.pop{animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.96) rotate(-1deg);opacity:.5}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:15px 16px;cursor:pointer;color:inherit;transition:transform .08s}
+button:active{transform:translateY(2px)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{background:var(--card);color:var(--ink);box-shadow:0 5px 0 #b8ab92;font-size:18px}
+.keep{background:var(--keep);color:#04230f;box-shadow:0 5px 0 var(--keep-deep);font-size:18px}
+.redo{grid-column:1/-1;background:transparent;border:2px solid rgba(255,247,232,.4);padding:11px 14px;font-size:15px}
+.redo.on,.keep.on,.drop.on{outline:3px solid var(--gold);outline-offset:3px}
+.note{display:flex;flex-direction:column;gap:8px}
+textarea,input[type=text]{font:inherit;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+textarea{min-height:76px;resize:vertical;font-weight:600}
+.small{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.link{background:none;padding:6px 2px;font-weight:600;font-size:14px;color:rgba(255,247,232,.8);text-decoration:underline;text-underline-offset:3px}
+.done{background:var(--soft);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:8px;text-align:center}
+.done h2{font-size:24px;color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:var(--soft);padding:8px 12px;font-size:14px;border-radius:999px;font-weight:600}
+.chips button.on{background:var(--gold);color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--soft);border-radius:12px;padding:10px 12px;text-align:left;font-weight:500;width:100%}
+.row.cur{background:var(--soft2);outline:2px solid var(--gold)}
+.row .t{min-width:0;font-size:15px}
+.row small{display:block;font-size:13px;opacity:.75;margin-top:2px}
+.pill{flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:var(--soft2)}
+.pill.garder{background:var(--keep);color:#04230f}.pill.jeter{background:var(--drop);color:#fff}.pill.reecrire{background:var(--redo);color:#fff}
+.add{display:grid;grid-template-columns:1fr;gap:8px}
+.add input{min-width:0}.add input#idea{border-color:var(--red)}.add input#idea2{border-color:var(--blue)}
+.add button{background:var(--hot);color:#fff;box-shadow:0 4px 0 var(--hot-deep);padding:12px 16px}
+.err{background:#ffe0d8;color:#7a1c06;border-radius:12px;padding:10px 14px;font-weight:600;font-size:15px}
+.hint{font-size:13px;opacity:.72}
+.keys{display:none}
+@media (hover:hover) and (pointer:fine){.keys{display:block}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.dl{background:var(--ink);border-radius:20px;padding:12px;box-shadow:0 10px 0 rgba(0,0,0,.25);display:flex;flex-direction:column;gap:0}
+.dl .side{border-radius:14px;padding:18px 16px;font-family:var(--display);font-weight:800;font-size:clamp(20px,5.6vw,26px);line-height:1.15;text-wrap:pretty}
+.dl .side.r{background:var(--red);color:#fff}.dl .side.b{background:var(--blue);color:var(--ink)}
+.dl .ou{align-self:center;margin:-11px 0;z-index:1;background:var(--ink);color:var(--card);font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.08em;padding:5px 11px;border-radius:999px}
+.dl .meta{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--card);opacity:.7;padding:12px 6px 2px;font-variant-numeric:tabular-nums}
+.dl .was{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.04em;text-transform:none}
+.row .t i{font-style:normal;display:block}.row .t .rd{color:#ff8a95}.row .t .bd{color:#8fd4ff}
+</style>
+
+<div class="wrap">
+  <header><div class="logo">DA<span>WA</span></div><div class="tag" id="tag">Le Dilemme · tri</div></header>
+  <div class="stack">
+    <h1>Garde les dilemmes où on hésite vraiment.</h1>
+  </div>
+  <p class="lead">Un bon dilemme coupe le groupe en deux, sinon le curseur est trop facile. Jette ceux où tout le monde prendrait le même côté. Si l'idée est bonne mais mal tournée, mets « À réécrire » et écris ta version.</p>
+  <div id="err" class="err" hidden></div>
+  <div class="prog" aria-live="polite">
+    <div class="bar" id="bar"></div>
+    <div class="counts" id="counts"></div>
+  </div>
+  <section id="main" aria-label="Dilemme à trier"></section>
+  <section class="stack" style="display:flex;flex-direction:column;gap:10px">
+    <span class="label">Tous les dilemmes</span>
+    <div class="chips" id="filters"></div>
+    <div class="list" id="list"></div>
+  </section>
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <span class="label">Tes propres dilemmes</span>
+    <p class="hint">Une idée qui manque ? Écris les deux côtés, elle sera ajoutée au jeu.</p>
+    <form class="add" id="addf"><input type="text" id="idea" maxlength="120" placeholder="Rouge : tu préfères…" autocomplete="off" aria-label="Côté rouge"><input type="text" id="idea2" maxlength="120" placeholder="Bleu : ou…" autocomplete="off" aria-label="Côté bleu"><button type="submit">Ajouter</button></form>
+    <div class="list" id="ideas"></div>
+  </section>
+</div>
+
+<script id="data" type="application/json">{"types": {"dsexe": "Sexe", "dcouple": "Amour & ex", "dici": "Dans cette pièce", "dsoiree": "Soirées & alcool", "ddegueu": "Dégueu", "dargent": "Argent", "ddingue": "Absurde", "dvie": "Choix de vie"}, "list": [{"id": "sexe0", "r": "Ne plus jamais faire l'amour", "b": "Ne plus jamais boire une goutte d'alcool", "t": "dsexe"}, {"id": "sexe1", "r": "Recoucher une dernière fois avec ton pire ex", "b": "Ne coucher avec personne pendant deux ans", "t": "dsexe"}, {"id": "sexe2", "r": "Faire l'amour toute ta vie dans le noir total", "b": "Toute ta vie avec la lumière à fond", "t": "dsexe"}, {"id": "sexe3", "r": "Être nul au lit sans jamais le savoir", "b": "Être un dieu au lit mais que personne ne veuille de toi", "t": "dsexe"}, {"id": "sexe4", "r": "Que ton partenaire crie le prénom de ton meilleur pote pendant l'amour", "b": "Qu'il éclate de rire au pire moment", "t": "dsexe"}, {"id": "sexe5", "r": "Avoir un orgasme à chaque éternuement", "b": "Ne plus jamais avoir d'orgasme", "t": "dsexe"}, {"id": "sexe6", "r": "Qu'un porno amateur de toi sorte sous ton vrai nom", "b": "Faire un strip-tease ce soir devant tout le monde ici", "t": "dsexe"}, {"id": "sexe7", "r": "Coucher avec quelqu'un de très moche qui est un dieu au lit", "b": "Avec quelqu'un de magnifique qui est une catastrophe", "t": "dsexe"}, {"id": "sexe8", "r": "Que tous tes ex te notent sur internet", "b": "Que ta prochaine relation lise tous tes anciens sextos", "t": "dsexe"}, {"id": "sexe9", "r": "Ne plus jamais pouvoir embrasser avec la langue", "b": "Ne plus jamais avoir de préliminaires", "t": "dsexe"}, {"id": "sexe10", "r": "Que ton dernier nude passe sur l'écran géant d'un stade", "b": "Envoyer ton dernier nude à ton patron", "t": "dsexe"}, {"id": "sexe11", "r": "Faire l'amour une seule fois par an mais incroyable", "b": "Tous les jours mais toujours moyen", "t": "dsexe"}, {"id": "coup0", "r": "Lire tous les messages de ton partenaire", "b": "Qu'il lise tous les tiens", "t": "dcouple"}, {"id": "coup1", "r": "Savoir que ton partenaire t'a trompé une fois il y a longtemps", "b": "Ne jamais le savoir", "t": "dcouple"}, {"id": "coup2", "r": "Te marier avec ton ex", "b": "Rester célibataire à vie", "t": "dcouple"}, {"id": "coup3", "r": "Que ton couple soit filmé façon téléréalité", "b": "Ne jamais pouvoir t'embrasser en public", "t": "dcouple"}, {"id": "coup4", "r": "Sortir avec quelqu'un qui ronfle comme un tracteur", "b": "Avec quelqu'un qui parle de son ex en dormant", "t": "dcouple"}, {"id": "coup5", "r": "Aimer quelqu'un qui ne t'aime pas", "b": "Être aimé par quelqu'un que tu n'aimes pas", "t": "dcouple"}, {"id": "coup6", "r": "Découvrir que ton couple a commencé sur un pari", "b": "Découvrir que tu étais son plan B", "t": "dcouple"}, {"id": "coup7", "r": "Que ton partenaire ait couché avec ton meilleur pote avant vous", "b": "Avec ton boss", "t": "dcouple"}, {"id": "coup8", "r": "Un partenaire canon mais jaloux maladif", "b": "Un partenaire banal qui te fait mourir de rire", "t": "dcouple"}, {"id": "coup9", "r": "Rester toute ta vie avec ton premier amour", "b": "Ne jamais connaître le grand amour", "t": "dcouple"}, {"id": "ici0", "r": "Embrasser quelqu'un dans cette pièce, tiré au sort", "b": "Lire à voix haute ta dernière recherche Google", "t": "dici"}, {"id": "ici1", "r": "Montrer ta galerie photo au groupe pendant 30 secondes", "b": "Donner ton téléphone déverrouillé à ton voisin de gauche 5 minutes", "t": "dici"}, {"id": "ici2", "r": "Partir un mois en vacances avec la personne à ta droite", "b": "Avec la personne à ta gauche", "t": "dici"}, {"id": "ici3", "r": "Que le groupe choisisse ton prochain tatouage", "b": "Que le groupe choisisse ta prochaine coupe", "t": "dici"}, {"id": "ici4", "r": "Dire ce que tu penses vraiment de chaque personne ici", "b": "Ne plus jamais revoir ce groupe", "t": "dici"}, {"id": "ici5", "r": "Être en coloc un an avec le plus bordélique ici", "b": "Avec le plus relou ici", "t": "dici"}, {"id": "ici6", "r": "Que quelqu'un ici lise ta dernière conversation WhatsApp", "b": "Que quelqu'un ici poste une story sur ton compte", "t": "dici"}, {"id": "ici7", "r": "Coucher avec quelqu'un dans cette pièce", "b": "Que tout le monde ici connaisse ton nombre de partenaires", "t": "dici"}, {"id": "soir0", "r": "Ne plus jamais boire d'alcool", "b": "Ne plus jamais pouvoir danser", "t": "dsoiree"}, {"id": "soir1", "r": "Te réveiller à côté d'un inconnu sans aucun souvenir", "b": "Te réveiller seul dans une ville inconnue sans téléphone", "t": "dsoiree"}, {"id": "soir2", "r": "Que chacune de tes soirées soit filmée et diffusée le lendemain", "b": "Ne plus jamais sortir", "t": "dsoiree"}, {"id": "soir3", "r": "Avoir la gueule de bois sans avoir bu", "b": "Être bourré dès que tu bois de l'eau", "t": "dsoiree"}, {"id": "soir4", "r": "Être toujours le plus bourré de la soirée", "b": "Toujours le seul à jeun", "t": "dsoiree"}, {"id": "soir5", "r": "Faire la fête tous les soirs pendant un an", "b": "Ne plus jamais faire la fête", "t": "dsoiree"}, {"id": "soir6", "r": "Être celui qui pleure quand il est bourré", "b": "Celui qui veut se battre quand il est bourré", "t": "dsoiree"}, {"id": "soir7", "r": "Envoyer un message bourré à ton ex", "b": "À ton patron", "t": "dsoiree"}, {"id": "soir8", "r": "Danser seul sur une table au mariage de ton meilleur pote", "b": "Faire son discours de mariage complètement bourré", "t": "dsoiree"}, {"id": "soir9", "r": "Ne boire que du vin chaud toute ta vie", "b": "Que de la bière tiède", "t": "dsoiree"}, {"id": "degu0", "r": "Lécher la barre du métro", "b": "Boire un verre d'eau de vaisselle", "t": "ddegueu"}, {"id": "degu1", "r": "Avoir toujours une crotte de nez visible", "b": "Sentir toujours un peu la transpiration", "t": "ddegueu"}, {"id": "degu2", "r": "Péter très fort à chaque fois que tu dis bonjour", "b": "Roter à chaque fois que tu dis merci", "t": "ddegueu"}, {"id": "degu3", "r": "Manger un ver de terre vivant", "b": "Manger une cuillère de pâtée pour chat", "t": "ddegueu"}, {"id": "degu4", "r": "Ne pas te brosser les dents pendant un an", "b": "Ne pas te laver pendant un an", "t": "ddegueu"}, {"id": "degu5", "r": "Avoir des aisselles qui sentent le fromage", "b": "Des pieds qui sentent le poisson", "t": "ddegueu"}, {"id": "degu6", "r": "Faire pipi dans ton pantalon à chaque fou rire", "b": "Baver dès que quelqu'un te plaît", "t": "ddegueu"}, {"id": "degu7", "r": "Boire un verre de la sueur de quelqu'un ici", "b": "Mâcher le chewing-gum de quelqu'un ici", "t": "ddegueu"}, {"id": "degu8", "r": "Avoir la diarrhée pendant ton mariage", "b": "Vomir pendant l'entretien d'embauche de tes rêves", "t": "ddegueu"}, {"id": "degu9", "r": "Ne plus jamais utiliser de papier toilette", "b": "Partager ta brosse à dents avec un inconnu", "t": "ddegueu"}, {"id": "arge0", "r": "Gagner un million mais ne plus jamais voir tes potes", "b": "Rester fauché avec eux", "t": "dargent"}, {"id": "arge1", "r": "500 000 € mais tout le monde voit ton historique internet", "b": "Ne rien gagner", "t": "dargent"}, {"id": "arge2", "r": "5 000 € par mois sans bosser mais vivre chez tes parents", "b": "2 000 € par mois dans ton propre appart", "t": "dargent"}, {"id": "arge3", "r": "Gagner au loto mais que tout le monde te déteste", "b": "Être adoré et fauché", "t": "dargent"}, {"id": "arge4", "r": "Être riche et moche", "b": "Être pauvre et canon", "t": "dargent"}, {"id": "arge5", "r": "100 000 € mais te raser la tête et les sourcils", "b": "Garder tes sourcils", "t": "dargent"}, {"id": "arge6", "r": "Doubler ton salaire mais bosser avec ton ex", "b": "Garder ton salaire", "t": "dargent"}, {"id": "arge7", "r": "Un million tout de suite", "b": "5 000 € par mois à vie", "t": "dargent"}, {"id": "arge8", "r": "Payer toutes les additions de ce groupe pendant un an", "b": "Ne plus jamais sortir avec eux", "t": "dargent"}, {"id": "arge9", "r": "50 000 € mais marcher à quatre pattes en public pendant un mois", "b": "Ne rien gagner", "t": "dargent"}, {"id": "ding0", "r": "Avoir des doigts en saucisse", "b": "Des dents en Lego", "t": "ddingue"}, {"id": "ding1", "r": "Ne parler qu'en chantant", "b": "Ne te déplacer qu'à cloche-pied", "t": "ddingue"}, {"id": "ding2", "r": "Parler aux animaux mais ils sont tous méchants", "b": "Comprendre les bébés mais ils ne parlent que de toi", "t": "ddingue"}, {"id": "ding3", "r": "Devenir invisible dès que tu fermes les yeux", "b": "Lire dans les pensées mais seulement les pensées gênantes", "t": "ddingue"}, {"id": "ding4", "r": "Avoir une voix d'hélium toute ta vie", "b": "Avoir un accent que personne ne comprend", "t": "ddingue"}, {"id": "ding5", "r": "Te battre contre 100 canards de la taille d'un chat", "b": "Contre un canard de la taille d'un cheval", "t": "ddingue"}, {"id": "ding6", "r": "Avoir une musique de film à chaque fois que tu entres dans une pièce", "b": "Un rire enregistré après chacune de tes phrases", "t": "ddingue"}, {"id": "ding7", "r": "Sentir l'oignon pour toujours", "b": "Avoir la Macarena dans la tête pour toujours", "t": "ddingue"}, {"id": "ding8", "r": "Être un génie que personne ne croit", "b": "Un idiot que tout le monde écoute", "t": "ddingue"}, {"id": "ding9", "r": "Revivre la même journée pendant un an", "b": "Avancer de dix ans d'un coup", "t": "ddingue"}, {"id": "ding10", "r": "Avoir une queue de chat", "b": "Avoir des oreilles d'âne", "t": "ddingue"}, {"id": "ding11", "r": "Pouvoir voler mais à 5 km/h", "b": "Te téléporter mais tout nu à l'arrivée", "t": "ddingue"}, {"id": "ding12", "r": "Que ton téléphone lise tous tes messages à voix haute", "b": "Que tes pensées s'affichent sur ton front une heure par jour", "t": "ddingue"}, {"id": "ding13", "r": "Ne plus jamais dormir", "b": "Dormir 16 heures par jour", "t": "ddingue"}, {"id": "vie0", "r": "Connaître la date de ta mort", "b": "Connaître la cause de ta mort", "t": "dvie"}, {"id": "vie1", "r": "Revenir à tes 15 ans avec ta tête d'aujourd'hui", "b": "Avoir 50 ans demain et être riche", "t": "dvie"}, {"id": "vie2", "r": "Ne plus jamais avoir de téléphone", "b": "Ne plus jamais voyager", "t": "dvie"}, {"id": "vie3", "r": "Perdre tous tes souvenirs", "b": "Ne plus pouvoir t'en faire de nouveaux", "t": "dvie"}, {"id": "vie4", "r": "Être célèbre pour un truc humiliant", "b": "Rester inconnu toute ta vie", "t": "dvie"}, {"id": "vie5", "r": "Ne plus jamais pouvoir mentir", "b": "Ne jamais savoir quand on te ment", "t": "dvie"}, {"id": "vie6", "r": "Vivre 200 ans tout seul", "b": "Vivre 50 ans bien entouré", "t": "dvie"}, {"id": "vie7", "r": "Savoir ce que tout le monde pense vraiment de toi", "b": "Ne jamais le savoir", "t": "dvie"}]}</script>
+<script>
+(function(){
+"use strict";
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const LIST = DATA.list, TYPES = DATA.types;
+const LABEL = { garder: "Gardée", jeter: "Jetée", reecrire: "À réécrire" };
+const typeName = t => TYPES[t] || "";
+const label = x => x.r + " / " + x.b;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let db = null, votes = {}, ideas = [], cur = null, filter = "todo", lastId = null, loaded = false, noteDraft = {};
+
+function toast(m){ const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+function showErr(m){ const e = $("err"); e.textContent = m; e.hidden = !m; }
+const firstTodo = () => LIST.find(x => !votes[x.id]);
+
+function stats(){
+  const c = { garder: 0, jeter: 0, reecrire: 0 };
+  Object.values(votes).forEach(v => { if (c[v.v] != null) c[v.v]++; });
+  return { ...c, done: c.garder + c.jeter + c.reecrire, total: LIST.length };
+}
+
+function renderProg(){
+  const s = stats(), w = n => (n / s.total * 100).toFixed(2) + "%";
+  $("bar").innerHTML = `<i class="k" style="width:${w(s.garder)}"></i><i class="r" style="width:${w(s.reecrire)}"></i><i class="d" style="width:${w(s.jeter)}"></i>`;
+  $("counts").innerHTML = `<span><b>${s.done}</b> / ${s.total} triées</span>
+    <span><i class="dot" style="background:var(--keep)"></i>${s.garder} gardées</span>
+    <span><i class="dot" style="background:var(--redo)"></i>${s.reecrire} à réécrire</span>
+    <span><i class="dot" style="background:var(--drop)"></i>${s.jeter} jetées</span>`;
+}
+
+function renderMain(){
+  const m = $("main");
+  if (!loaded){ m.innerHTML = `<div class="done"><p>Chargement de ton tri…</p></div>`; return; }
+  const item = cur ? LIST.find(x => x.id === cur) : null;
+  if (!item){
+    m.innerHTML = `<div class="done pop"><h2>Tout est trié</h2><p>Dis-moi « c'est trié » dans la conversation et je mets le jeu à jour. Tu peux encore changer d'avis en touchant un dilemme dans la liste.</p></div>`;
+    return;
+  }
+  const v = votes[item.id], idx = LIST.indexOf(item) + 1;
+  const note = noteDraft[item.id] != null ? noteDraft[item.id] : (v && v.note) || "";
+  m.innerHTML = `<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="dl pop"><div class="side r">${esc(item.r)}</div><span class="ou">OU</span><div class="side b">${esc(item.b)}</div>
+      <div class="meta"><span>${esc(typeName(item.t))}</span>${v ? `<span class="was">Déjà ${esc(LABEL[v.v].toLowerCase())}</span>` : `<span>${idx} / ${LIST.length}</span>`}</div></div>
+    <div class="verdicts">
+      <button class="drop ${v && v.v === "jeter" ? "on" : ""}" data-v="jeter">Jeter</button>
+      <button class="keep ${v && v.v === "garder" ? "on" : ""}" data-v="garder">Garder</button>
+      <button class="redo ${v && v.v === "reecrire" ? "on" : ""}" data-v="reecrire">À réécrire avec ta version</button>
+    </div>
+    <div class="note" id="notebox" ${v && v.v === "reecrire" || note ? "" : "hidden"}>
+      <label class="label" for="note">Ta version (facultatif)</label>
+      <textarea id="note" maxlength="240" placeholder="Rouge … / Bleu …">${esc(note)}</textarea>
+    </div>
+    <div class="small">
+      <button class="link" id="back" ${lastId ? "" : "disabled"}>Revenir à la précédente</button>
+      <button class="link" id="skip">Passer pour l'instant</button>
+    </div>
+    <p class="hint keys">Clavier : flèche gauche pour jeter, flèche droite pour garder.</p>
+  </div>`;
+}
+
+const FILTERS = [["todo", "À trier"], ["garder", "Gardées"], ["reecrire", "À réécrire"], ["jeter", "Jetées"], ["all", "Toutes"]];
+function renderList(){
+  const s = stats(), n = { todo: s.total - s.done, garder: s.garder, reecrire: s.reecrire, jeter: s.jeter, all: s.total };
+  $("filters").innerHTML = FILTERS.map(([k, l]) => `<button data-f="${k}" class="${filter === k ? "on" : ""}" aria-pressed="${filter === k}">${l} · ${n[k]}</button>`).join("");
+  const rows = LIST.filter(x => filter === "all" ? true : filter === "todo" ? !votes[x.id] : votes[x.id] && votes[x.id].v === filter);
+  $("list").innerHTML = rows.length ? rows.map(x => { const v = votes[x.id];
+    return `<button class="row ${x.id === cur ? "cur" : ""}" data-id="${x.id}"><span class="t"><i class="rd">${esc(x.r)}</i> <i class="bd">${esc(x.b)}</i>${v && v.note ? `<small>Ta version : ${esc(v.note)}</small>` : ""}</span>${v ? `<span class="pill ${v.v}">${LABEL[v.v]}</span>` : `<span class="pill">${esc(typeName(x.t))}</span>`}</button>`; }).join("")
+    : `<p class="hint">Rien ici pour l'instant.</p>`;
+  $("ideas").innerHTML = ideas.map(i => `<div class="row"><span class="t">${esc(i.q)}</span><button class="link" data-del="${esc(i.id)}">Retirer</button></div>`).join("");
+}
+function render(){ renderProg(); renderMain(); renderList(); }
+
+async function decide(v){
+  const item = LIST.find(x => x.id === cur); if (!item) return;
+  const box = $("note"), note = (box ? box.value : "").trim();
+  if (v === "reecrire" && $("notebox").hidden){ $("notebox").hidden = false; $("note").focus(); return; }
+  const prev = votes[item.id];
+  votes[item.id] = { q: label(item), type: item.t, v, note: v === "reecrire" ? note : "" };
+  delete noteDraft[item.id];
+  lastId = item.id;
+  const next = LIST.slice(LIST.indexOf(item) + 1).find(x => !votes[x.id]) || firstTodo();
+  cur = next ? next.id : null;
+  render();
+  if (!db){ toast("Pas enregistré : ouvre la page en étant connecté à claude.ai"); return; }
+  try { await db.collection("dtri").doc(item.id).set({ ...votes[item.id], at: new Date().toISOString() }); }
+  catch(e){ if (prev) votes[item.id] = prev; else delete votes[item.id]; render(); toast("Pas enregistré, réessaie."); }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.v){ decide(b.dataset.v); return; }
+  if (b.dataset.f){ filter = b.dataset.f; renderList(); return; }
+  if (b.dataset.id){ cur = b.dataset.id; render(); $("main").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (b.dataset.del){ if (db) db.collection("didees").doc(b.dataset.del).delete().catch(() => toast("Pas retiré, réessaie.")); return; }
+  if (b.id === "back" && lastId){ cur = lastId; lastId = null; render(); return; }
+  if (b.id === "skip"){ const i = LIST.findIndex(x => x.id === cur); const n = LIST.slice(i + 1).find(x => !votes[x.id]) || LIST.find(x => !votes[x.id] && x.id !== cur); if (n){ cur = n.id; render(); } return; }
+});
+document.addEventListener("input", e => { if (e.target.id === "note" && cur) noteDraft[cur] = e.target.value; });
+document.addEventListener("keydown", e => {
+  if (/^(TEXTAREA|INPUT)$/.test(e.target.tagName)) return;
+  if (e.key === "ArrowLeft"){ e.preventDefault(); decide("jeter"); }
+  if (e.key === "ArrowRight"){ e.preventDefault(); decide("garder"); }
+});
+$("addf").addEventListener("submit", async e => {
+  e.preventDefault();
+  const r = $("idea").value.trim(), b2 = $("idea2").value.trim(); if (!r || !b2){ toast("Écris les deux côtés"); return; }
+  const q = r + " / " + b2;
+  if (!db){ toast("Pas enregistré : ouvre la page en étant connecté à claude.ai"); return; }
+  try { await db.collection("didees").add({ q, at: new Date().toISOString() }); $("idea").value = ""; $("idea2").value = ""; toast("Dilemme ajouté"); }
+  catch(x){ toast("Pas ajouté, réessaie."); }
+});
+
+cur = LIST[0].id; render();
+(async () => {
+  db = await (window.claude && window.claude.use ? window.claude.use("db") : null);
+  if (!db){ loaded = true; showErr("Ton tri ne peut pas être enregistré ici. Ouvre cette page dans claude.ai en étant connecté."); render(); return; }
+  db.collection("dtri").limit(1000).onSnapshot(snap => {
+    const v = {}; snap.docs.forEach(d => { const x = d.data(); if (x && LABEL[x.v]) v[d.id] = x; });
+    const first = !loaded; votes = v; loaded = true;
+    if (first){ const t = firstTodo(); cur = t ? t.id : null; }
+    render();
+  }, () => { loaded = true; showErr("Impossible de charger ton tri. Recharge la page."); render(); });
+  db.collection("didees").limit(500).onSnapshot(snap => {
+    ideas = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    renderList();
+  }, () => {});
+})();
+})();
+</script>

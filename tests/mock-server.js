@@ -9,8 +9,8 @@ const isBot = id => String(id).startsWith("b07b07b0-");
 const present = p => isBot(p.id) || Date.now() - Date.parse(p.last_seen) < 45000;
 const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"], aveux_bets: ["room", "round", "player"] };
 const defaults = {
-  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], yes: null, aused: [], created_at: now(), updated_at: now() }),
-  players: () => ({ ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
+  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], yes: null, aused: [], custom: [], cused: [], created_at: now(), updated_at: now() }),
+  players: () => ({ photo: null, ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
   answers: () => ({ id: crypto.randomUUID(), created_at: now(), won: false, fav: false, judge: null, secs: null, late: false }),
   reactions: () => ({ id: crypto.randomUUID(), created_at: now() }),
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
@@ -127,10 +127,15 @@ const rpc = {
     const old = { ...r }; Object.assign(r, { phase: "result", yes: y, updated_at: now() }); hook(old, r);
     return null;
   },
+  set_photo({ p_player, p_room, p_photo }){
+    if (p_photo != null && (!/^data:image\/(jpeg|webp|png);base64,/.test(p_photo) || p_photo.length > 40000)) return null;
+    const p = db.players.find(x => x.id === p_player && x.room === p_room); if (p) p.photo = p_photo || null;
+    return null;
+  },
   restart_room({ p_code, p_game }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], updated_at: now() }); if (["punchline","qui","aveux"].includes(p_game)) r.game = p_game; hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux"].includes(p_game)) r.game = p_game; hook(old, r);
     return null;
   }
 };

@@ -37,7 +37,7 @@ let live = false, channel = null, pollTimer = null, pingTimer = null, refreshTim
 let clock = 0; // décalage horloge serveur - horloge locale (ms)
 const savedTimer = store.get("timer");
 const TIMERS = [[15, "15 s"], [30, "30 s"], [60, "1 min"], [0, "Sans limite"]];
-const ui = { creating: false, target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer,
+const ui = { creating: false, mode: store.get("mode") === "soft" ? "soft" : "mix", target: store.get("target") || 5, timer: savedTimer == null ? 30 : savedTimer,
   codeInput: urlCode, err: "", sel: null, editing: false, confirmLeave: false, draft: "",
   tv: false, tvReady: false, tvAsk: !!urlTv, page: "home", stats: null,
   sound: store.get("sound") !== false, ratings: store.get("ratings") || {}, rank: [], game: store.get("game") || null,
@@ -523,7 +523,14 @@ function weightedPick(list, w, deck){
   return list[list.length - 1];
 }
 
+/* Cartes perso de l'hôte : sorties en priorité, une seule fois (rooms.custom / rooms.cused), effacées au retour en salle d'attente */
+const customLeft = (skip) => ((room && room.custom) || []).filter(t => !((room.cused || []).includes(t)) && t !== room.card && !(skip || []).includes(t));
+const pDeck = () => window.CARDS.concat((room && room.custom) || []);
 async function pickCard(skip){
+  const D = pDeck(), base = window.CARDS.length;
+  const mine = customLeft(skip.filter(i => i >= base).map(i => D[i]));
+  if (mine.length) return base + room.custom.indexOf(pickOne(mine));
+  skip = skip.filter(i => i < base);
   const C = window.CARDS, all = C.map((_, i) => i), soft = all.filter(i => okCard(C[i])), pool = soft.length ? soft : all;
   const used = (room.used || []).filter(i => i < C.length);
   let free = pool.filter(i => !used.includes(i) && !skip.includes(i) && C[i] !== room.card);
@@ -532,13 +539,15 @@ async function pickCard(skip){
   return weightedPick(free, await cardWeights());
 }
 async function commitCard(idx){
-  const C = window.CARDS;
+  const C = window.CARDS, D = pDeck(), text = D[idx];
+  if (text == null) return;
   let used = (room.used || []).filter(i => i < C.length);
-  if (used.length >= C.length - 1) used = [];
-  used.push(idx);
-  local(() => { room.card = C[idx]; room.phase = "writing"; }); sfx.card();
+  const extra = {};
+  if (idx >= C.length) extra.cused = (room.cused || []).concat([text]);
+  else { if (used.length >= C.length - 1) used = []; used.push(idx); }
+  local(() => { room.card = text; room.phase = "writing"; if (extra.cused) room.cused = extra.cused; }); sfx.card();
   busy = true;
-  const { error } = await sb.from("rooms").update({ card: C[idx], used, phase: "writing", updated_at: new Date().toISOString() })
+  const { error } = await sb.from("rooms").update({ card: text, used, ...extra, phase: "writing", updated_at: new Date().toISOString() })
     .eq("code", code).eq("round", room.round).in("phase", ["draw", "writing"]);
   busy = false;
   if (error) toast("Connexion perdue, réessaie.");
@@ -554,14 +563,15 @@ async function quiDraw(){
   const ok = Q.map((_, i) => i).filter(i => okCard(Q[i])), base = ok.length >= 4 ? ok : Q.map((_, i) => i);
   let free = base.filter(i => !used.includes(i));
   if (!free.length){ used = []; free = base; }
-  const idx = weightedPick(free, await cardWeights(), Q), q = Q[idx];
+  const mine = customLeft(), own = mine.length ? pickOne(mine) : null;
+  const idx = own ? -1 : weightedPick(free, await cardWeights(), Q), q = own || Q[idx];
   const opts = [q], shuffled = base.filter(i => i !== idx).sort(() => Math.random() - .5);
   for (const i of shuffled){ if (opts.length < 4 && !opts.some(o => T[o] === T[Q[i]])) opts.push(Q[i]); }
   for (const i of shuffled){ if (opts.length < 4 && !opts.includes(Q[i])) opts.push(Q[i]); }
   opts.sort(() => Math.random() - .5);
-  used.push(idx);
+  if (!own) used.push(idx);
   busy = true;
-  const { error } = await sb.from("rooms").update({ card: q, options: opts, qused: used, guess: null, phase: "writing", updated_at: new Date().toISOString() })
+  const { error } = await sb.from("rooms").update({ card: q, options: opts, qused: used, ...(own ? { cused: (room.cused || []).concat([own]) } : {}), guess: null, phase: "writing", updated_at: new Date().toISOString() })
     .eq("code", code).eq("round", room.round).eq("phase", "draw");
   busy = false;
   if (error){ autoDone.delete("qpick:" + room.round); toast("Connexion perdue, réessaie."); }
@@ -576,10 +586,11 @@ async function aveuxDraw(){
   const ok = A.map((_, i) => i).filter(i => okCard(A[i])), base = ok.length ? ok : A.map((_, i) => i);
   let free = base.filter(i => !used.includes(i));
   if (!free.length){ used = []; free = base; }
-  const idx = weightedPick(free, await cardWeights(), A);
-  used.push(idx);
+  const mine = customLeft(), own = mine.length ? pickOne(mine) : null;
+  const idx = own ? -1 : weightedPick(free, await cardWeights(), A);
+  if (!own) used.push(idx);
   busy = true;
-  const { error } = await sb.from("rooms").update({ card: A[idx], aused: used, phase: "writing", updated_at: new Date().toISOString() })
+  const { error } = await sb.from("rooms").update({ card: own || A[idx], aused: used, ...(own ? { cused: (room.cused || []).concat([own]) } : {}), phase: "writing", updated_at: new Date().toISOString() })
     .eq("code", code).eq("round", room.round).eq("phase", "draw");
   busy = false;
   if (error){ autoDone.delete("apick:" + room.round); toast("Connexion perdue, réessaie."); }
@@ -622,7 +633,7 @@ const actions = {
   async create(){
     const n = needName(); if (!n) return;
     busy = true;
-    const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: "mix" });
+    const { data, error } = await sb.rpc("create_room", { p_host: me.id, p_name: n, p_target: ui.target, p_mode: ui.mode });
     busy = false;
     if (error || !data){ ui.err = "Impossible de créer la partie. Vérifie ta connexion."; render(); return; }
     await sb.from("rooms").update({ timer: ui.timer, game: GAME_IDS.includes(ui.game) ? ui.game : "punchline" }).eq("code", data);
@@ -641,10 +652,30 @@ const actions = {
     await enterRoom(c);
   },
   swap(){ ui.swap = !ui.swap; },
+  instClose(){ store.set("inst", 1); },
+  async install(){ if (!installEvt) return; const e = installEvt; installEvt = null; e.prompt(); try { const r = await e.userChoice; if (r && r.outcome === "accepted") store.set("inst", 1); } catch(x){} },
+  async cadd(){
+    if (!room || !isLeader() || room.phase !== "lobby") return;
+    const t = customText(ui.cdraft), list = room.custom || [];
+    if (!t || list.includes(t)) { ui.cdraft = ""; render(); return; }
+    if (list.length >= 40){ toast("40 cartes perso maximum."); return; }
+    const next = list.concat([t]); ui.cdraft = ""; room.custom = next; const inp = $("#cin"); if (inp) inp.value = ""; render();
+    const { error } = await sb.from("rooms").update({ custom: next }).eq("code", code).eq("phase", "lobby");
+    if (error){ room.custom = list; toast("Carte pas ajoutée, réessaie."); }
+    scheduleRefresh(); const el = $("#cin"); if (el) el.focus();
+  },
+  async cdel(i){
+    if (!room || !isLeader() || room.phase !== "lobby") return;
+    const list = room.custom || [], next = list.filter((_, k) => k !== +i);
+    room.custom = next; render();
+    await sb.from("rooms").update({ custom: next }).eq("code", code).eq("phase", "lobby");
+    scheduleRefresh();
+  },
   async game(v){
     if (!room || !isLeader() || room.phase !== "lobby" || !GAME_IDS.includes(v)) return;
     ui.swap = false; room.game = v; try { localStorage.setItem("pl-game", v); } catch (e) {} ui.game = v; render();
-    await sb.from("rooms").update({ game: v }).eq("code", code).eq("phase", "lobby");
+    room.custom = []; room.cused = [];
+    await sb.from("rooms").update({ game: v, custom: [], cused: [] }).eq("code", code).eq("phase", "lobby");
     scheduleRefresh();
   },
   rankTap(id){
@@ -694,6 +725,14 @@ const actions = {
   chooseGame(){ ui.game = null; store.del("game"); ui.err = ""; ui.creating = false; render(); },
   help(){ ui.menu = false; ui.page = "help"; render(); },
   sound(){ ui.sound = !ui.sound; store.set("sound", ui.sound); unlockAudio(); if (ui.sound) sfx.pop(); render(); },
+  async vibe(v){
+    v = v === "soft" ? "soft" : "mix";
+    if (!room){ ui.mode = v; store.set("mode", v); render(); return; }
+    if (!isLeader() || room.phase !== "lobby" || room.mode === v) return;
+    room.mode = v; ui.mode = v; store.set("mode", v); render();
+    await sb.from("rooms").update({ mode: v }).eq("code", code).eq("phase", "lobby");
+    scheduleRefresh();
+  },
   target(v){ ui.target = +v; store.set("target", ui.target); render(); },
   async timer(v){
     ui.timer = +v; store.set("timer", ui.timer);
@@ -816,6 +855,8 @@ const ICON = {
   sndOff: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   gear: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
   back: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  down: `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 4v15M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  cam: `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`,
   heart: on => `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="${on ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`
 };
 const sndBtn = () => `<button class="snd" data-a="sound" aria-label="${ui.sound ? "Couper le son" : "Activer le son"}" title="${ui.sound ? "Son activé" : "Son coupé"}">${ui.sound ? ICON.sndOn : ICON.sndOff}</button>`;
@@ -832,7 +873,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 30;
+const APP_VERSION = 31;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux"];
 const GAME_CARDS = [
@@ -870,7 +911,11 @@ function punchDelta(){
 // Salle d'attente : chaque joueur arrive en pastille qui tombe, places vides en pointillés jusqu'à 3
 function crowd(kick){
   const empty = Math.max(0, MIN_PLAYERS - players.length);
-  return `<div class="crowd">${players.map(p => `<span class="cp ${present(p) ? "" : "away"}">${av(p.id, "lg")}<span class="cn">${meName(p.id)}</span>${kick && p.id !== me.id ? `<button class="cx" data-a="kick" data-v="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>` : ""}</span>`).join("")}
+  const cam = !ui.tv && room && room.phase === "lobby";
+  const mine = p => cam && p.id === me.id
+    ? `<label class="selfie" aria-label="${photoOf(me.id) ? "Changer mon selfie" : "Prendre un selfie"}">${av(p.id, "lg")}<span class="cam">${ICON.cam}</span><input type="file" id="selfie" accept="image/*" capture="user"></label>`
+    : av(p.id, "lg");
+  return `<div class="crowd">${players.map(p => `<span class="cp ${present(p) ? "" : "away"}">${mine(p)}<span class="cn">${meName(p.id)}</span>${kick && p.id !== me.id ? `<button class="cx" data-a="kick" data-v="${p.id}" aria-label="Retirer ${esc(p.name)}">×</button>` : ""}</span>`).join("")}
     ${Array.from({ length: empty }, () => `<span class="cp empty"><span class="av lg">?</span><span class="cn">&nbsp;</span></span>`).join("")}</div>`;
 }
 function blackCard(ans){
@@ -906,7 +951,7 @@ function favBlock(){
 }
 // Notation discrète, réservée à l'hôte (sert à améliorer le paquet)
 function rateBlock(){
-  if (!isLeader()) return "";
+  if (!isLeader() || ((room.custom || []).includes(room.card))) return "";
   const cur = ui.ratings[room.card];
   return `<div class="rate"><span>Cette carte :</span><button class="${cur === -1 ? "on" : ""}" data-a="rate" data-v="-1">nulle</button><button class="${cur === 1 ? "on" : ""}" data-a="rate" data-v="1">top</button></div>`;
 }
@@ -1036,6 +1081,7 @@ const views = {
     ${ui.creating ? `
     <div class="card stack pop">
       <h2>Nouvelle partie</h2>
+      ${vibeCards(ui.mode, true)}
       <span class="label">Points pour gagner</span>
       <div class="seg">${[3,5,7,10].map(n => `<button data-a="target" data-v="${n}" class="${ui.target === n ? "on" : ""}">${n}</button>`).join("")}</div>
       <span class="label">Temps pour répondre</span>
@@ -1102,6 +1148,8 @@ const views = {
     </div>
     <div class="stack">
       ${crowd(isLeader())}
+      ${vibeCards(room.mode, lead)}
+      ${lead ? customBlock() : ""}
       ${isLeader() ? "" : `<p style="font-size:14px;opacity:.8">Partie en ${room.target} points · ${timerLabel(room.timer)}</p>`}
       ${isLeader() ? `<span class="label light">Temps pour répondre</span>${timerSeg(room.timer)}` : ""}
     </div>
@@ -1121,7 +1169,7 @@ const views = {
 
   draw(){
     if (isJudge()){
-      const pv = ui.preview && ui.preview.round === room.round && ui.preview.idx != null ? window.CARDS[ui.preview.idx] : null;
+      const pv = ui.preview && ui.preview.round === room.round && ui.preview.idx != null ? pDeck()[ui.preview.idx] : null;
       if (pv) return `${head()}
       <div class="black pop"><div>${fill(pv)}</div><div class="brand">Punchline</div></div>
       <button class="btn gold" data-a="keep">Garder cette carte</button>
@@ -1245,6 +1293,40 @@ const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
 };
+/* Bandeau « Installer Dawa » : seulement dans le navigateur, jusqu'à ce qu'on le ferme */
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; render(); });
+window.addEventListener("appinstalled", () => { store.set("inst", 1); installEvt = null; render(); });
+const standalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function installBar(){
+  if (standalone() || store.get("inst")) return "";
+  const how = installEvt ? "Ajoute-la sur ton écran d'accueil" : isIOS() ? "Partager, puis « Sur l'écran d'accueil »" : "Menu du navigateur, puis « Ajouter à l'écran d'accueil »";
+  return `<div class="instbar" role="region" aria-label="Installer Dawa">
+    <div class="instic" aria-hidden="true">DA<br><span>WA</span></div>
+    <div class="insttx"><b>Installer Dawa</b><small>${how}</small></div>
+    ${installEvt ? `<button class="btn instgo" data-a="install">Installer</button>` : ""}
+    <button class="instx" data-a="instClose" aria-label="Fermer">×</button>
+  </div>${isIOS() && !installEvt ? `<div class="instarrow" aria-hidden="true">${ICON.down}</div>` : ""}`;
+}
+const CUSTOM_PH = { punchline: "Une carte sur le groupe, avec ___", qui: "Qui de nous… ?", aveux: "J'ai déjà…" };
+function customText(t){
+  t = String(t || "").replace(/\s+/g, " ").trim().slice(0, 140);
+  if (!t) return "";
+  if (room.game === "punchline"){
+    t = t.replace(/_{2,}|\.{3,}|…/g, BLANK);
+    if (!t.includes(BLANK)) t = t.replace(/[.!]?$/, "") + " " + BLANK + ".";
+  }
+  if (room.game === "qui"){ if (!/^qui\b/i.test(t)) t = "Qui de nous " + (/^(le |la |plus )/i.test(t) ? "est " : "") + t.charAt(0).toLowerCase() + t.slice(1); if (!/\?$/.test(t)) t = t.replace(/[.!]$/, "") + " ?"; }
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+const customBlock = () => `<div class="stack custom">
+  <div class="row"><input id="cin" maxlength="140" autocomplete="off" placeholder="${esc(CUSTOM_PH[room.game] || "")}" value="${esc(ui.cdraft || "")}"><button class="btn cadd" data-a="cadd" aria-label="Ajouter la carte">+</button></div>
+  ${(room.custom || []).map((t, i) => `<div class="cardrow"><i>Perso</i><span>${room.game === "punchline" ? fill(t) : esc(t)}</span><button class="x" data-a="cdel" data-v="${i}" aria-label="Retirer cette carte">×</button></div>`).join("")}
+</div>`;
+const vibeCards = (cur, can) => `<div class="vibe" role="group" aria-label="Ambiance">
+  <button class="vb s ${cur === "soft" ? "on" : "off"}" data-a="vibe" data-v="soft" aria-pressed="${cur === "soft"}" ${can ? "" : "disabled"}><b>Soft</b><small>Avec la famille</small></button>
+  <button class="vb t ${cur !== "soft" ? "on" : "off"}" data-a="vibe" data-v="mix" aria-pressed="${cur !== "soft"}" ${can ? "" : "disabled"}><b>Trash</b><small>Entre potes</small></button></div>`;
 const gameTo = g => g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : "à Punchline";
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
@@ -1252,7 +1334,10 @@ const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + 
 const AV_COLORS = ["#ff5a36", "#ffc83d", "#2fbf71", "#b48cff", "#4cc9f0", "#ff8fb1", "#f7f052", "#7ee0c3", "#ff9f43", "#9ab3ff"];
 const initial = n => { n = String(n || "?").replace(/^Robot\s+/i, ""); return (n.trim()[0] || "?").toUpperCase(); };
 function avColor(id){ const p = byId(id); const i = p ? [...players].sort((a, b) => a.seat - b.seat).indexOf(p) : 0; return AV_COLORS[(i < 0 ? 0 : i) % AV_COLORS.length]; }
-const av = (id, size, extra) => `<span class="av ${size || ""} ${extra || ""}" style="--c:${avColor(id)}" aria-hidden="true">${esc(initial(nameOf(id)))}</span>`;
+const photoOf = id => { const p = byId(id); return p && typeof p.photo === "string" && /^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/.test(p.photo) ? p.photo : null; };
+const av = (id, size, extra) => { const ph = photoOf(id);
+  return ph ? `<span class="av photo ${size || ""} ${extra || ""}" style="--c:${avColor(id)};background-image:url(${ph})" aria-hidden="true"></span>`
+    : `<span class="av ${size || ""} ${extra || ""}" style="--c:${avColor(id)}" aria-hidden="true">${esc(initial(nameOf(id)))}</span>`; };
 const meName = id => id === me.id && !ui.tv ? "Toi" : esc(nameOf(id));
 // « Qui de nous est le plus susceptible d'être… » : la petite ligne au-dessus, la fin en gros
 function splitQ(q){
@@ -1494,6 +1579,7 @@ const tvViews = {
       <p class="lead"><b>${esc(shortUrl())}</b></p></div>
       <div class="qr big">${qrSvg(joinUrl(code))}</div>
       <div class="stack">${crowd(false)}
+      <div style="max-width:320px">${vibeCards(room.mode, false)}</div>
       ${wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}</div></div>`;
   },
   draw(){
@@ -1614,6 +1700,7 @@ function render(){
   if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
   else if (lateMe()) html = views.late();
   else { const v = !room ? "home" : room.phase; html = ((isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
+  if (!room && !ui.tv && ui.page === "home") html += installBar();
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
   const key = screenKey(), app = $("#app");
@@ -1649,11 +1736,32 @@ document.addEventListener("input", ev => {
   if (t.id === "name"){ me.name = t.value; store.set("name", t.value.trim()); }
   if (t.id === "code"){ t.value = t.value.replace(/\D/g, "").slice(0, 4); ui.codeInput = t.value; }
   if (t.id === "ans"){ ui.draft = t.value; updatePreview(); }
+  if (t.id === "cin") ui.cdraft = t.value;
 });
+document.addEventListener("change", ev => { if (ev.target.id === "selfie" && ev.target.files && ev.target.files[0]) takeSelfie(ev.target.files[0]); });
+// Selfie réduit à 128 px (jpeg, environ 6 ko), envoyé via set_photo, effacé avec la partie
+async function takeSelfie(file){
+  if (!room) return;
+  try {
+    const url = URL.createObjectURL(file), img = new Image();
+    await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
+    const n = 128, cv = document.createElement("canvas"); cv.width = cv.height = n;
+    const side = Math.min(img.naturalWidth, img.naturalHeight), sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+    const g = cv.getContext("2d"); g.translate(n, 0); g.scale(-1, 1); g.drawImage(img, sx, sy, side, side, 0, 0, n, n);
+    URL.revokeObjectURL(url);
+    let data = cv.toDataURL("image/jpeg", .72);
+    if (data.length > 38000) data = cv.toDataURL("image/jpeg", .45);
+    const p = byId(me.id); if (p) p.photo = data; render();
+    const { error } = await sb.rpc("set_photo", { p_player: me.id, p_room: code, p_photo: data });
+    if (error) toast("Selfie pas envoyé, réessaie.");
+    scheduleRefresh();
+  } catch(e){ toast("Impossible de lire cette photo."); }
+}
 document.addEventListener("keydown", ev => {
   if (ev.key !== "Enter") return;
   if (ev.target.id === "code" || ev.target.id === "name"){ ev.preventDefault(); ui.tvAsk ? actions.watch() : actions.join(); }
   if (ev.target.id === "ans" && !ev.shiftKey){ ev.preventDefault(); actions.send(); }
+  if (ev.target.id === "cin"){ ev.preventDefault(); actions.cadd(); }
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && code){ ping().then(refresh); keepAwake(); }

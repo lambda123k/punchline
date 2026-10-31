@@ -52,6 +52,9 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   check(await admin(`return db.players.length`) === 3, "le grand écran ne compte pas comme joueur");
   await TV.screenshot({ path: S + "/tv-lobby.png" });
 
+  console.log("Carte perso");
+  await A.fill("#cin", "Léo a encore ... en soirée"); await A.click("[data-a=cadd]");
+  check(await until(A, async () => ((await admin("return db.rooms[0].custom")) || [])[0] === "Léo a encore ____ en soirée", "carte perso"), "les ... deviennent un trou");
   console.log("Manche 1");
   await A.click("[data-a=start]");
   const judgeId = async () => admin(`return db.rooms[0].judge`);
@@ -61,7 +64,9 @@ const hasText = (p, s) => until(p, async () => (await txt(p)).includes(s), s);
   let jName = Object.keys(ids).find(k => ids[k] === jid), J = byName[jName];
   const others = Object.keys(byName).filter(n => n !== jName);
   console.log("  juge : " + jName);
-  await hasText(J, "Piocher une carte"); await J.click("[data-a=peek]"); await J.waitForSelector("[data-a=keep]"); await J.click("[data-a=peek]"); await J.click("[data-a=keep]");
+  await hasText(J, "Piocher une carte"); await J.click("[data-a=peek]"); await J.waitForSelector("[data-a=keep]");
+  check((await txt(J)).includes("Léo a encore"), "la carte perso sort en premier à la pioche");
+  await J.click("[data-a=peek]"); await J.click("[data-a=keep]");
   await hasText(TV, "réponses");
   await TV.screenshot({ path: S + "/tv-writing.png" });
   for (const n of others){ const p = byName[n]; await until(p, () => p.locator("#ans").isVisible(), "zone réponse"); await p.fill("#ans", "réponse de " + n); await p.click("#send"); }

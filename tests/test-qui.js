@@ -57,7 +57,11 @@ const room = () => admin(`return db.rooms[0]`);
 
   for (const round of [1, 2]){
     console.log(`Manche ${round}`);
-    if (round === 1) await A.click("[data-a=start]");
+    if (round === 1){
+      await A.fill("#cin", "le plus gourmand"); await A.click("[data-a=cadd]");
+      check(await until(A, async () => ((await room()).custom || [])[0] === "Qui de nous est le plus gourmand ?", "question perso"), "question perso mise en forme");
+      await A.click("[data-a=start]");
+    }
     else {
       const nextBtn = [A, B, C].find(() => true);
       await until(A, async () => (await A.locator("[data-a=next]").count()) > 0 || (await B.locator("[data-a=next]").count()) > 0 || (await C.locator("[data-a=next]").count()) > 0, "bouton manche suivante");
@@ -68,6 +72,7 @@ const room = () => admin(`return db.rooms[0]`);
     const r = await room();
     const judge = nameOfId(r.judge), J = byName[judge];
     console.log("  devineur : " + judge + " · question : " + r.card);
+    if (round === 1) check(r.card === "Qui de nous est le plus gourmand ?", "la question perso sort en premier");
     check(r.options && r.options.length === 4 && r.options.includes(r.card) && new Set(r.options).size === 4, "4 propositions différentes dont la vraie");
     if (round === 2) check(r.judge !== prevJudge, "le rôle de devineur tourne");
     prevJudge = r.judge;

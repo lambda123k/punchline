@@ -11,7 +11,7 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Base : projet Supabase `punchline` (id `pjywkbrqtntblxtwqjlj`, région eu-west-3), clé anon dans `app.js`
 
 ## Fichiers
-- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N`, `qui.js?v=N` et `aveux.js?v=N` : monter N à chaque mise en ligne (cache).
+- `index.html` — styles (tokens bleu cobalt / crème / encre / orange / or ; rose #e8436b pour le coup de cœur), charge supabase-js 2.45.4 et qrcode-generator 1.4.4 depuis jsDelivr. `app.js?v=N`, `cards.js?v=N`, `qui.js?v=N`, `aveux.js?v=N` et `dilemme.js?v=N` : monter N à chaque mise en ligne (cache).
 - `APP_VERSION` dans app.js = le N du `?v=N` : à monter ensemble à chaque mise en ligne ; affiché en bas des Paramètres (« Version N ») pour vérifier qu'un téléphone a bien la dernière version.
 - `app.js` — toute l'appli (vues en chaînes HTML, rendu par comparaison de HTML pour ne pas casser la saisie). `views` = téléphones, `tvViews` = grand écran.
 - `cards.js` — `window.CARD_DECK` : 267 cartes triées par Naim le 25/10 (4 tris), rangées par type (soiree, couple, corps, boulot, quotidien, famille, absurde, souvenirs) ; libellés dans `CARD_TYPES`. En dérive `CARDS` (liste à plat) et `CARD_TYPE` (texte → type). `____` = trou. Plus aucune carte à deux-points ni question.
@@ -72,13 +72,16 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Affirmations : `aveux.js` (`AVEUX_DECK`, `AVEUX_TYPES` préfixe `a` : asoiree, asexe, aex, ahonte, aboulot, adingue). 98 écrites par Claude le 27/10, triées par Naim (page https://claude.ai/artifact/81fRtNeU9Q77iLTQ9zt3Wv, collection `atri`, idées perso `aidees`) : 94 gardées, 4 jetées (vomi dans un taxi, incruster un mariage, pipi dans la rue, viré d'une boîte). Ici la forme « J'ai déjà… » est voulue. Notation nulle/top et page des notes partagées.
 - Test : `node tests/test-aveux.js` (serveur neuf).
 
-## Jeu 4 : Le Dilemme (idée de Naim le 01/11/2026, code interne prévu `dilemme`) — pas encore codé
-- Principe : un « tu préfères » rouge ou bleu avec des dilemmes de ouf. Chacun choisit rouge ou bleu en secret, puis devine au curseur le % du groupe qui a pris bleu. Révélation : vrai %, curseurs de chacun, qui a pris quoi.
-- Points (Naim, 01/11) : seul le plus proche gagne 1 point (ex aequo tous à 1). Nom choisi : « Le Dilemme » (écartés : Tu préfères, Rouge ou Bleu).
-- Couleurs proposées : rouge #ff3b4e, bleu ciel #3fb6ff (pour ressortir sur le fond cobalt).
-- Maquettes (3 styles : A écran coupé, B deux cartes + thermomètre, C balance) : https://claude.ai/artifact/DYS36tUrCeS4gyhnun4C7i (`design/maquettes-dilemme.html`). En attente de son choix.
-- 82 dilemmes écrits par Claude, à trier : https://claude.ai/artifact/Ji5RQg9gTTEyZ54FgW8H1z (`design/tri-dilemme.html`, collection `dtri` doc id = id du dilemme, champs v garder|jeter|reecrire, note ; `didees` = ses dilemmes « rouge / bleu »). Types prévus (préfixe `d`) : dsexe, dcouple, dici, dsoiree, ddegueu, dargent, ddingue, dvie. Soft probable : ddingue, dvie, dargent ; trash : dsexe, dici ; à voir : dcouple, dsoiree, ddegueu.
-- Base à prévoir sur le modèle des Aveux : choix secret (table sans RLS) + curseur lisible, fonction de révélation qui compte le % et donne le point.
+## Jeu 4 : Le Dilemme (en ligne le 01/11/2026, v=32, code interne `dilemme`)
+- Principe (idée de Naim) : un « tu préfères » rouge ou bleu avec des dilemmes de ouf. Chacun choisit rouge ou bleu en secret, puis devine au curseur le % du groupe qui a pris bleu. Révélation : gros % qui monte, règle rouge/bleu avec le pari de chacun, gagnant, camps ROUGE / BLEU.
+- Points (Naim, 01/11) : seul le plus proche gagne 1 point (ex aequo tous à 1). Nom choisi : « Le Dilemme ».
+- Naim a dit « envoie tout directement sur l'application » sans choisir de maquette : Claude a pris le style A « écran coupé » (maquettes https://claude.ai/artifact/DYS36tUrCeS4gyhnun4C7i, `design/maquettes-dilemme.html`) et mis les 82 dilemmes sans tri. S'il préfère B (deux cartes + thermomètre) ou C (balance), c'est à refaire.
+- Tri possible après coup : https://claude.ai/artifact/Ji5RQg9gTTEyZ54FgW8H1z (`design/tri-dilemme.html`, collection `dtri` doc id = id du dilemme, champs v garder|jeter|reecrire, q « rouge / bleu », note ; `didees` = ses dilemmes « rouge / bleu »). Quand il dit « c'est trié », retirer les jetés de `dilemme.js`.
+- Code : réutilise toute la mécanique des Aveux. `isAveux()` est vrai pour les deux jeux, `isDil()` seulement pour le Dilemme. Même tables (`aveux_bets.bet` = % de bleu, contrainte 0 à 100 ; `aveux_secret.yes` = nombre de bleus ; `said` true = bleu), mêmes fonctions `aveu_send` / `aveu_reveal` (branche `dilemme` : plus proche = min |bet × n − bleus × 100|, comparaison sans arrondi, pareil côté client dans `dilBest`). `rooms.yes` = nombre de bleus, `dilPct()` = % arrondi. `rooms.aused` sert aussi pour les dilemmes déjà sortis.
+- Paquet : `dilemme.js` (`DIL_DECK` paires [rouge, bleu], `DIL_TYPES` préfixe `d` : dsexe, dcouple, dici, dsoiree, ddegueu, dargent, ddingue, dvie ; `DIL` = textes « rouge\nbleu » stockés tels quels dans `rooms.card` ; `DIL_TYPE`). Soft / Trash : dsexe et dici trash entiers + 2 dilemmes dans `TRASH_CARDS` ; 61 restent en soft.
+- Cartes perso : l'hôte tape « rouge / bleu » (ou « … ou … », « tu préfères » retiré), `customText` les sépare.
+- Vues : `dilViews` / `dilTv` (choisis avant `aveuxViews` dans `render()`), `dilSplit`, `dilMeter` (curseur `#dslide`, mis à jour sans re-rendu par `dilMeterSet`), `dilRuler`, `dilWin`, `dilCamps`. Styles `.dsplit`, `.dmeter`, `.druler`, `.dbig`, `.dwin`, `.camp.dr/.db`, `.gamecard.dilemme`.
+- Test : `node tests/test-dilemme.js` (serveur neuf), 45 vérifications.
 
 ## Fluidité (29/10/2026, diagnostic demandé par Naim)
 - Réaction immédiate : `local(fn)` applique le changement chez soi avant la réponse du serveur (lancer, garder la carte, envoyer une réponse / un classement / un pari, retourner une carte, changer de phase) ; en cas d'erreur on revient en arrière. Attention à calculer les valeurs (ex. `round + 1`) avant `local`, sinon elles sont comptées deux fois. Bouton en cours : `data-busy` (enfoncé, pas grisé).
@@ -127,6 +130,7 @@ node tests/mock-server.js /home/claude/punchline 8787 &
 NODE_PATH=/opt/npm-tools/node_modules node tests/test.js        # Punchline
 NODE_PATH=/opt/npm-tools/node_modules node tests/test-qui.js    # Qui de nous (serveur neuf)
 NODE_PATH=/opt/npm-tools/node_modules node tests/test-aveux.js  # Les Aveux (serveur neuf)
+NODE_PATH=/opt/npm-tools/node_modules node tests/test-dilemme.js  # Le Dilemme (serveur neuf)
 ```
 (Le test remplace supabase-js par `tests/mock-client.js` et le QR par un carré. Un serveur garde son état : en relancer un neuf pour chaque passage. Penser à garder `mock-server.js` aligné avec le SQL.) La logique SQL se teste avec `execute_sql` dans une transaction annulée : insertions en rôle postgres, puis `set local role anon` pour appeler les fonctions.
 

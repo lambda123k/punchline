@@ -107,21 +107,23 @@ const rpc = {
   },
   aveu_send({ p_code, p_player, p_yes, p_bet }){
     const r = db.rooms.find(x => x.code === p_code);
-    if (!r || r.phase !== "writing" || r.game !== "aveux") return false;
+    if (!r || r.phase !== "writing" || !["aveux", "dilemme"].includes(r.game)) return false;
     if (!db.players.some(p => p.id === p_player && p.room === p_code)) return false;
     if (db.aveux_bets.some(b => b.room === p_code && b.round === r.round && b.player === p_player)) return false;
-    db.aveux_bets.push({ ...defaults.aveux_bets(), room: p_code, round: r.round, player: p_player, bet: Math.max(0, Math.min(30, p_bet)) });
+    db.aveux_bets.push({ ...defaults.aveux_bets(), room: p_code, round: r.round, player: p_player, bet: Math.max(0, Math.min(r.game === "dilemme" ? 100 : 30, p_bet)) });
     const k = p_code + ":" + r.round; secret[k] = (secret[k] || 0) + (p_yes ? 1 : 0);
     secret["said:" + p_code + ":" + r.round + ":" + p_player] = !!p_yes;
     return true;
   },
   aveu_reveal({ p_code, p_round }){
     const r = db.rooms.find(x => x.code === p_code);
-    if (!r || r.round !== p_round || r.phase !== "writing" || r.game !== "aveux") return null;
+    if (!r || r.round !== p_round || r.phase !== "writing" || !["aveux", "dilemme"].includes(r.game)) return null;
     const y = secret[p_code + ":" + p_round] || 0;
-    db.aveux_bets.filter(b => b.room === p_code && b.round === p_round).forEach(b => {
+    const bs = db.aveux_bets.filter(b => b.room === p_code && b.round === p_round), n = bs.length;
+    const m = Math.min(...bs.map(b => Math.abs(b.bet * n - y * 100)));
+    bs.forEach(b => {
       const p = db.players.find(x => x.id === b.player && x.room === p_code); const e = Math.abs(b.bet - y);
-      if (p) p.score += e === 0 ? 2 : e === 1 ? 1 : 0;
+      if (p) p.score += r.game === "dilemme" ? (Math.abs(b.bet * n - y * 100) === m ? 1 : 0) : e === 0 ? 2 : e === 1 ? 1 : 0;
       b.said = secret["said:" + p_code + ":" + p_round + ":" + b.player];
     });
     const old = { ...r }; Object.assign(r, { phase: "result", yes: y, updated_at: now() }); hook(old, r);
@@ -135,7 +137,7 @@ const rpc = {
   restart_room({ p_code, p_game }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux"].includes(p_game)) r.game = p_game; hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux","dilemme"].includes(p_game)) r.game = p_game; hook(old, r);
     return null;
   }
 };

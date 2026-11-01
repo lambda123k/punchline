@@ -85,19 +85,22 @@ const roundAnswers = () => room ? answers.filter(a => a.round === room.round && 
 // Arrivé pendant la manche (après le début de l'écriture) : il joue à partir de la manche suivante
 const inRound = p => !room || !["writing", "judging", "result"].includes(room.phase) || !room.writing_at || !p.joined_at || !(parseTs(p.joined_at) > parseTs(room.writing_at));
 const lateMe = () => !ui.tv && !!room && room.phase === "writing" && !!byId(me.id) && !inRound(byId(me.id));
-const writers = () => players.filter(p => room && (p.id !== room.judge || room.game === "aveux") && present(p) && inRound(p));
+const writers = () => players.filter(p => room && (p.id !== room.judge || isAveux()) && present(p) && inRound(p));
 const writersDone = () => { const ids = doneIds(); return writers().filter(p => ids.has(p.id)).length; };
 const myAnswer = () => roundAnswers().find(a => a.player === me.id);
 const roundVotes = () => room ? votes.filter(v => v.round === room.round) : [];
 const myVote = () => roundVotes().find(v => v.voter === me.id);
 const maxScore = () => Math.max(0, ...players.map(p => p.score));
-const cardType = c => (window.CARD_TYPE || {})[c] || (window.QUI_TYPE || {})[c] || (window.AVEUX_TYPE || {})[c] || "autre";
+const cardType = c => (window.CARD_TYPE || {})[c] || (window.QUI_TYPE || {})[c] || (window.AVEUX_TYPE || {})[c] || (window.DIL_TYPE || {})[c] || "autre";
 /* « Qui de nous » : le juge est le devineur, les autres classent tout le monde */
 const isQui = () => !!room && room.game === "qui";
 const roundRanks = () => room ? rankings.filter(k => k.round === room.round && byId(k.player) && k.player !== room.judge) : [];
 const myRanking = () => roundRanks().find(k => k.player === me.id);
 /* « Les Aveux » : tout le monde répond (pas de juge), le oui n'est jamais lié au joueur, seul le pari l'est */
-const isAveux = () => !!room && room.game === "aveux";
+const isAveux = () => !!room && (room.game === "aveux" || room.game === "dilemme");
+/* « Le Dilemme » (01/11) : même mécanique que les Aveux (choix secret + pari), le pari est un % de bleu, le plus proche gagne 1 point */
+const isDil = () => !!room && room.game === "dilemme";
+const dilParts = t => { const p = String(t || "").split("\n"); return [p[0] || "", p.slice(1).join(" ") || ""]; };
 const roundBets = () => room ? bets.filter(b => b.round === room.round && byId(b.player)) : [];
 const myBet = () => roundBets().find(b => b.player === me.id);
 const doneIds = () => new Set((isAveux() ? roundBets() : isQui() ? roundRanks() : roundAnswers()).map(a => a.player));
@@ -185,7 +188,7 @@ function fxOnScreen(){
   if (room.phase === "draw" && prev.round !== room.round) roundBanner(room.round);
   if (room.phase === "result" && prev.phase !== "result"){
     countdown(() => {
-      if (room.game === "aveux") return;   // les Aveux enchaînent avec leur compteur (aveuxCount)
+      if (isAveux()) return;   // les Aveux et le Dilemme enchaînent avec leur compteur (aveuxCount)
       let mine;
       if (room.game === "qui"){ const right = room.guess === room.card; mine = right && (ui.tv || !!myRanking() || isJudge()); if (right) confetti(mine); }
       else { const w = answers.find(x => x.id === room.winner); mine = ui.tv || (w && w.player === me.id); if (w) confetti(mine); }
@@ -211,7 +214,7 @@ async function refresh(){
     pl ? sb.from("votes").select("*").eq("room", c) : none,
     pl && (!room || ["result", "end"].includes(room.phase)) ? sb.from("reactions").select("round,answer,player").eq("room", c) : none,
     !g || g === "qui" ? sb.from("rankings").select("*").eq("room", c) : none,
-    !g || g === "aveux" ? sb.from("aveux_bets").select("*").eq("room", c) : none
+    !g || g === "aveux" || g === "dilemme" ? sb.from("aveux_bets").select("*").eq("room", c) : none
   ]);
   if (c !== code) return;
   if (!r.error && r.data && g && r.data.game !== g){ room = r.data; return refresh(); } // jeu changé : on recharge tout
@@ -299,7 +302,7 @@ function botActions(){
       players.filter(p => isBot(p.id) && present(p) && !roundBets().some(b => b.player === p.id)).forEach(p => {
         botOnce(`${r}:aveu:${p.id}`, rand(2000, 6000), () => {
           if (!still() || room.phase !== "writing") return;
-          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: rand(0, n + 1) });
+          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: isDil() ? rand(0, 101) : rand(0, n + 1) });
         });
       });
     }
@@ -502,8 +505,8 @@ function leaveLocal(msg){
 
 /* ---------- pioche pondérée par les notes ---------- */
 /* Soft / Trash (tri validé par Naim le 30/10) : en mode « soft », ces types entiers et ces cartes sont écartés */
-const TRASH_TYPES = new Set(["couple", "corps", "qcouple", "asexe", "aici", "adingue"]);
-const TRASH_CARDS = new Set(["Je me suis réveillé chez un inconnu avec ____.","____, ma passion depuis que je suis célibataire.","____ dans un sachet congélation, ça passe.","Qui de nous est le plus susceptible d'être acteur porno ?","Qui de nous est le plus susceptible d'être un détraqué sexuel ?","Qui de nous est le plus susceptible d'être zoophile en cachette ?","Qui de nous est le plus susceptible d'avoir un compte OnlyFans secret ?","Qui de nous est le plus susceptible d'avoir un donjon SM dans sa cave ?","Qui de nous est le plus susceptible de coucher avec son patron ?","Qui de nous est le plus susceptible de coucher avec l'ex d'un pote ?","Qui de nous est le plus susceptible de tromper son copain ou sa copine ?","Qui de nous est le plus susceptible de se faire payer pour coucher ?","Qui de nous est le plus susceptible de vendre ses culottes sur internet ?","Qui de nous est le plus susceptible d'envoyer un nude au mauvais destinataire ?","Qui de nous est le plus susceptible de se faire surprendre en pleine branlette ?","Qui de nous est le plus susceptible de faire l'amour dans les toilettes d'un bar ?","Qui de nous est le plus susceptible de cacher une poupée gonflable sous son lit ?","Qui de nous est le plus susceptible de faire de l'échangisme ?","Qui de nous est le plus susceptible de dépasser les 100 partenaires ?","Qui de nous est le plus susceptible d'avoir un plan cul avec son voisin ?","Qui de nous est le plus susceptible de se faire tatouer le prénom d'un coup d'un soir ?","Qui de nous est le plus susceptible de se faire arrêter tout nu dans la rue ?","Qui de nous est le plus susceptible de coucher avec une star ?","J'ai déjà pété pendant un moment intime","J'ai déjà recouché avec un ex","J'ai déjà couché avec l'ex d'un pote","J'ai déjà menti sur mon nombre de partenaires","J'ai déjà dit je t'aime juste pour coucher","J'ai déjà dormi chez un inconnu après une soirée","J'ai déjà été trop bourré pour coucher"]);
+const TRASH_TYPES = new Set(["couple", "corps", "qcouple", "asexe", "aici", "adingue", "dsexe", "dici"]);
+const TRASH_CARDS = new Set(["Je me suis réveillé chez un inconnu avec ____.","____, ma passion depuis que je suis célibataire.","____ dans un sachet congélation, ça passe.","Qui de nous est le plus susceptible d'être acteur porno ?","Qui de nous est le plus susceptible d'être un détraqué sexuel ?","Qui de nous est le plus susceptible d'être zoophile en cachette ?","Qui de nous est le plus susceptible d'avoir un compte OnlyFans secret ?","Qui de nous est le plus susceptible d'avoir un donjon SM dans sa cave ?","Qui de nous est le plus susceptible de coucher avec son patron ?","Qui de nous est le plus susceptible de coucher avec l'ex d'un pote ?","Qui de nous est le plus susceptible de tromper son copain ou sa copine ?","Qui de nous est le plus susceptible de se faire payer pour coucher ?","Qui de nous est le plus susceptible de vendre ses culottes sur internet ?","Qui de nous est le plus susceptible d'envoyer un nude au mauvais destinataire ?","Qui de nous est le plus susceptible de se faire surprendre en pleine branlette ?","Qui de nous est le plus susceptible de faire l'amour dans les toilettes d'un bar ?","Qui de nous est le plus susceptible de cacher une poupée gonflable sous son lit ?","Qui de nous est le plus susceptible de faire de l'échangisme ?","Qui de nous est le plus susceptible de dépasser les 100 partenaires ?","Qui de nous est le plus susceptible d'avoir un plan cul avec son voisin ?","Qui de nous est le plus susceptible de se faire tatouer le prénom d'un coup d'un soir ?","Qui de nous est le plus susceptible de se faire arrêter tout nu dans la rue ?","Qui de nous est le plus susceptible de coucher avec une star ?","J'ai déjà pété pendant un moment intime","J'ai déjà recouché avec un ex","J'ai déjà couché avec l'ex d'un pote","J'ai déjà menti sur mon nombre de partenaires","J'ai déjà dit je t'aime juste pour coucher","J'ai déjà dormi chez un inconnu après une soirée","J'ai déjà été trop bourré pour coucher","Que ton partenaire ait couché avec ton meilleur pote avant vous\nAvec ton boss","Te réveiller à côté d'un inconnu sans aucun souvenir\nTe réveiller seul dans une ville inconnue sans téléphone"]);
 const isTrash = t => TRASH_TYPES.has(cardType(t)) || TRASH_CARDS.has(t);
 const okCard = t => !room || room.mode !== "soft" || !isTrash(t);
 async function cardWeights(){
@@ -579,7 +582,7 @@ async function quiDraw(){
 }
 /* « Les Aveux » : une affirmation au hasard, pondérée par les notes */
 async function aveuxDraw(){
-  const A = window.AVEUX || [];
+  const A = (isDil() ? window.DIL : window.AVEUX) || [];
   if (!A.length) return;
   let used = (room.aused || []).filter(i => i < A.length);
   if (used.length >= A.length - 1) used = [];
@@ -596,7 +599,7 @@ async function aveuxDraw(){
   if (error){ autoDone.delete("apick:" + room.round); toast("Connexion perdue, réessaie."); }
   scheduleRefresh();
 }
-const betMax = () => Math.max(1, rankPool().length);
+const betMax = () => isDil() ? 100 : Math.max(1, rankPool().length);
 const curBet = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet, betMax());
 async function sendAveu(){
   if (!room || room.phase !== "writing" || ui.ayes == null || myBet()) return;
@@ -851,6 +854,7 @@ const actions = {
 
 /* ---------- vues ---------- */
 const ICON = {
+  crown: `<svg class="crown" viewBox="0 0 16 12" width="18" height="14" aria-hidden="true"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="#ffc83d" stroke="#16130f" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
   sndOn: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   sndOff: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   gear: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
@@ -873,13 +877,14 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 31;
-const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
-const GAME_IDS = ["punchline", "qui", "aveux"];
+const APP_VERSION = 32;
+const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const GAME_IDS = ["punchline", "qui", "aveux", "dilemme"];
 const GAME_CARDS = [
   ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],
   ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]],
-  ["aveux", ["Une affirmation", "Chacun avoue en secret", "Pariez sur le nombre de oui"]]
+  ["aveux", ["Une affirmation", "Chacun avoue en secret", "Pariez sur le nombre de oui"]],
+  ["dilemme", ["Rouge ou bleu", "Chacun choisit en secret", "Devine le % du groupe"]]
 ];
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
@@ -1099,6 +1104,7 @@ const views = {
       <section><h3>Punchline</h3><p>Le juge pioche une carte à trous et la lit à voix haute. Chacun écrit sa réponse en secret. Le juge retourne les réponses une par une et choisit sa préférée : 1 point, et le gagnant devient le juge suivant. Les autres votent pour leur coup de cœur : 1 point bonus à la plus votée.</p></section>
       <section><h3>Le Verdict</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
       <section><h3>Les Aveux</h3><p>Une affirmation s'affiche, par exemple « J'ai déjà couché le premier soir ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui dans le groupe. Personne ne sait qui a dit oui : on ne voit que le total. Pari exact : 2 points. À 1 près : 1 point.</p></section>
+      <section><h3>Le Dilemme</h3><p>Un dilemme s'affiche : rouge ou bleu. Chacun choisit son côté en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche du vrai pourcentage gagne 1 point (tous les ex aequo aussi). À la fin, on voit qui a pris quoi.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -1109,7 +1115,7 @@ const views = {
     if (!s) body = wait("Chargement des notes");
     else if (s.error) body = `<div class="err">Impossible de charger les notes. Vérifie ta connexion.</div>`;
     else {
-      const T = { ...(window.CARD_TYPES || {}), ...(window.QUI_TYPES || {}), ...(window.AVEUX_TYPES || {}) }, deck = { ...(window.CARD_DECK || {}), ...(window.QUI_DECK || {}), ...(window.AVEUX_DECK || {}) };
+      const T = { ...(window.CARD_TYPES || {}), ...(window.QUI_TYPES || {}), ...(window.AVEUX_TYPES || {}), ...(window.DIL_TYPES || {}) }, deck = { ...(window.CARD_DECK || {}), ...(window.QUI_DECK || {}), ...(window.AVEUX_DECK || {}), ...(window.DIL_DECK || {}) };
       const rows = s.rows.map(r => ({ ...r, type: cardType(r.card) !== "autre" ? cardType(r.card) : (r.type || "autre") }));
       const votesTotal = rows.reduce((t, r) => t + r.up + r.down, 0);
       const types = Object.keys(T).map(k => {
@@ -1288,7 +1294,7 @@ const views = {
 };
 
 /* ---------- « Qui de nous » ---------- */
-const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"]];
+const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"], ["dilemme", "Le Dilemme"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
@@ -1309,10 +1315,16 @@ function installBar(){
     <button class="instx" data-a="instClose" aria-label="Fermer">×</button>
   </div>${isIOS() && !installEvt ? `<div class="instarrow" aria-hidden="true">${ICON.down}</div>` : ""}`;
 }
-const CUSTOM_PH = { punchline: "Une carte sur le groupe, avec ___", qui: "Qui de nous… ?", aveux: "J'ai déjà…" };
+const CUSTOM_PH = { punchline: "Une carte sur le groupe, avec ___", qui: "Qui de nous… ?", aveux: "J'ai déjà…", dilemme: "Rouge / Bleu" };
 function customText(t){
   t = String(t || "").replace(/\s+/g, " ").trim().slice(0, 140);
   if (!t) return "";
+  if (room.game === "dilemme"){
+    const m = t.split(/\s*\/\s*|\s+ou\s+/i).filter(Boolean);
+    if (m.length < 2){ toast("Écris les deux côtés : rouge / bleu"); return ""; }
+    const cap = x => x.charAt(0).toUpperCase() + x.slice(1).replace(/[?.!]+$/, "");
+    return cap(m[0].replace(/^tu préfères\s*/i, "")) + "\n" + cap(m.slice(1).join(" ou "));
+  }
   if (room.game === "punchline"){
     t = t.replace(/_{2,}|\.{3,}|…/g, BLANK);
     if (!t.includes(BLANK)) t = t.replace(/[.!]?$/, "") + " " + BLANK + ".";
@@ -1322,12 +1334,12 @@ function customText(t){
 }
 const customBlock = () => `<div class="stack custom">
   <div class="row"><input id="cin" maxlength="140" autocomplete="off" placeholder="${esc(CUSTOM_PH[room.game] || "")}" value="${esc(ui.cdraft || "")}"><button class="btn cadd" data-a="cadd" aria-label="Ajouter la carte">+</button></div>
-  ${(room.custom || []).map((t, i) => `<div class="cardrow"><i>Perso</i><span>${room.game === "punchline" ? fill(t) : esc(t)}</span><button class="x" data-a="cdel" data-v="${i}" aria-label="Retirer cette carte">×</button></div>`).join("")}
+  ${(room.custom || []).map((t, i) => `<div class="cardrow"><i>Perso</i><span>${room.game === "punchline" ? fill(t) : room.game === "dilemme" ? `<b class="cr">${esc(dilParts(t)[0])}</b> <b class="cb">${esc(dilParts(t)[1])}</b>` : esc(t)}</span><button class="x" data-a="cdel" data-v="${i}" aria-label="Retirer cette carte">×</button></div>`).join("")}
 </div>`;
 const vibeCards = (cur, can) => `<div class="vibe" role="group" aria-label="Ambiance">
   <button class="vb s ${cur === "soft" ? "on" : "off"}" data-a="vibe" data-v="soft" aria-pressed="${cur === "soft"}" ${can ? "" : "disabled"}><b>Soft</b><small>Avec la famille</small></button>
   <button class="vb t ${cur !== "soft" ? "on" : "off"}" data-a="vibe" data-v="mix" aria-pressed="${cur !== "soft"}" ${can ? "" : "disabled"}><b>Trash</b><small>Entre potes</small></button></div>`;
-const gameTo = g => g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : "à Punchline";
+const gameTo = g => g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : g === "dilemme" ? "au Dilemme" : "à Punchline";
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
 // Pastille de couleur + initiale par joueur (couleur fixe selon l'ordre d'arrivée)
@@ -1486,6 +1498,7 @@ const quiTv = {
 function aveuxDelta(){
   const d = {};
   if (room.yes == null) return d;
+  if (isDil()){ const best = dilBest(); roundBets().forEach(b => { if (best.includes(b.player)) d[b.player] = 1; }); return d; }
   roundBets().forEach(b => { const e = Math.abs(b.bet - room.yes); if (e <= 1) d[b.player] = e === 0 ? 2 : 1; });
   return d;
 }
@@ -1494,13 +1507,15 @@ function aveuxCount(){
   if (!room || room.phase !== "result" || room.yes == null) return;
   const key = code + ":" + room.round;
   if (ui.ashow && ui.ashow.key === key) return;
-  ui.ashow = { key, n: 0, done: room.yes === 0 };
+  const goal = isDil() ? dilPct() : room.yes;
+  ui.ashow = { key, n: 0, done: goal === 0 };
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const step = () => {
     if (!ui.ashow || ui.ashow.key !== key) return;
     if (Date.now() < cdUntil){ setTimeout(step, cdUntil - Date.now() + 250); return; }
-    if (reduce) ui.ashow.n = room.yes;
-    if (ui.ashow.n >= room.yes){ ui.ashow.done = true; const d = aveuxDelta(); sfx.win(ui.tv || !!d[me.id]); render(); countUp(); if (ui.tv || d[me.id]) confetti(d[me.id] === 2); return; }
+    if (reduce) ui.ashow.n = goal;
+    if (ui.ashow.n >= goal){ ui.ashow.done = true; const d = aveuxDelta(); sfx.win(ui.tv || !!d[me.id]); render(); countUp(); if (ui.tv || d[me.id]) confetti(isDil() || d[me.id] === 2); return; }
+    if (isDil()){ ui.ashow.n = Math.min(goal, ui.ashow.n + Math.max(1, Math.ceil(goal / 14))); sfx.tick(false); render(); setTimeout(step, 110); return; }
     ui.ashow.n++; sfx.tick(false); render();
     setTimeout(step, 600);
   };
@@ -1560,6 +1575,85 @@ const aveuxTv = {
     const s = ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: room.yes, done: true };
     return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${aveuCard("small")}
       <div class="ybig ${s.done ? "done" : ""}">${s.n}<small>oui sur ${roundBets().length}</small></div>${s.done ? aveuCamps() + scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
+  }
+};
+
+/* ---------- « Le Dilemme » : écran coupé rouge / bleu, curseur, règle avec les paris (style A, 01/11) ---------- */
+// % de bleu dans le groupe (les paris envoyés), et les plus proches (comparaison sans arrondi, comme aveu_reveal)
+const dilPct = () => { const n = roundBets().length; return n && room.yes != null ? Math.round(room.yes * 100 / n) : 0; };
+function dilBest(){
+  const bs = roundBets(), n = bs.length;
+  if (!n || room.yes == null) return [];
+  const e = b => Math.abs(b.bet * n - room.yes * 100), m = Math.min(...bs.map(e));
+  return bs.filter(b => e(b) === m).map(b => b.player);
+}
+const dilSplit = (cls, pick) => { const [r, b] = dilParts(room.card), on = v => ui.ayes === v ? "on" : ui.ayes == null ? "" : "dim";
+  return pick ? `<div class="dsplit ${cls || ""}"><button class="dh r ${on(false)}" data-a="ayes" data-v="0">${esc(r)}</button><span class="dou">OU</span><button class="dh b ${on(true)}" data-a="ayes" data-v="1">${esc(b)}</button></div>`
+    : `<div class="dsplit ${cls || ""}"><div class="dh r">${esc(r)}</div><span class="dou">OU</span><div class="dh b">${esc(b)}</div></div>`; };
+const dilMeter = v => `<div class="dmeter" aria-hidden="true"><i class="dr" style="width:${100 - v}%"></i><i class="db"></i><i class="dk" style="left:${100 - v}%"></i>
+  <div class="dpct"><span>${100 - v} %</span><span>${v} %</span></div></div>`;
+function dilMeterSet(v){
+  const m = $(".dmeter"); if (!m) return;
+  m.querySelector(".dr").style.width = (100 - v) + "%"; m.querySelector(".dk").style.left = (100 - v) + "%";
+  const s = m.querySelectorAll(".dpct span"); s[0].textContent = (100 - v) + " %"; s[1].textContent = v + " %";
+}
+// La règle de la révélation : barre qui se remplit jusqu'au vrai %, trait blanc, paris de chacun au-dessus / au-dessous
+function dilRuler(show){
+  const bs = roundBets().slice().sort((a, b) => a.bet - b.bet), best = show.done ? dilBest() : [];
+  const marks = bs.map((b, i) => `<span class="dg ${i % 2 ? "dn" : "up"} ${best.includes(b.player) ? "best" : ""}" style="left:${Math.max(4, Math.min(96, 100 - b.bet))}%">${best.includes(b.player) ? ICON.crown : ""}${av(b.player, "sm")}<small>${b.bet}</small></span>`).join("");
+  return `<div class="dbig ${show.done ? "done" : ""}">${show.n} %<small>bleu</small></div><div class="druler"><div class="dtrack"><i class="dr" style="width:${100 - show.n}%"></i><i class="db"></i></div>
+    <div class="dtruth" style="left:${100 - show.n}%"></div>${show.done ? marks : ""}</div>`;
+}
+function dilCamps(){
+  const bs = roundBets().filter(b => b.said != null).sort((a, b) => (byId(a.player) || {}).seat - (byId(b.player) || {}).seat);
+  if (!bs.length) return "";
+  return `<div class="camps pop">${[false, true].map(y => `<div class="camp ${y ? "db" : "dr"}"><h3>${y ? "BLEU" : "ROUGE"}</h3>
+    ${bs.filter(b => b.said === y).map(b => `<span class="who">${av(b.player, "sm")}<span>${meName(b.player)}</span></span>`).join("")}</div>`).join("")}</div>`;
+}
+const dilWin = () => { const best = dilBest(); if (!best.length) return "";
+  return `<div class="dwin pop">${best.map(id => av(id, "lg")).join("")}<b>${best.map(meName).join(", ")}</b><small>+1</small></div>`; };
+const dilShow = () => ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: dilPct(), done: true };
+const dilViews = {
+  draw(){ return aveuxViews.draw(); },
+  writing(){
+    if (myBet()) return `${head()}${aveuxTop()}
+      ${dilSplit("small " + (ui.ayes === true ? "pb" : ui.ayes === false ? "pr" : ""))}
+      <div class="qcenter tight"><div class="big">Envoyé</div></div>
+      ${aveuWait("")}
+      ${footer()}`;
+    if (ui.ayes == null) return `${head()}${aveuxTop()}${dilSplit("pop", true)}${footer()}`;
+    const v = curBet();
+    return `${head()}${aveuxTop()}
+      <div class="dq">Combien ont pris <span>bleu</span> ?</div>
+      ${dilMeter(v)}
+      <input class="drange" type="range" id="dslide" min="0" max="100" step="1" value="${v}" aria-label="Pourcentage du groupe qui a pris bleu">
+      <div class="dmine"><span class="dchip ${ui.ayes ? "b" : "r"}"></span>Toi : ${ui.ayes ? "bleu" : "rouge"}</div>
+      <button class="btn" data-a="asend">Valider</button>
+      <button class="link" data-a="aback">Changer mon choix</button>
+      ${footer()}`;
+  },
+  result(){
+    aveuxCount();
+    const s = dilShow(), over = maxScore() >= room.target;
+    return `${head()}
+      ${dilSplit("small")}
+      ${dilRuler(s)}
+      ${s.done ? `${dilWin()}
+      ${dilCamps()}
+      ${scoreChips(aveuxDelta())}
+      ${reactBar()}
+      ${isLeader() ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}
+      ${rateBlock()}` : ""}
+      ${footer()}`;
+  }
+};
+const dilTv = {
+  draw(){ return aveuxTv.draw(); },
+  writing(){ return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${timerBox()}${dilSplit()}${aveuWait("lg")}</main>${tvSide()}</div>`; },
+  result(){
+    aveuxCount();
+    const s = dilShow();
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${dilSplit("small")}${dilRuler(s)}${s.done ? dilWin() + dilCamps() + scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
   }
 };
 
@@ -1697,9 +1791,9 @@ function screenKey(){
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
-  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
+  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isDil() && dilTv[room.phase]) || (isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
   else if (lateMe()) html = views.late();
-  else { const v = !room ? "home" : room.phase; html = ((isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
+  else { const v = !room ? "home" : room.phase; html = ((isDil() && dilViews[v]) || (isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (!room && !ui.tv && ui.page === "home") html += installBar();
   if (html === lastHtml) return;
   const act = document.activeElement, actId = act && act.id, s = act && act.selectionStart, e = act && act.selectionEnd;
@@ -1737,6 +1831,7 @@ document.addEventListener("input", ev => {
   if (t.id === "code"){ t.value = t.value.replace(/\D/g, "").slice(0, 4); ui.codeInput = t.value; }
   if (t.id === "ans"){ ui.draft = t.value; updatePreview(); }
   if (t.id === "cin") ui.cdraft = t.value;
+  if (t.id === "dslide"){ ui.abet = Math.max(0, Math.min(100, Math.round(+t.value))); dilMeterSet(ui.abet); }
 });
 document.addEventListener("change", ev => { if (ev.target.id === "selfie" && ev.target.files && ev.target.files[0]) takeSelfie(ev.target.files[0]); });
 // Selfie réduit à 128 px (jpeg, environ 6 ko), envoyé via set_photo, effacé avec la partie

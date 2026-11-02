@@ -73,14 +73,16 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
     check(await A.locator(".dsplit .dh.r").count() === 1 && await A.locator(".dsplit .dh.b").count() === 1, "écran coupé rouge / bleu");
     if (round === 1) await A.screenshot({ path: S + "/dilemme-choose.png", fullPage: true });
     // Naim et Léa bleu, Tom rouge ; curseurs 50 (défaut), 70, 30
-    const plan = { Naim: [true, null], "Léa": [true, 70], Tom: [false, 30] };
+    const plan = { Naim: [true, null], "Léa": [true, 3], Tom: [false, 1] };
     for (const [n, p] of humans){
       const [y, v] = plan[n];
       await p.click(`[data-a=ayes][data-v="${y ? 1 : 0}"]`);
       await p.waitForSelector("#dslide");
-      check(+(await p.locator("#dslide").inputValue()) === 50, `${n} : le curseur démarre à 50 %`);
-      if (v != null){ await slide(p, v); check((await p.locator(".dmeter").innerText()).includes(v + " %"), `${n} : la barre suit le curseur (${v} %)`); }
-      if (round === 1 && n === "Léa") await p.screenshot({ path: S + "/dilemme-guess.png", fullPage: true });
+      check(await p.locator(".dsplit.small").innerText().then(x => x.includes(red) && x.includes(blue)), `${n} : le dilemme reste affiché pendant le pari`);
+      check(+(await p.locator("#dslide").getAttribute("max")) === 4, `${n} : 4 joueurs, le curseur a 4 crans`);
+      check(+(await p.locator("#dslide").inputValue()) === 2 && (await p.locator(".dmeter").innerText()).includes("50 %"), `${n} : le curseur démarre à 50 %`);
+      if (v != null){ await slide(p, v); check((await p.locator(".dmeter").innerText()).includes(v * 25 + " %"), `${n} : la barre suit le curseur (${v * 25} %)`); }
+      if (round === 1 && n === "Léa") { await sleep(1800); await p.screenshot({ path: S + "/dilemme-guess.png", fullPage: true }); }
       await p.click("[data-a=asend]");
       await hasText(p, "Envoyé");
     }
@@ -89,8 +91,7 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
     const rr = await room();
     const bets = await admin(`return db.aveux_bets.filter(b=>b.round===${round})`);
     check(bets.length === 4, "4 paris enregistrés");
-    const mine = bets.find(b => b.player === (bets.find(x => x.bet === 70) || {}).player);
-    check(!!mine, "le pari de Léa vaut 70");
+    check(bets.every(b => b.bet % 25 === 0), "tous les paris tombent sur un cran (0, 25, 50, 75, 100)");
     const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     const names = await admin(`return Object.fromEntries(db.players.map(p=>[p.id,p.name]))`);
     const n = bets.length, m = Math.min(...bets.map(b => Math.abs(b.bet * n - rr.yes * 100)));

@@ -302,7 +302,7 @@ function botActions(){
       players.filter(p => isBot(p.id) && present(p) && !roundBets().some(b => b.player === p.id)).forEach(p => {
         botOnce(`${r}:aveu:${p.id}`, rand(2000, 6000), () => {
           if (!still() || room.phase !== "writing") return;
-          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: isDil() ? rand(0, 101) : rand(0, n + 1) });
+          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: isDil() ? Math.round(rand(0, n + 1) * 100 / n) : rand(0, n + 1) });
         });
       });
     }
@@ -599,8 +599,11 @@ async function aveuxDraw(){
   if (error){ autoDone.delete("apick:" + room.round); toast("Connexion perdue, réessaie."); }
   scheduleRefresh();
 }
-const betMax = () => isDil() ? 100 : Math.max(1, rankPool().length);
-const curBet = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet, betMax());
+const betMax = () => Math.max(1, rankPool().length);
+// Dilemme : le curseur avance par crans d'un joueur (à 2 : 0, 50, 100 % ; à 5 : tous les 20 %). ui.abet = nombre de bleus, le pari envoyé = le % arrondi
+const dilStep = k => Math.round(k * 100 / betMax());
+const curK = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet, betMax());
+const curBet = () => isDil() ? dilStep(curK()) : curK();
 async function sendAveu(){
   if (!room || room.phase !== "writing" || ui.ayes == null || myBet()) return;
   const mine = { room: code, round: room.round, player: me.id, bet: curBet(), local: true };
@@ -690,7 +693,7 @@ const actions = {
   rankReset(){ ui.rank = []; render(); },
   ayes(v){ if (!room || room.phase !== "writing" || myBet()) return; ui.ayes = v === "1"; buzz(15); render(); },
   aback(){ if (myBet()) return; ui.ayes = null; render(); },
-  abet(d){ ui.abet = Math.max(0, Math.min(betMax(), curBet() + (+d))); buzz(8); render(); },
+  abet(d){ ui.abet = Math.max(0, Math.min(betMax(), curK() + (+d))); buzz(8); render(); },
   async asend(){ await sendAveu(); },
   async rankSend(){ if (ui.rank.length >= rankPool().length) await sendRanking(ui.rank); },
   rankEdit(){ const k = myRanking(); ui.rank = k ? k.ranking.slice() : []; ui.editing = true; render(); },
@@ -877,7 +880,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme"];
 const GAME_CARDS = [
@@ -1590,19 +1593,20 @@ function dilBest(){
 const dilSplit = (cls, pick) => { const [r, b] = dilParts(room.card), on = v => ui.ayes === v ? "on" : ui.ayes == null ? "" : "dim";
   return pick ? `<div class="dsplit ${cls || ""}"><button class="dh r ${on(false)}" data-a="ayes" data-v="0">${esc(r)}</button><span class="dou">OU</span><button class="dh b ${on(true)}" data-a="ayes" data-v="1">${esc(b)}</button></div>`
     : `<div class="dsplit ${cls || ""}"><div class="dh r">${esc(r)}</div><span class="dou">OU</span><div class="dh b">${esc(b)}</div></div>`; };
-const dilMeter = v => `<div class="dmeter" aria-hidden="true"><i class="dr" style="width:${100 - v}%"></i><i class="db"></i><i class="dk" style="left:${100 - v}%"></i>
-  <div class="dpct"><span>${100 - v} %</span><span>${v} %</span></div></div>`;
+// Bleu à gauche, rouge à droite : le trait suit le curseur dans le même sens (vers la droite = plus de bleu)
+const dilMeter = v => `<div class="dmeter" aria-hidden="true"><i class="db" style="width:${v}%"></i><i class="dr"></i>${Array.from({ length: betMax() - 1 }, (_, j) => `<i class="dt" style="left:${dilStep(j + 1)}%"></i>`).join("")}<i class="dk" style="left:${v}%"></i>
+  <div class="dpct"><span>${v} %</span></div></div>`;
 function dilMeterSet(v){
   const m = $(".dmeter"); if (!m) return;
-  m.querySelector(".dr").style.width = (100 - v) + "%"; m.querySelector(".dk").style.left = (100 - v) + "%";
-  const s = m.querySelectorAll(".dpct span"); s[0].textContent = (100 - v) + " %"; s[1].textContent = v + " %";
+  m.querySelector(".db").style.width = v + "%"; m.querySelector(".dk").style.left = v + "%";
+  m.querySelector(".dpct span").textContent = v + " %";
 }
 // La règle de la révélation : barre qui se remplit jusqu'au vrai %, trait blanc, paris de chacun au-dessus / au-dessous
 function dilRuler(show){
   const bs = roundBets().slice().sort((a, b) => a.bet - b.bet), best = show.done ? dilBest() : [];
-  const marks = bs.map((b, i) => `<span class="dg ${i % 2 ? "dn" : "up"} ${best.includes(b.player) ? "best" : ""}" style="left:${Math.max(4, Math.min(96, 100 - b.bet))}%">${best.includes(b.player) ? ICON.crown : ""}${av(b.player, "sm")}<small>${b.bet}</small></span>`).join("");
-  return `<div class="dbig ${show.done ? "done" : ""}">${show.n} %<small>bleu</small></div><div class="druler"><div class="dtrack"><i class="dr" style="width:${100 - show.n}%"></i><i class="db"></i></div>
-    <div class="dtruth" style="left:${100 - show.n}%"></div>${show.done ? marks : ""}</div>`;
+  const marks = bs.map((b, i) => `<span class="dg ${i % 2 ? "dn" : "up"} ${best.includes(b.player) ? "best" : ""}" style="left:${Math.max(4, Math.min(96, b.bet))}%">${best.includes(b.player) ? ICON.crown : ""}${av(b.player, "sm")}<small>${b.bet}</small></span>`).join("");
+  return `<div class="dbig ${show.done ? "done" : ""}">${show.n} %<small>bleu</small></div><div class="druler"><div class="dtrack"><i class="db" style="width:${show.n}%"></i><i class="dr"></i></div>
+    <div class="dtruth" style="left:${show.n}%"></div>${show.done ? marks : ""}</div>`;
 }
 function dilCamps(){
   const bs = roundBets().filter(b => b.said != null).sort((a, b) => (byId(a.player) || {}).seat - (byId(b.player) || {}).seat);
@@ -1624,10 +1628,10 @@ const dilViews = {
     if (ui.ayes == null) return `${head()}${aveuxTop()}${dilSplit("pop", true)}${footer()}`;
     const v = curBet();
     return `${head()}${aveuxTop()}
+      ${dilSplit("small " + (ui.ayes ? "pb" : "pr"))}
       <div class="dq">Combien ont pris <span>bleu</span> ?</div>
       ${dilMeter(v)}
-      <input class="drange" type="range" id="dslide" min="0" max="100" step="1" value="${v}" aria-label="Pourcentage du groupe qui a pris bleu">
-      <div class="dmine"><span class="dchip ${ui.ayes ? "b" : "r"}"></span>Toi : ${ui.ayes ? "bleu" : "rouge"}</div>
+      <input class="drange" type="range" id="dslide" min="0" max="${betMax()}" step="1" value="${curK()}" aria-label="Combien de joueurs ont pris bleu" aria-valuetext="${v} %">
       <button class="btn" data-a="asend">Valider</button>
       <button class="link" data-a="aback">Changer mon choix</button>
       ${footer()}`;
@@ -1831,7 +1835,7 @@ document.addEventListener("input", ev => {
   if (t.id === "code"){ t.value = t.value.replace(/\D/g, "").slice(0, 4); ui.codeInput = t.value; }
   if (t.id === "ans"){ ui.draft = t.value; updatePreview(); }
   if (t.id === "cin") ui.cdraft = t.value;
-  if (t.id === "dslide"){ ui.abet = Math.max(0, Math.min(100, Math.round(+t.value))); dilMeterSet(ui.abet); }
+  if (t.id === "dslide"){ const k = Math.max(0, Math.min(betMax(), Math.round(+t.value))); if (k !== curK()) buzz(8); ui.abet = k; dilMeterSet(curBet()); t.setAttribute("aria-valuetext", curBet() + " %"); }
 });
 document.addEventListener("change", ev => { if (ev.target.id === "selfie" && ev.target.files && ev.target.files[0]) takeSelfie(ev.target.files[0]); });
 // Selfie réduit à 128 px (jpeg, environ 6 ko), envoyé via set_photo, effacé avec la partie

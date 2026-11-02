@@ -407,13 +407,14 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 .dsplit.small .dh{flex:none;font-size:16px;padding:12px 14px}
 .dsplit.small .dou{font-size:11px;padding:4px 9px;margin:-11px 0}
 .dsplit.pr .dh.b,.dsplit.pb .dh.r{opacity:.4}
-.dq{font-family:var(--display);font-weight:800;font-size:28px;line-height:1.1;text-align:center;text-wrap:balance;padding-top:10px}
+.dq{font-family:var(--display);font-weight:800;font-size:24px;line-height:1.1;text-align:center;text-wrap:balance;padding-top:4px}
 .dq span{color:#3fb6ff}
 .dmeter{position:relative;height:96px;border-radius:20px;overflow:hidden;display:flex;box-shadow:0 6px 0 rgba(0,0,0,.25)}
-.dmeter .dr{background:#ff3b4e}.dmeter .db{background:#3fb6ff;flex:1}
+.dmeter .db{background:#3fb6ff}.dmeter .dr{background:#ff3b4e;flex:1}
+.dmeter .dt{position:absolute;top:0;bottom:0;width:2px;transform:translateX(-1px);background:rgba(22,19,15,.28)}
 .dmeter .dk{position:absolute;top:0;bottom:0;width:6px;background:#fff;transform:translateX(-3px);box-shadow:0 0 0 2px var(--ink)}
 .dmeter .dpct{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-family:var(--display);font-weight:800;font-size:34px;font-variant-numeric:tabular-nums;pointer-events:none}
-.dmeter .dpct span:first-child{color:#fff}.dmeter .dpct span:last-child{color:var(--ink)}
+.dmeter .dpct span:first-child{color:var(--ink)}.dmeter .dpct span:last-child{color:#fff}
 .drange{width:100%;height:36px;accent-color:#fff;margin:0}
 .dmine{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;opacity:.9}
 .dchip{width:14px;height:14px;border-radius:4px}.dchip.r{background:#ff3b4e}.dchip.b{background:#3fb6ff}
@@ -421,7 +422,7 @@ body.tv .codebig{font-size:clamp(90px,10vw,160px)}
 .dbig.done{color:#3fb6ff}.dbig small{font-size:22px;color:#3fb6ff}
 .druler{position:relative;height:170px;margin:0 6px}
 .druler .dtrack{position:absolute;left:0;right:0;top:66px;height:38px;border-radius:12px;overflow:hidden;display:flex;box-shadow:0 4px 0 rgba(0,0,0,.25)}
-.druler .dtrack .dr{background:#ff3b4e;transition:width .1s linear}.druler .dtrack .db{background:#3fb6ff;flex:1}
+.druler .dtrack .db{background:#3fb6ff;transition:width .1s linear}.druler .dtrack .dr{background:#ff3b4e;flex:1}
 .druler .dtruth{position:absolute;top:50px;height:70px;width:4px;background:#fff;transform:translateX(-2px);border-radius:2px;box-shadow:0 0 0 2px var(--ink);transition:left .1s linear}
 .druler .dtruth b{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-family:var(--display);font-size:24px;white-space:nowrap;margin-bottom:2px;font-variant-numeric:tabular-nums}
 .druler .dg{position:absolute;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;font-weight:700;font-variant-numeric:tabular-nums;animation:dgin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -441,18 +442,18 @@ body.tv .dsplit .dh{font-size:clamp(34px,3.6vw,56px);padding:40px}
 body.tv .dsplit.small .dh{font-size:28px;padding:18px 24px}
 body.tv .dbig{font-size:84px}body.tv .dbig small{font-size:40px}body.tv .druler{height:200px}body.tv .druler .dtrack{top:78px;height:46px}body.tv .druler .dtruth{top:62px;height:78px}body.tv .druler .dtruth b{font-size:40px}body.tv .druler .dg.dn{top:132px}body.tv .druler .dg small{font-size:18px}
 body.tv .dwin{font-size:30px}
-@media (prefers-reduced-motion:reduce){.druler .dg{animation:none}.dsplit .dh,.druler .dtrack .dr,.druler .dtruth{transition:none}}
+@media (prefers-reduced-motion:reduce){.druler .dg{animation:none}.dsplit .dh,.druler .dtrack .db,.druler .dtruth{transition:none}}
 </style>
 </head>
 <body>
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=32"></script>
-<script src="qui.js?v=32"></script>
-<script src="aveux.js?v=32"></script>
-<script src="dilemme.js?v=32"></script>
-<script src="app.js?v=32"></script>
+<script src="cards.js?v=33"></script>
+<script src="qui.js?v=33"></script>
+<script src="aveux.js?v=33"></script>
+<script src="dilemme.js?v=33"></script>
+<script src="app.js?v=33"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

@@ -90,6 +90,11 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Vues : `dilViews` / `dilTv` (choisis avant `aveuxViews` dans `render()`), `dilSplit`, `dilMeter` (curseur `#dslide`, mis à jour sans re-rendu par `dilMeterSet`), `dilRuler`, `dilWin`, `dilCamps`. Styles `.dsplit`, `.dmeter`, `.druler`, `.dbig`, `.dwin`, `.camp.dr/.db`, `.gamecard.dilemme`.
 - Test : `node tests/test-dilemme.js` (serveur neuf), 76 vérifications (lecture, pile, Défends-toi compris).
 
+## Liste de Naim du 02/11/2026 (à faire dans une nouvelle conversation)
+1. Jeu « Loup-garou » dans Dawa. Règles à fixer avec lui avant de coder (voir questions posées le 02/11 : rôles, meneur humain ou appli, nuit/jour sur les téléphones, nombre de joueurs). Visuel → maquettes d'abord.
+2. Jeu « Qui est capable de… ? ». Principe à fixer avec lui (différence avec Le Verdict, qui classe déjà « qui de nous est le plus susceptible de… »). Visuel → maquettes d'abord.
+3. ✅ (02/11, v=35) Plus de zoom quand on tape vite : viewport `maximum-scale=1,user-scalable=no`, `touch-action: manipulation` partout (coupe le double-tap sans bloquer les tapes rapides sur + / −), champs en 16 px minimum (sinon l'iPhone zoome en tapant), `gesturestart` bloqué (pincement sur iPhone).
+
 ## Fluidité (29/10/2026, diagnostic demandé par Naim)
 - Réaction immédiate : `local(fn)` applique le changement chez soi avant la réponse du serveur (lancer, garder la carte, envoyer une réponse / un classement / un pari, retourner une carte, changer de phase) ; en cas d'erreur on revient en arrière. Attention à calculer les valeurs (ex. `round + 1`) avant `local`, sinon elles sont comptées deux fois. Bouton en cours : `data-busy` (enfoncé, pas grisé).
 - Rendu partiel : `render()` dessine l'écran en entier seulement quand `screenKey()` change (jeu, phase, manche) ; sinon `morph()` ne modifie que ce qui a changé, donc les animations `.pop` ne se rejouent plus à chaque événement.

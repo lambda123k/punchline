@@ -885,7 +885,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 34;
+const APP_VERSION = 35;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme"];
 const GAME_CARDS = [
@@ -1920,3 +1920,6 @@ document.addEventListener("visibilitychange", () => {
   if (urlCode && !urlTv && !me.name){ const n = $("#name"); if (n) n.focus(); }
 })();
 })();
+
+// Pas de zoom sur iPhone (02/11) : le double-tap est coupé par touch-action: manipulation (index.html) ; Safari ignore user-scalable=no, on bloque aussi le pincement
+document.addEventListener("gesturestart", e => e.preventDefault(), { passive: false });

@@ -91,7 +91,13 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
 - Test : `node tests/test-dilemme.js` (serveur neuf), 76 vérifications (lecture, pile, Défends-toi compris).
 
 ## Liste de Naim du 02/11/2026 (à faire dans une nouvelle conversation)
-1. Jeu « Loup-garou » dans Dawa. Règles à fixer avec lui avant de coder (voir questions posées le 02/11 : rôles, meneur humain ou appli, nuit/jour sur les téléphones, nombre de joueurs). Visuel → maquettes d'abord.
+1. Jeu « Loup-garou » dans Dawa. Brainstorm du 02/11, choix de Naim :
+   - L'hôte règle un maximum de choses à la création : nombre de loups, présence de chaque rôle (sorcière, voyante, voleur…), avec une composition recommandée selon le nombre de joueurs. Il veut le voleur et d'autres cartes spéciales qui existent dans le vrai jeu.
+   - Conteur dans l'appli : un seul appareil met le son (sur une enceinte), une voix dit « Le village s'endort », « Les loups-garous se réveillent »… On ferme vraiment les yeux ; celui qui est appelé ouvre les yeux et agit sur son téléphone (assez silencieux). Il demande si on peut avoir des voix générées par IA.
+   - Les morts parient sur le prochain mort (points), mais ne parlent pas et n'envoient rien (le « murmure » est refusé : ça gâcherait le jeu).
+   - Refusé : les missions secrètes / gages pendant le jour.
+   - Propositions de Claude en attente de réponse (02/11) : voix du téléphone d'abord puis vraies voix IA enregistrées en MP3 ; appeler aussi les rôles absents ou morts avec un temps d'attente au hasard (sinon on devine qui est mort) ; écran noir pour tous la nuit ; le grand écran peut être le conteur ; liste de rôles en deux temps (voir conversation) ; maire, rôle révélé à la mort, durée du débat, nom du jeu, points.
+   Visuel → maquettes d'abord. À coder dans une nouvelle conversation.
 2. Jeu « Qui est capable de… ? ». Principe à fixer avec lui (différence avec Le Verdict, qui classe déjà « qui de nous est le plus susceptible de… »). Visuel → maquettes d'abord.
 3. ✅ (02/11, v=35) Plus de zoom quand on tape vite : viewport `maximum-scale=1,user-scalable=no`, `touch-action: manipulation` partout (coupe le double-tap sans bloquer les tapes rapides sur + / −), champs en 16 px minimum (sinon l'iPhone zoome en tapant), `gesturestart` bloqué (pincement sur iPhone).
 

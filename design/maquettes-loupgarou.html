@@ -1,0 +1,249 @@
+<title>Loup-garou maquettes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Cinzel:wght@600;800;900&family=Pirata+One&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : en haut, trois onglets d'ambiance (A forêt, B lune de sang, C veillée). Dessous, les 4 mêmes écrans de téléphone (réglages, ta carte, la nuit, le matin) redessinés selon l'ambiance choisie. Un seul thème sombre voulu par ambiance. */
+:root{
+  --bg:#0b1410; --bg2:#13241b; --panel:rgba(233,228,201,.06); --line:rgba(233,228,201,.16);
+  --ink:#e9e4c9; --soft:rgba(233,228,201,.66); --accent:#f2a33a; --accent-ink:#1a1206; --danger:#d9573b;
+  --card:#e9e4c9; --card-ink:#14201a; --moon:#f4efd6;
+  --display:"IM Fell English SC",Georgia,serif; --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  --bgimg:radial-gradient(120% 70% at 70% -10%,rgba(244,239,214,.16) 0,transparent 45%),linear-gradient(180deg,#0e1d16 0%,#0b1410 60%,#070d0a 100%);
+  color-scheme:dark;
+}
+body.b{
+  --bg:#0a0607; --bg2:#1a0b0d; --panel:rgba(243,233,226,.05); --line:rgba(243,233,226,.14);
+  --ink:#f3e9e2; --soft:rgba(243,233,226,.62); --accent:#d3132f; --accent-ink:#fff; --danger:#ff3b52;
+  --card:#f3e9e2; --card-ink:#1a0b0d; --moon:#ffd9d2;
+  --display:"Cinzel",Georgia,serif;
+  --bgimg:radial-gradient(60% 40% at 50% -5%,rgba(211,19,47,.35) 0,transparent 70%),linear-gradient(180deg,#140709 0%,#0a0607 70%);
+}
+body.c{
+  --bg:#1b120b; --bg2:#2a1b10; --panel:rgba(239,224,191,.07); --line:rgba(239,224,191,.18);
+  --ink:#efe0bf; --soft:rgba(239,224,191,.68); --accent:#ff7a1a; --accent-ink:#2b1300; --danger:#ff5b3a;
+  --card:#efe0bf; --card-ink:#2b1d10; --moon:#ffe2a8;
+  --display:"Pirata One",Georgia,serif;
+  --bgimg:radial-gradient(90% 50% at 50% 110%,rgba(255,122,26,.28) 0,transparent 60%),linear-gradient(180deg,#22160d 0%,#1b120b 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bgimg) fixed,var(--bg);background-color:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:22px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));transition:background-color .4s}
+.top{max-width:1240px;margin:0 auto 18px;display:flex;flex-direction:column;gap:14px}
+.top h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,8vw,54px);line-height:1;margin:0;letter-spacing:.01em}
+.top h1 small{display:block;font-family:var(--body);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);font-weight:700;margin-bottom:6px}
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.tab{font:inherit;text-align:left;cursor:pointer;color:inherit;background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;gap:12px;align-items:center}
+.tab[aria-selected="true"]{border-color:var(--accent);background:rgba(255,255,255,.06)}
+.tab .sw{width:42px;height:42px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.25)}
+.tab b{display:block;font-size:16px}.tab span{font-size:13px;color:var(--soft)}
+.tab:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.voice{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.vbtn{font:inherit;font-weight:800;cursor:pointer;border:0;border-radius:999px;padding:11px 18px;background:var(--accent);color:var(--accent-ink);display:inline-flex;gap:8px;align-items:center}
+.voice small{color:var(--soft);font-size:13px}
+.screens{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.step{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);margin-left:4px}
+.phone{position:relative;overflow:hidden;border-radius:30px;border:2px solid var(--line);background:var(--bg2);padding:16px 14px 18px;display:flex;flex-direction:column;gap:12px;min-height:560px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.logo{font-family:var(--display);font-size:22px;letter-spacing:.02em}
+.logo span{color:var(--accent)}
+.pill{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:var(--panel);border:1px solid var(--line);padding:5px 9px;border-radius:999px;white-space:nowrap}
+.h{font-family:var(--display);font-size:24px;line-height:1.05;margin:0}
+.lbl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.ic{width:22px;height:22px;flex-shrink:0;color:var(--accent)}
+/* réglages */
+.roles{display:flex;flex-direction:column;gap:6px}
+.role{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 8px 7px 10px}
+.role.off{opacity:.45}
+.role b{flex:1;font-size:14px}
+.cnt{display:flex;align-items:center;gap:6px}
+.cnt button{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-weight:800;cursor:pointer;line-height:1}
+.cnt i{font-style:normal;font-weight:800;min-width:1.2ch;text-align:center;font-variant-numeric:tabular-nums}
+.mid{display:flex;gap:6px;flex-wrap:wrap}
+.mc{display:flex;align-items:center;gap:6px;background:var(--card);color:var(--card-ink);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:800;transform:rotate(var(--r,0deg))}
+.mc .ic{width:16px;height:16px;color:var(--card-ink)}
+.seg{display:grid;grid-template-columns:repeat(var(--n,2),1fr);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{font:inherit;font-size:13px;font-weight:700;border:0;border-radius:9px;padding:8px 4px;background:transparent;color:var(--soft);cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tot{font-size:12px;color:var(--soft);text-align:center;font-variant-numeric:tabular-nums}
+.go{font:inherit;font-family:var(--display);font-size:22px;border:0;border-radius:14px;padding:12px;background:var(--accent);color:var(--accent-ink);cursor:pointer;margin-top:auto;box-shadow:0 5px 0 rgba(0,0,0,.35)}
+/* carte */
+.flipwrap{flex:1;display:grid;place-items:center;perspective:900px;padding:8px 0}
+.flip{width:min(78%,240px);aspect-ratio:2.5/3.6;position:relative;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,1.3,.5,1);cursor:pointer;border:0;padding:0;background:none}
+.flip.on{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.back{background:repeating-linear-gradient(45deg,var(--bg2) 0 10px,rgba(255,255,255,.05) 10px 20px);border:3px solid var(--accent)}
+.back .ic{width:64px;height:64px}
+.front{transform:rotateY(180deg);background:var(--card);color:var(--card-ink);border:3px solid var(--accent);padding:16px}
+.front .ic{width:84px;height:84px;color:var(--card-ink)}
+.front b{font-family:var(--display);font-size:32px;line-height:1}
+.front small{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+.tap{text-align:center;color:var(--soft);font-size:13px}
+/* nuit */
+.night{background:#000!important}
+.moon{position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 40% 40%,var(--moon),rgba(0,0,0,0) 70%);opacity:.35;pointer-events:none}
+body.b .moon{background:radial-gradient(circle at 40% 40%,#ff4b5c,rgba(0,0,0,0) 70%);opacity:.5}
+.wolves{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pl{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:700;background:transparent;border:2px solid transparent;border-radius:14px;padding:8px 2px;color:inherit;font-family:inherit;cursor:pointer;position:relative}
+.pl.sel{border-color:var(--danger);background:rgba(255,40,60,.1)}
+.pl.ally{opacity:.5;cursor:default}
+.pl .vote{position:absolute;top:2px;right:6px;display:flex}
+.pl .vote .av{width:18px;height:18px;font-size:9px;border:1px solid #000}
+.av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#16130f;font-weight:800;font-size:19px;font-family:var(--body)}
+.pl.gone .av{filter:grayscale(1) brightness(.5)}
+.pl.gone span{text-decoration:line-through;opacity:.6}
+.blackhint{margin-top:auto;border:1px dashed var(--line);border-radius:12px;padding:10px;font-size:12px;color:var(--soft);display:flex;gap:10px;align-items:center}
+.blackhint i{width:26px;height:40px;border-radius:6px;background:#000;border:1px solid var(--line);flex-shrink:0}
+/* matin */
+.dawn{background:linear-gradient(180deg,rgba(255,170,90,.18),transparent 45%),var(--bg2)}
+body.b .dawn{background:linear-gradient(180deg,rgba(211,19,47,.25),transparent 45%),var(--bg2)}
+.dead{display:flex;align-items:center;gap:12px;background:var(--card);color:var(--card-ink);border-radius:16px;padding:12px;transform:rotate(-1.5deg);box-shadow:0 6px 0 rgba(0,0,0,.35)}
+.dead .av{filter:grayscale(1)}
+.dead div{flex:1;min-width:0}
+.dead b{font-family:var(--display);font-size:22px;line-height:1;display:block}
+.dead small{font-weight:700}
+.dead .ic{width:38px;height:38px;color:var(--card-ink)}
+.timer{display:flex;align-items:center;gap:12px}
+.ring{width:66px;height:66px;flex-shrink:0}
+.ring circle{fill:none;stroke-width:6}
+.timer b{font-family:var(--display);font-size:34px;font-variant-numeric:tabular-nums;line-height:1}
+.mayor{position:absolute;top:-4px;left:50%;transform:translateX(-50%);color:var(--accent);width:18px;height:14px}
+.hint{font-size:12px;color:var(--soft)}
+.legend{max-width:1240px;margin:22px auto 0;color:var(--soft);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.legend b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.flip{transition:none}body{transition:none}}
+</style>
+
+<div class="top">
+  <h1><small>Dawa · 5e jeu</small>Loup-garou</h1>
+  <div class="tabs" role="tablist" aria-label="Ambiance">
+    <button class="tab" role="tab" data-t="a" aria-selected="true"><span class="sw" style="background:radial-gradient(circle at 35% 35%,#f4efd6,#1d3a2c 55%,#0b1410)"></span><span><b>A · La forêt</b><span>Nuit verte, clair de lune, yeux ambrés</span></span></button>
+    <button class="tab" role="tab" data-t="b" aria-selected="false"><span class="sw" style="background:radial-gradient(circle at 35% 35%,#ff4b5c,#5a0a14 55%,#0a0607)"></span><span><b>B · Lune de sang</b><span>Noir et rouge, style film d'horreur</span></span></button>
+    <button class="tab" role="tab" data-t="c" aria-selected="false"><span class="sw" style="background:radial-gradient(circle at 35% 65%,#ffb35c,#7a3a10 55%,#1b120b)"></span><span><b>C · La veillée</b><span>Parchemin, bois et feu de camp</span></span></button>
+  </div>
+  <div class="voice"><button class="vbtn" id="speak"><svg class="ic" viewBox="0 0 24 24" style="color:inherit"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8a5 5 0 0 1 0 8M18.5 5.5a8.5 8.5 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Écouter le conteur</button><small id="vnote">La voix de ton téléphone, en attendant la vraie voix IA.</small></div>
+</div>
+
+<div class="screens">
+  <!-- 1 Réglages -->
+  <section class="col"><div class="step">1 · Réglages de l'hôte</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">Loup<span>-garou</span></span><span class="pill">8 joueurs</span></div>
+    <div class="roles" id="roles"></div>
+    <span class="lbl">Au milieu</span>
+    <div class="mid" id="mid"></div>
+    <div class="tot" id="tot"></div>
+    <span class="lbl">Conteur</span>
+    <div class="seg" style="--n:2" data-seg><button class="on">Voix</button><button>Un joueur</button></div>
+    <div class="row2">
+      <div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">Débat</span><div class="seg" style="--n:4" data-seg><button>2'</button><button class="on">3'</button><button>5'</button><button>∞</button></div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">Musique</span><div class="seg" style="--n:2" data-seg><button class="on">Oui</button><button>Non</button></div></div>
+    </div>
+    <button class="go">Lancer</button>
+  </div></section>
+
+  <!-- 2 Ta carte -->
+  <section class="col"><div class="step">2 · Ta carte</div>
+  <div class="phone">
+    <div class="bar"><span class="logo">Loup<span>-garou</span></span><span class="pill">Nuit 1</span></div>
+    <div class="flipwrap"><button class="flip" id="flip" aria-label="Retourner ta carte">
+      <span class="face back"><svg class="ic" viewBox="0 0 24 24"><use href="#i-moon"/></svg></span>
+      <span class="face front"><svg class="ic" viewBox="0 0 24 24"><use href="#i-eye"/></svg><b>Voyante</b><small>Village</small></span>
+    </button></div>
+    <p class="tap" id="taptxt">Touche ta carte, cache ton écran</p>
+  </div></section>
+
+  <!-- 3 La nuit -->
+  <section class="col"><div class="step">3 · La nuit (écran d'un loup)</div>
+  <div class="phone night">
+    <span class="moon" aria-hidden="true"></span>
+    <div class="bar"><span class="logo">Loup<span>-garou</span></span><span class="pill">Nuit 2</span></div>
+    <h2 class="h">Les loups-garous</h2>
+    <div class="wolves"><span class="av" style="--c:#4cc9f0;width:26px;height:26px;font-size:12px">T</span>Tom est avec toi</div>
+    <div class="grid" id="victims"></div>
+    <div class="blackhint"><i></i>Tous les autres téléphones restent noirs pendant ce temps, même ceux des villageois.</div>
+  </div></section>
+
+  <!-- 4 Le matin -->
+  <section class="col"><div class="step">4 · Le matin et le débat</div>
+  <div class="phone dawn">
+    <div class="bar"><span class="logo">Loup<span>-garou</span></span><span class="pill">Jour 2</span></div>
+    <h2 class="h">Cette nuit a été terrible…</h2>
+    <div class="dead"><span class="av" style="--c:#ffc83d">L</span><div><b>Léa</b><small>était la voyante</small></div><svg class="ic" viewBox="0 0 24 24"><use href="#i-eye"/></svg></div>
+    <div class="timer"><svg class="ring" viewBox="0 0 70 70"><circle cx="35" cy="35" r="30" style="stroke:var(--line)"/><circle cx="35" cy="35" r="30" style="stroke:var(--accent)" stroke-dasharray="188.5" stroke-dashoffset="54" transform="rotate(-90 35 35)" stroke-linecap="round"/></svg><div><b>2:07</b><div class="hint">Débat, puis vote</div></div></div>
+    <div class="grid" id="village"></div>
+    <div class="hint">Égalité au vote : le maire (couronne) départage.</div>
+  </div></section>
+</div>
+
+<div class="legend">
+  <p><b>Ce qui change entre A, B et C :</b> les couleurs, la police des titres, le fond et la lumière (lune, lune rouge, feu de camp). Les écrans et les boutons restent les mêmes.</p>
+  <p><b>Écrans 1 et 3 :</b> les + / − et les victimes répondent au doigt, pour sentir le jeu. La carte de l'écran 2 se retourne.</p>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wolf" viewBox="0 0 24 24"><path d="M4 3l4 5h8l4-5v9l-2 5-6 4-6-4-2-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 1M15 12l-2 1M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-villager" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></symbol>
+  <symbol id="i-potion" viewBox="0 0 24 24"><path d="M9 3h6M10 3v5L5 17a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 15h10" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-hunter" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 21l8-8M3 21h4M3 21v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-girl" viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 7c0-3 2-4 4-4s4 1 4 4M7 21l1.5-6h7L17 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-thief" viewBox="0 0 24 24"><path d="M3 10c3-2 15-2 18 0v3c-3 2-15 2-18 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="11.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="11.5" r="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15A8 8 0 1 1 9 4a7 7 0 0 0 11 11z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 16 12"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="currentColor"/></symbol>
+</svg>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const ic = (n, cls) => `<svg class="ic ${cls || ""}" viewBox="0 0 24 24"><use href="#i-${n}"/></svg>`;
+const COLORS = ["#ff5a36","#ffc83d","#2fbf71","#b48cff","#4cc9f0","#ff8fb1","#f7f052","#7ee0c3"];
+const PLAYERS = ["Naim","Léa","Tom","Inès","Yanis","Sarah","Hugo","Zoé"];
+const av = (i, extra) => `<span class="av" style="--c:${COLORS[i]}${extra || ""}">${PLAYERS[i][0]}</span>`;
+const roles = [["wolf","Loups-garous",2],["villager","Villageois",4],["eye","Voyante",1],["potion","Sorcière",1],["hunter","Chasseur",1],["thief","Voleur",1],["heart","Cupidon",0],["girl","Petite fille",1],["shield","Salvateur",0]];
+const mid = [["villager","Villageois","-4deg"],["wolf","Loup-garou","2deg"],["girl","Petite fille","-1deg"]];
+function renderRoles(){
+  $("roles").innerHTML = roles.map((r, i) => `<div class="role ${r[2] ? "" : "off"}">${ic(r[0])}<b>${r[1]}</b><div class="cnt"><button data-r="${i}" data-d="-1" aria-label="Un ${r[1]} de moins">−</button><i>${r[2]}</i><button data-r="${i}" data-d="1" aria-label="Un ${r[1]} de plus">+</button></div></div>`).join("");
+  $("mid").innerHTML = mid.map(m => `<span class="mc" style="--r:${m[2]}">${ic(m[0])}${m[1]}</span>`).join("");
+  const total = roles.reduce((s, r) => s + r[2], 0);
+  $("tot").textContent = `${total} cartes = 8 joueurs + ${total - 8} au milieu`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.r){ const r = roles[+b.dataset.r]; r[2] = Math.max(0, Math.min(6, r[2] + (+b.dataset.d))); renderRoles(); return; }
+  if (b.parentElement && b.parentElement.hasAttribute("data-seg")){ [...b.parentElement.children].forEach(x => x.classList.toggle("on", x === b)); return; }
+  if (b.dataset.v != null){ document.querySelectorAll("#victims .pl").forEach(x => x.classList.toggle("sel", x === b)); return; }
+  if (b.classList.contains("tab")){ document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === b)); document.body.className = b.dataset.t === "a" ? "" : b.dataset.t; return; }
+});
+$("flip").addEventListener("click", () => { $("flip").classList.toggle("on"); $("taptxt").textContent = $("flip").classList.contains("on") ? "Touche encore pour la cacher" : "Touche ta carte, cache ton écran"; });
+// nuit : Naim est loup avec Tom ; Tom a déjà voté pour Inès
+$("victims").innerHTML = PLAYERS.map((n, i) => {
+  if (i === 0) return "";
+  const ally = i === 2;
+  return `<button class="pl ${ally ? "ally" : ""} ${i === 3 ? "sel" : ""}" ${ally ? "disabled" : `data-v="${i}"`}>${i === 3 ? `<span class="vote">${av(2)}</span>` : ""}${av(i)}<span>${n}</span></button>`;
+}).join("");
+// matin : Léa morte, Sarah maire
+$("village").innerHTML = PLAYERS.map((n, i) => `<div class="pl ${i === 1 ? "gone" : ""}">${i === 5 ? `<svg class="mayor" viewBox="0 0 16 12"><use href="#i-crown"/></svg>` : ""}${av(i)}<span>${n}</span></div>`).join("");
+renderRoles();
+// voix du conteur (synthèse du téléphone)
+const LINES = ["Le village s'endort.", "Les loups-garous se réveillent, et choisissent une victime.", "Les loups-garous se rendorment.", "Le village se réveille… Cette nuit a été terrible."];
+$("speak").addEventListener("click", () => {
+  const S = window.speechSynthesis;
+  if (!S || typeof SpeechSynthesisUtterance === "undefined"){ $("vnote").textContent = "Ce navigateur ne sait pas lire à voix haute ici. Sur le téléphone, dans l'appli, ça marchera."; return; }
+  try {
+    S.cancel();
+    const fr = S.getVoices().filter(v => /^fr/i.test(v.lang));
+    LINES.forEach((t, i) => { const u = new SpeechSynthesisUtterance(t); u.lang = "fr-FR"; u.rate = .82; u.pitch = .75; if (fr.length) u.voice = fr.find(v => /thomas|daniel|male|homme/i.test(v.name)) || fr[0]; S.speak(u); });
+    $("vnote").textContent = "Lecture en cours… Monte le son.";
+  } catch(e){ $("vnote").textContent = "La voix n'a pas pu démarrer ici. Dans l'appli, ça marchera."; }
+});
+})();
+</script>

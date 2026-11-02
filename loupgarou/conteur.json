@@ -1,0 +1,56 @@
+{
+ "note": "Texte du conteur du Loup-garou (Claude, 02/11/2026). Un fichier MP3 par ligne, nommé <id>.mp3, enregistré par Naim sur ElevenLabs. L'appli enchaîne les clips et ajoute les silences (attente des joueurs) ; les prénoms et les rôles s'affichent à l'écran, la voix ne les dit pas. Plusieurs variantes par moment pour ne pas répéter.",
+ "groups": [
+  {"t": "Le début", "lines": [
+   {"id": "intro", "txt": "Il était une fois… au fond d'une forêt où la lune ne se couche jamais vraiment… un petit village. Le vôtre.\n\nDepuis quelques nuits, des hurlements résonnent derrière les collines. Des bêtes rôdent autour des maisons.\n\nEt ce soir, une rumeur glace le sang de tout le monde… certains d'entre vous… ne sont pas tout à fait humains.\n\nRegardez votre carte. Et surtout… ne la montrez à personne."},
+   {"id": "maire", "txt": "Avant que la nuit tombe… le village doit choisir son maire. Quelqu'un de confiance. Quelqu'un qui saura trancher… quand il faudra."}
+  ]},
+  {"t": "La nuit tombe", "lines": [
+   {"id": "nuit1", "txt": "La nuit tombe sur le village… Les volets se ferment. Les bougies s'éteignent, une à une.\n\nFermez les yeux."},
+   {"id": "nuit2", "txt": "Le soleil disparaît derrière les arbres… Le vent se lève. Quelque part, un chien aboie… puis se tait.\n\nLe village s'endort."},
+   {"id": "nuit3", "txt": "Encore une nuit… Personne n'a vraiment envie de dormir. Mais il le faut.\n\nFermez les yeux."}
+  ]},
+  {"t": "Les rôles de la nuit", "lines": [
+   {"id": "voleur", "txt": "Le voleur se réveille… Au milieu du village, des cartes dorment, face cachée. Tu peux en voler une… ou garder la tienne."},
+   {"id": "voleur_dort", "txt": "Le voleur se rendort."},
+   {"id": "cupidon", "txt": "Cupidon se réveille… Choisis deux âmes. Elles seront liées pour toujours… même dans la mort."},
+   {"id": "cupidon_dort", "txt": "Cupidon se rendort."},
+   {"id": "amoureux", "txt": "Amoureux… ouvrez les yeux. Regardez votre téléphone… et découvrez qui partage votre cœur."},
+   {"id": "amoureux_dort", "txt": "Les amoureux se rendorment… main dans la main."},
+   {"id": "salvateur", "txt": "Le salvateur se réveille… Cette nuit, qui protèges-tu ?"},
+   {"id": "salvateur_dort", "txt": "Le salvateur se rendort."},
+   {"id": "voyante1", "txt": "La voyante se réveille… Sa boule de cristal s'allume. Qui veux-tu percer à jour cette nuit ?"},
+   {"id": "voyante2", "txt": "La voyante ouvre les yeux… Un seul regard. Une seule vérité. Choisis bien."},
+   {"id": "voyante_dort", "txt": "La voyante se rendort… en gardant son secret."},
+   {"id": "loups1", "txt": "Les loups-garous se réveillent… Ils se reconnaissent. Ils ont faim.\n\nChoisissez votre victime."},
+   {"id": "loups2", "txt": "Dans l'ombre, des yeux jaunes s'ouvrent… Les loups-garous se réveillent.\n\nQui sera dévoré cette nuit ?"},
+   {"id": "loups_dort", "txt": "Les loups-garous se rendorment… le ventre plein."},
+   {"id": "sorciere", "txt": "La sorcière se réveille… Elle sait qui les loups ont attaqué cette nuit.\n\nUne potion pour sauver… une potion pour tuer. Que décides-tu ?"},
+   {"id": "sorciere_dort", "txt": "La sorcière se rendort."}
+  ]},
+  {"t": "Le matin", "lines": [
+   {"id": "matin", "txt": "Le soleil se lève sur le village… Tout le monde se réveille.\n\nEnfin… presque tout le monde."},
+   {"id": "mort1", "txt": "Cette nuit a été terrible… Au petit matin, le village découvre un corps."},
+   {"id": "mort2", "txt": "Un cri déchire le silence du matin… Quelqu'un ne s'est pas réveillé."},
+   {"id": "mort3", "txt": "La porte d'une maison est restée ouverte toute la nuit… Ce qu'on trouve à l'intérieur… glace le sang."},
+   {"id": "deux_morts", "txt": "Le village se réveille… et découvre non pas un… mais deux corps."},
+   {"id": "personne1", "txt": "Le village se réveille… et, par miracle, personne n'est mort cette nuit."},
+   {"id": "personne2", "txt": "Le soleil se lève… Tout le monde est là. Les loups auraient-ils raté leur coup ?"}
+  ]},
+  {"t": "Le débat et le vote", "lines": [
+   {"id": "debat", "txt": "Les loups sont parmi vous… Ils vous regardent, ils vous sourient.\n\nParlez. Accusez. Défendez-vous."},
+   {"id": "debat_fin", "txt": "Le temps est écoulé… Il est l'heure de voter."},
+   {"id": "vote", "txt": "Le village a parlé… Celui qui va être exécuté est…"},
+   {"id": "egalite", "txt": "Égalité… C'est au maire de trancher."},
+   {"id": "chasseur", "txt": "Le chasseur, dans son dernier souffle, attrape son fusil… Qui emportes-tu avec toi ?"},
+   {"id": "maire_mort", "txt": "Le maire est mort… Avant de partir, il désigne son successeur."},
+   {"id": "chagrin", "txt": "Fou de chagrin… l'amoureux rejoint celui qu'il aimait dans la tombe."},
+   {"id": "idiot", "txt": "Le village s'apprête à exécuter l'idiot… puis renonce. Il est bien trop bête pour être un loup."}
+  ]},
+  {"t": "La fin", "lines": [
+   {"id": "fin_village", "txt": "Le dernier loup est tombé… Ce soir, pour la première fois depuis longtemps, le village va dormir en paix.\n\nLes villageois ont gagné."},
+   {"id": "fin_loups", "txt": "Il ne reste plus personne pour résister… Les maisons sont vides. Les rues sont silencieuses.\n\nLes loups-garous ont gagné."},
+   {"id": "fin_amoureux", "txt": "Seuls au monde… les amoureux ont survécu à tout. Aux loups, aux votes, aux mensonges.\n\nL'amour a gagné."}
+  ]}
+ ]
+}

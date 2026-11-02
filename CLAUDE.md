@@ -102,6 +102,7 @@ Nom de l'appli qui réunit les jeux : **Dawa** (« mettre le dawa », choisi par
      · Musique d'ambiance, activable ou non dans les réglages.
      · Conteur au choix : voix (IA) dans l'appli, ou un des joueurs fait le conteur (proposition de Claude : son téléphone affiche le texte à lire, voit tout, et appuie sur « Suivant » ; il ne joue pas).
      · Idée de Claude pour la musique : d'abord une ambiance générée par l'appli (vent, grillons, battement de cœur au tour des loups), puis de vraies musiques libres de droits (Pixabay) qu'il télécharge.
+   - Réponses de Naim (02/11, 18 h 47) : le maire n'a deux voix qu'en cas d'égalité (il départage) ; l'hôte règle la durée des débats ; nom « Loup-garou » ; il veut une ambiance totalement à part (en arrivant, on doit avoir l'impression d'être sur un autre jeu) → maquettes de 3 ambiances : `design/maquettes-loupgarou.html`.
    - Propositions de Claude en attente de réponse (02/11) : voix du téléphone d'abord puis vraies voix IA enregistrées en MP3 ; appeler aussi les rôles absents ou morts avec un temps d'attente au hasard (sinon on devine qui est mort) ; écran noir pour tous la nuit ; le grand écran peut être le conteur ; liste de rôles en deux temps (voir conversation) ; maire, rôle révélé à la mort, durée du débat, nom du jeu, points.
    Visuel → maquettes d'abord. À coder dans une nouvelle conversation.
 2. Jeu « Qui est capable de… ? ». Principe à fixer avec lui (différence avec Le Verdict, qui classe déjà « qui de nous est le plus susceptible de… »). Visuel → maquettes d'abord.

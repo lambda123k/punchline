@@ -233,7 +233,7 @@ async function refresh(){
   autoActions();
 }
 
-function resetRoundUi(){ ui.editing = false; ui.draft = ""; ui.rank = []; ui.ayes = null; ui.abet = null; ui.sel = null; }
+function resetRoundUi(){ ui.editing = false; ui.draft = ""; ui.rank = []; ui.ayes = null; ui.abet = null; ui.aread = null; ui.sel = null; }
 async function loadGameRatings(){
   const c = code;
   let q = sb.from("card_ratings").select("player,updated_at").eq("room", c);
@@ -302,7 +302,8 @@ function botActions(){
       players.filter(p => isBot(p.id) && present(p) && !roundBets().some(b => b.player === p.id)).forEach(p => {
         botOnce(`${r}:aveu:${p.id}`, rand(2000, 6000), () => {
           if (!still() || room.phase !== "writing") return;
-          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: isDil() ? Math.round(rand(0, n + 1) * 100 / n) : rand(0, n + 1) });
+          if (isDil()) return sb.rpc("dil_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: Math.round(rand(0, n + 1) * 100 / n), p_read: Math.random() < .5 });
+          return sb.rpc("aveu_send", { p_code: c, p_player: p.id, p_yes: Math.random() < .5, p_bet: rand(0, n + 1) });
         });
       });
     }
@@ -606,10 +607,12 @@ const curK = () => ui.abet == null ? Math.round(betMax() / 2) : Math.min(ui.abet
 const curBet = () => isDil() ? dilStep(curK()) : curK();
 async function sendAveu(){
   if (!room || room.phase !== "writing" || ui.ayes == null || myBet()) return;
-  const mine = { room: code, round: room.round, player: me.id, bet: curBet(), local: true };
+  const mine = { room: code, round: room.round, player: me.id, bet: curBet(), read: isDil() ? ui.aread : null, local: true };
   local(() => { bets = bets.concat([mine]); });
   busy = true;
-  const { error } = await sb.rpc("aveu_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: mine.bet });
+  const { error } = isDil()
+    ? await sb.rpc("dil_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: mine.bet, p_read: ui.aread })
+    : await sb.rpc("aveu_send", { p_code: code, p_player: me.id, p_yes: ui.ayes, p_bet: mine.bet });
   busy = false;
   if (error){ bets = bets.filter(b => b !== mine); render(); toast("Pas envoyé. Vérifie ta connexion et réessaie."); return; }
   buzz(20); scheduleRefresh();
@@ -695,6 +698,7 @@ const actions = {
   aback(){ if (myBet()) return; ui.ayes = null; render(); },
   abet(d){ ui.abet = Math.max(0, Math.min(betMax(), curK() + (+d))); buzz(8); render(); },
   async asend(){ await sendAveu(); },
+  aread(v){ if (!room || room.phase !== "writing" || myBet()) return; ui.aread = v === "1"; buzz(12); render(); },
   async rankSend(){ if (ui.rank.length >= rankPool().length) await sendRanking(ui.rank); },
   rankEdit(){ const k = myRanking(); ui.rank = k ? k.ranking.slice() : []; ui.editing = true; render(); },
   guessPick(i){ if (isJudge() && room.phase === "judging" && !(room.wrong || []).includes(room.options[+i])){ ui.sel = +i; render(); } },
@@ -857,6 +861,7 @@ const actions = {
 
 /* ---------- vues ---------- */
 const ICON = {
+  eye: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg>`,
   crown: `<svg class="crown" viewBox="0 0 16 12" width="18" height="14" aria-hidden="true"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="#ffc83d" stroke="#16130f" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
   sndOn: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   sndOff: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
@@ -880,7 +885,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 33;
+const APP_VERSION = 34;
 const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme"];
 const GAME_CARDS = [
@@ -1107,7 +1112,7 @@ const views = {
       <section><h3>Punchline</h3><p>Le juge pioche une carte à trous et la lit à voix haute. Chacun écrit sa réponse en secret. Le juge retourne les réponses une par une et choisit sa préférée : 1 point, et le gagnant devient le juge suivant. Les autres votent pour leur coup de cœur : 1 point bonus à la plus votée.</p></section>
       <section><h3>Le Verdict</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
       <section><h3>Les Aveux</h3><p>Une affirmation s'affiche, par exemple « J'ai déjà couché le premier soir ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui dans le groupe. Personne ne sait qui a dit oui : on ne voit que le total. Pari exact : 2 points. À 1 près : 1 point.</p></section>
-      <section><h3>Le Dilemme</h3><p>Un dilemme s'affiche : rouge ou bleu. Chacun choisit son côté en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche du vrai pourcentage gagne 1 point (tous les ex aequo aussi). À la fin, on voit qui a pris quoi.</p></section>
+      <section><h3>Le Dilemme</h3><p>Un dilemme s'affiche : rouge ou bleu. Chacun choisit son côté en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche du vrai pourcentage gagne 1 point (tous les ex aequo aussi), 2 points s'il tombe pile. À chaque manche, un joueur est dans le viseur : les autres devinent aussi s'il a pris rouge ou bleu, 1 point si c'est juste. À la fin, on voit qui a pris quoi, et celui qui est seul dans son camp doit se défendre.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -1501,7 +1506,14 @@ const quiTv = {
 function aveuxDelta(){
   const d = {};
   if (room.yes == null) return d;
-  if (isDil()){ const best = dilBest(); roundBets().forEach(b => { if (best.includes(b.player)) d[b.player] = 1; }); return d; }
+  if (isDil()){
+    const best = dilBest(), pct = dilPct(), ts = dilTargetSaid();
+    roundBets().forEach(b => {
+      if (best.includes(b.player)) d[b.player] = b.bet === pct ? 2 : 1;
+      if (ts != null && b.player !== room.judge && b.read === ts) d[b.player] = (d[b.player] || 0) + 1;
+    });
+    return d;
+  }
   roundBets().forEach(b => { const e = Math.abs(b.bet - room.yes); if (e <= 1) d[b.player] = e === 0 ? 2 : 1; });
   return d;
 }
@@ -1615,7 +1627,28 @@ function dilCamps(){
     ${bs.filter(b => b.said === y).map(b => `<span class="who">${av(b.player, "sm")}<span>${meName(b.player)}</span></span>`).join("")}</div>`).join("")}</div>`;
 }
 const dilWin = () => { const best = dilBest(); if (!best.length) return "";
-  return `<div class="dwin pop">${best.map(id => av(id, "lg")).join("")}<b>${best.map(meName).join(", ")}</b><small>+1</small></div>`; };
+  const pile = roundBets().some(b => best.includes(b.player) && b.bet === dilPct());
+  return `<div class="dwin pop ${pile ? "pile" : ""}">${best.map(id => av(id, "lg")).join("")}<b>${best.map(meName).join(", ")}</b>${pile ? `<i>Pile</i>` : ""}<small>+${pile ? 2 : 1}</small></div>`; };
+/* Lis dans ses pensées (02/11) : la cible de la manche = rooms.judge (tirée au début, puis chacun son tour) ; les autres devinent son choix, +1 si juste */
+const dilTarget = () => { const p = room && byId(room.judge); return p && present(p) && inRound(p) ? p.id : null; };
+const dilTargetSaid = () => { const b = roundBets().find(x => x.player === room.judge); return b && b.said != null ? b.said : null; };
+const dilReadPick = () => { const t = dilTarget(); if (!t || t === me.id) return "";
+  return `<div class="dread"><span class="drwho">${av(t, "lg")}<b>${esc(nameOf(t))}</b></span><div class="drbtns">
+    <button class="r ${ui.aread === false ? "on" : ui.aread == null ? "" : "dim"}" data-a="aread" data-v="0">Rouge</button><button class="b ${ui.aread === true ? "on" : ui.aread == null ? "" : "dim"}" data-a="aread" data-v="1">Bleu</button></div></div>`; };
+const dilReadMe = () => dilTarget() === me.id ? `<div class="dreadme">${ICON.eye}<span>Ils lisent dans tes pensées</span></div>` : "";
+function dilReadResult(){
+  const ts = dilTargetSaid(); if (ts == null) return "";
+  const ok = roundBets().filter(b => b.player !== room.judge && b.read === ts);
+  return `<div class="dreadres pop"><span class="drwho">${av(room.judge, "lg")}<b>${meName(room.judge)}</b></span><span class="drc ${ts ? "b" : "r"}">${ts ? "BLEU" : "ROUGE"}</span>
+    <span class="drok">${ok.length ? ok.map(b => `<span class="dro">${av(b.player, "sm")}<i>+1</i></span>`).join("") : `<em>Personne</em>`}</span></div>`;
+}
+/* Défends-toi (02/11) : seul dans son camp (à 3 joueurs ou plus) → 20 s pour se justifier */
+function dilAlone(){
+  const bs = roundBets().filter(b => b.said != null); if (bs.length < 3) return "";
+  const blue = bs.filter(b => b.said), red = bs.filter(b => !b.said);
+  const one = blue.length === 1 ? blue[0] : red.length === 1 ? red[0] : null; if (!one) return "";
+  return `<div class="dalone pop ${one.said ? "b" : "r"}">${av(one.player, "xl")}<div><b>${meName(one.player)}</b><span>Défends-toi</span></div><i class="dclock" aria-hidden="true"></i></div>`;
+}
 const dilShow = () => ui.ashow && ui.ashow.key === code + ":" + room.round ? ui.ashow : { n: dilPct(), done: true };
 const dilViews = {
   draw(){ return aveuxViews.draw(); },
@@ -1629,10 +1662,12 @@ const dilViews = {
     const v = curBet();
     return `${head()}${aveuxTop()}
       ${dilSplit("small " + (ui.ayes ? "pb" : "pr"))}
+      ${dilReadMe()}
       <div class="dq">Combien ont pris <span>bleu</span> ?</div>
       ${dilMeter(v)}
       <input class="drange" type="range" id="dslide" min="0" max="${betMax()}" step="1" value="${curK()}" aria-label="Combien de joueurs ont pris bleu" aria-valuetext="${v} %">
-      <button class="btn" data-a="asend">Valider</button>
+      ${dilReadPick()}
+      <button class="btn" data-a="asend" ${dilTarget() && dilTarget() !== me.id && ui.aread == null ? "disabled" : ""}>Valider</button>
       <button class="link" data-a="aback">Changer mon choix</button>
       ${footer()}`;
   },
@@ -1643,7 +1678,9 @@ const dilViews = {
       ${dilSplit("small")}
       ${dilRuler(s)}
       ${s.done ? `${dilWin()}
+      ${dilAlone()}
       ${dilCamps()}
+      ${dilReadResult()}
       ${scoreChips(aveuxDelta())}
       ${reactBar()}
       ${isLeader() ? `<button class="btn" data-a="next">${over ? "Classement final" : "Manche suivante"}</button>` : ""}
@@ -1657,7 +1694,7 @@ const dilTv = {
   result(){
     aveuxCount();
     const s = dilShow();
-    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${dilSplit("small")}${dilRuler(s)}${s.done ? dilWin() + dilCamps() + scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
+    return `${tvHead()}<div class="tvgrid"><main class="stack tvmain">${dilSplit("small")}${dilRuler(s)}${s.done ? dilWin() + dilAlone() + dilCamps() + dilReadResult() + scoreChips(aveuxDelta()) : ""}</main>${tvSide()}</div>`;
   }
 };
 

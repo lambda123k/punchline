@@ -1,5 +1,5 @@
 // Dilemmes du jeu « Le Dilemme » : rouge ou bleu en secret, puis chacun devine au curseur le % du groupe qui a pris bleu.
-// 01/11 : 82 écrits par Claude, mis en ligne directement à la demande de Naim (tri possible sur https://claude.ai/artifact/Ji5RQg9gTTEyZ54FgW8H1z, collection dtri).
+// 01/11 : 82 écrits par Claude ; 02/11 : 40 de plus, tous jouables en Soft (types dbouffe et dquotidien ajoutés), mis en ligne directement à la demande de Naim (tri possible sur https://claude.ai/artifact/Ji5RQg9gTTEyZ54FgW8H1z, collection dtri).
 // Chaque dilemme est stocké dans rooms.card sous la forme « rouge\nbleu ».
 window.DIL_TYPES = {
  "dsexe": "Dilemme · sexe",
@@ -9,7 +9,9 @@ window.DIL_TYPES = {
  "ddegueu": "Dilemme · dégueu",
  "dargent": "Dilemme · argent",
  "ddingue": "Dilemme · absurde",
- "dvie": "Dilemme · choix de vie"
+ "dvie": "Dilemme · choix de vie",
+ "dbouffe": "Dilemme · bouffe",
+ "dquotidien": "Dilemme · quotidien"
 };
 window.DIL_DECK = {
  "dsexe": [
@@ -82,7 +84,12 @@ window.DIL_DECK = {
 ["Doubler ton salaire mais bosser avec ton ex", "Garder ton salaire"],
 ["Un million tout de suite", "5 000 € par mois à vie"],
 ["Payer toutes les additions de ce groupe pendant un an", "Ne plus jamais sortir avec eux"],
-["50 000 € mais marcher à quatre pattes en public pendant un mois", "Ne rien gagner"]
+["50 000 € mais marcher à quatre pattes en public pendant un mois", "Ne rien gagner"],
+["Gagner 10 000 € tout de suite", "1 € qui double chaque jour pendant un mois"],
+["Ne plus jamais payer de loyer", "Ne plus jamais payer de courses"],
+["Être payé en euros", "Être payé en pizzas, autant que tu veux"],
+["Avoir une maison immense en pleine campagne", "Un petit appart en plein centre de Paris"],
+["Gagner 1 000 € à chaque fois que tu cours un marathon", "100 € à chaque fois que tu fais une sieste"]
 ],
  "ddingue": [
 ["Avoir des doigts en saucisse", "Des dents en Lego"],
@@ -98,7 +105,17 @@ window.DIL_DECK = {
 ["Avoir une queue de chat", "Avoir des oreilles d'âne"],
 ["Pouvoir voler mais à 5 km/h", "Te téléporter mais tout nu à l'arrivée"],
 ["Que ton téléphone lise tous tes messages à voix haute", "Que tes pensées s'affichent sur ton front une heure par jour"],
-["Ne plus jamais dormir", "Dormir 16 heures par jour"]
+["Ne plus jamais dormir", "Dormir 16 heures par jour"],
+["Avoir le pouvoir de mettre la vie sur pause", "De revenir 10 secondes en arrière"],
+["Être un chat pendant une semaine", "Être un pigeon pendant une semaine"],
+["Avoir des bras de 3 mètres", "Des jambes de 3 mètres"],
+["Vivre dans un monde sans musique", "Dans un monde sans couleurs"],
+["Être suivi partout par un narrateur", "Par une fanfare"],
+["Savoir parler toutes les langues", "Savoir jouer de tous les instruments"],
+["Voyager dans le passé sans pouvoir revenir", "Voyager dans le futur sans pouvoir revenir"],
+["Être le meilleur joueur d'un jeu que personne ne connaît", "Être moyen à un sport que tout le monde regarde"],
+["Avoir un dinosaure de la taille d'un chien", "Un chien de la taille d'un dinosaure"],
+["Ne plus pouvoir dire que des questions", "Ne plus pouvoir dire que des mots de trois lettres"]
 ],
  "dvie": [
 ["Connaître la date de ta mort", "Connaître la cause de ta mort"],
@@ -108,7 +125,36 @@ window.DIL_DECK = {
 ["Être célèbre pour un truc humiliant", "Rester inconnu toute ta vie"],
 ["Ne plus jamais pouvoir mentir", "Ne jamais savoir quand on te ment"],
 ["Vivre 200 ans tout seul", "Vivre 50 ans bien entouré"],
-["Savoir ce que tout le monde pense vraiment de toi", "Ne jamais le savoir"]
+["Savoir ce que tout le monde pense vraiment de toi", "Ne jamais le savoir"],
+["Vivre à la mer", "Vivre à la montagne"],
+["Avoir un travail passionnant mal payé", "Un travail ennuyeux très bien payé"],
+["Être le plus intelligent de la pièce", "Être le plus drôle de la pièce"],
+["Connaître toutes les réponses mais ne jamais pouvoir les dire", "Tout dire sans jamais savoir si c'est vrai"],
+["Faire le tour du monde seul", "Ne jamais quitter ta ville mais avec tous tes proches"]
+],
+ "dbouffe": [
+["Ne plus jamais manger de fromage", "Ne plus jamais manger de chocolat"],
+["Manger des pâtes à tous les repas pendant un an", "Ne plus jamais en manger"],
+["Que toute ta nourriture ait goût de brocoli", "Que toutes tes boissons aient goût d'eau de mer"],
+["Ne manger que froid toute ta vie", "Ne manger que mixé toute ta vie"],
+["Renoncer aux frites pour toujours", "Renoncer à la pizza pour toujours"],
+["Avoir toujours un peu faim", "Avoir toujours un peu trop mangé"],
+["Ne boire que de l'eau gazeuse", "Ne boire que du lait"],
+["Cuisiner tous les repas de ce groupe pendant un mois", "Faire toute leur vaisselle pendant un mois"],
+["Manger le même plat tous les jours", "Ne jamais manger deux fois le même plat"],
+["Un buffet à volonté gratuit à vie dans un seul resto", "Une étoile Michelin une fois par an"]
+],
+ "dquotidien": [
+["Toujours avoir 10 % de batterie", "Toujours avoir une connexion à une barre"],
+["Être toujours en retard de 10 minutes", "Toujours en avance de 30 minutes"],
+["Avoir toujours une chaussette mouillée", "Avoir toujours un caillou dans la chaussure"],
+["Ne plus jamais pouvoir regarder de séries", "Ne plus jamais pouvoir écouter de musique"],
+["Faire 2 heures de transport par jour", "Vivre dans 15 m² à côté du travail"],
+["Te lever à 5 h tous les jours", "Te coucher à 4 h tous les jours"],
+["Avoir un voisin qui fait des travaux tous les dimanches", "Un voisin qui chante faux tous les soirs"],
+["Que tous tes réveils sonnent avec un cri de chèvre", "Que ta sonnerie de téléphone soit un pet"],
+["Ne plus jamais avoir de wifi chez toi", "Ne plus jamais avoir d'eau chaude"],
+["Avoir un hoquet d'une heure chaque jour", "Éternuer toutes les cinq minutes"]
 ]
 };
 window.DIL = []; window.DIL_TYPE = {};

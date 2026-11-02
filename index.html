@@ -443,17 +443,52 @@ body.tv .dsplit.small .dh{font-size:28px;padding:18px 24px}
 body.tv .dbig{font-size:84px}body.tv .dbig small{font-size:40px}body.tv .druler{height:200px}body.tv .druler .dtrack{top:78px;height:46px}body.tv .druler .dtruth{top:62px;height:78px}body.tv .druler .dtruth b{font-size:40px}body.tv .druler .dg.dn{top:132px}body.tv .druler .dg small{font-size:18px}
 body.tv .dwin{font-size:30px}
 @media (prefers-reduced-motion:reduce){.druler .dg{animation:none}.dsplit .dh,.druler .dtrack .db,.druler .dtruth{transition:none}}
+/* Le Dilemme, 02/11 : barre bleu → violet → rouge (demande de Naim), Lis dans ses pensées, Pile, Défends-toi */
+.dmeter{background:linear-gradient(90deg,#3fb6ff 0%,#9b5cff 50%,#ff3b4e 100%)}
+.dmeter .db,.dmeter .dr{background:none!important}
+.druler .dtrack{background:linear-gradient(90deg,#3fb6ff 0%,#9b5cff 50%,#ff3b4e 100%)}
+.druler .dtrack .db,.druler .dtrack .dr{background:none!important}
+.druler .dtrack .db{background:rgba(255,255,255,.18)!important}
+.dmeter .dpct span{color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+.gamecard.dilemme ul{background:linear-gradient(90deg,#3fb6ff,#9b5cff 55%,#ff3b4e)}
+.dread{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border-radius:18px;padding:10px 12px}
+.drwho{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;max-width:96px}
+.drwho b{font-size:13px;text-align:center;overflow-wrap:anywhere;line-height:1.1}
+.drbtns{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.drbtns button{font-family:var(--display);font-weight:800;font-size:18px;padding:14px 0;border-radius:14px;transition:opacity .15s,transform .15s}
+.drbtns .r{background:#ff3b4e;color:#fff;box-shadow:0 4px 0 #a8162a}
+.drbtns .b{background:#3fb6ff;color:var(--ink);box-shadow:0 4px 0 #0f6aa8}
+.drbtns .on{outline:3px solid #fff;outline-offset:2px}.drbtns .dim{opacity:.35}
+.dreadme{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;color:var(--gold)}
+.dreadres{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border-radius:18px;padding:10px 12px;flex-wrap:wrap}
+.drc{font-family:var(--display);font-weight:800;font-size:18px;padding:6px 12px;border-radius:10px}
+.drc.r{background:#ff3b4e;color:#fff}.drc.b{background:#3fb6ff;color:var(--ink)}
+.drok{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto;align-items:center}
+.drok em{font-style:normal;opacity:.7;font-weight:700}
+.dro{position:relative;display:inline-flex}.dro i{position:absolute;right:-8px;top:-7px;font-style:normal;font-family:var(--display);font-weight:800;font-size:11px;background:var(--gold);color:var(--ink);border-radius:999px;padding:1px 5px}
+.dwin i{font-style:normal;font-size:14px;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:#fff;border-radius:8px;padding:3px 8px}
+.dwin.pile{animation:pilew .5s ease-in-out 2}
+@keyframes pilew{25%{transform:rotate(-4deg) scale(1.04)}75%{transform:rotate(1deg) scale(1.04)}}
+.dalone{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;border-radius:20px;padding:14px 16px 20px;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.dalone.r{background:#ff3b4e;color:#fff}.dalone.b{background:#3fb6ff;color:var(--ink)}
+.dalone div{display:flex;flex-direction:column;min-width:0}
+.dalone b{font-family:var(--display);font-size:22px;line-height:1.1;overflow-wrap:anywhere}
+.dalone span{font-family:var(--display);font-weight:800;font-size:30px;line-height:1}
+.dalone .dclock{position:absolute;left:0;bottom:0;height:7px;width:100%;background:currentColor;opacity:.55;transform-origin:left;animation:dclock 20s linear forwards}
+@keyframes dclock{to{transform:scaleX(0)}}
+body.tv .dalone b{font-size:34px}body.tv .dalone span{font-size:52px}body.tv .dreadres{font-size:20px}body.tv .drc{font-size:28px}
+@media (prefers-reduced-motion:reduce){.dalone .dclock,.dwin.pile{animation:none}}
 </style>
 </head>
 <body>
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=33"></script>
-<script src="qui.js?v=33"></script>
-<script src="aveux.js?v=33"></script>
-<script src="dilemme.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="cards.js?v=34"></script>
+<script src="qui.js?v=34"></script>
+<script src="aveux.js?v=34"></script>
+<script src="dilemme.js?v=34"></script>
+<script src="app.js?v=34"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

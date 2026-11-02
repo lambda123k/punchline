@@ -72,8 +72,10 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
     check(await hasText(TV, blue), "le grand écran montre les deux côtés");
     check(await A.locator(".dsplit .dh.r").count() === 1 && await A.locator(".dsplit .dh.b").count() === 1, "écran coupé rouge / bleu");
     if (round === 1) await A.screenshot({ path: S + "/dilemme-choose.png", fullPage: true });
-    // Naim et Léa bleu, Tom rouge ; curseurs 50 (défaut), 70, 30
+    // Naim et Léa bleu, Tom rouge ; curseurs 50 (défaut), 75, 25 ; tout le monde devine « bleu » pour la cible
     const plan = { Naim: [true, null], "Léa": [true, 3], Tom: [false, 1] };
+    const target = r.judge, tname = await admin(`return (db.players.find(p => p.id === "${target}") || {}).name`);
+    console.log("  dans le viseur : " + tname);
     for (const [n, p] of humans){
       const [y, v] = plan[n];
       await p.click(`[data-a=ayes][data-v="${y ? 1 : 0}"]`);
@@ -82,6 +84,13 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
       check(+(await p.locator("#dslide").getAttribute("max")) === 4, `${n} : 4 joueurs, le curseur a 4 crans`);
       check(+(await p.locator("#dslide").inputValue()) === 2 && (await p.locator(".dmeter").innerText()).includes("50 %"), `${n} : le curseur démarre à 50 %`);
       if (v != null){ await slide(p, v); check((await p.locator(".dmeter").innerText()).includes(v * 25 + " %"), `${n} : la barre suit le curseur (${v * 25} %)`); }
+      if (tname === n){
+        check(await p.locator(".dreadme").count() === 1 && await p.locator(".dread").count() === 0, `${n} est dans le viseur : il ne devine pas`);
+      } else {
+        check(await p.locator(".dread").count() === 1 && await p.locator("[data-a=asend]").isDisabled(), `${n} : il faut deviner le choix de ${tname} avant de valider`);
+        await p.click("[data-a=aread][data-v='1']");
+        check(!(await p.locator("[data-a=asend]").isDisabled()), `${n} : Valider s'active après la devinette`);
+      }
       if (round === 1 && n === "Léa") { await sleep(1800); await p.screenshot({ path: S + "/dilemme-guess.png", fullPage: true }); }
       await p.click("[data-a=asend]");
       await hasText(p, "Envoyé");
@@ -95,15 +104,21 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
     const after = await admin(`return Object.fromEntries(db.players.map(p=>[p.name,p.score]))`);
     const names = await admin(`return Object.fromEntries(db.players.map(p=>[p.id,p.name]))`);
     const n = bets.length, m = Math.min(...bets.map(b => Math.abs(b.bet * n - rr.yes * 100)));
-    const expect = {}; bets.forEach(b => { expect[names[b.player]] = Math.abs(b.bet * n - rr.yes * 100) === m ? 1 : 0; });
+    const ts = (await admin(`return db.aveux_bets.find(b=>b.round===${round}&&b.player==="${target}")`)).said;
+    const expect = {}; bets.forEach(b => { expect[names[b.player]] = (Math.abs(b.bet * n - rr.yes * 100) === m ? (b.bet === Math.round(rr.yes * 100 / n) ? 2 : 1) : 0) + (b.player !== target && b.read === ts ? 1 : 0); });
     const diff = Object.fromEntries(Object.keys(after).map(k => [k, after[k] - before[k]]));
-    check(JSON.stringify(diff) === JSON.stringify(Object.fromEntries(Object.keys(after).map(k => [k, expect[k] || 0]))), `points au plus proche : ${JSON.stringify(diff)} (bleu ${rr.yes}/4)`);
+    check(JSON.stringify(diff) === JSON.stringify(Object.fromEntries(Object.keys(after).map(k => [k, expect[k] || 0]))), `points (plus proche, pile, lecture) : ${JSON.stringify(diff)} (bleu ${rr.yes}/4, ${tname} a pris ${ts ? "bleu" : "rouge"})`);
+    check(bets.filter(b => b.player !== target).every(b => b.read != null) && bets.find(b => b.player === target).read == null, "les devinettes sont enregistrées, sauf pour la cible");
     const pct = Math.round(rr.yes * 100 / 4);
     check(await until(B, async () => (await B.locator(".dwin").count()) === 1, "révélation finie", 10000), "la barre monte puis le gagnant s'affiche");
     check((await B.locator(".dbig").innerText()).includes(pct + " %"), `le vrai pourcentage s'affiche (${pct} %)`);
     check(await B.locator(".druler .dg").count() === 4, "les 4 paris sont placés sur la règle");
     check(await B.locator(".camp.db .who").count() === rr.yes && await B.locator(".camp.dr .who").count() === 4 - rr.yes, "les camps ROUGE / BLEU s'affichent");
     check((await B.locator(".camp.db").innerText()).includes("Naim") && (await B.locator(".camp.dr").innerText()).includes("Tom"), "chacun est dans le bon camp");
+    check(await B.locator(".dreadres").count() === 1 && (await B.locator(".dreadres .drc").innerText()) === (ts ? "BLEU" : "ROUGE"), "on voit le choix de la cible et qui l'a deviné");
+    const alone = rr.yes === 3 ? "Tom" : null;
+    check(alone ? (await B.locator(".dalone").innerText()).includes(alone) && (await B.locator(".dalone").innerText()).includes("Défends-toi") : await B.locator(".dalone").count() === 0, alone ? "Tom seul en rouge : Défends-toi" : "2 contre 2 : personne ne doit se défendre");
+    if (bets.some(b => b.bet === pct)) check(await B.locator(".dwin.pile").count() === 1 && (await B.locator(".dwin small").innerText()) === "+2", "pile sur le bon % : +2 affiché");
     await until(TV, async () => (await TV.locator(".dwin").count()) === 1, "révélation TV");
     if (round === 1){ await B.screenshot({ path: S + "/dilemme-result.png", fullPage: true }); await TV.screenshot({ path: S + "/dilemme-tv-result.png" }); }
   }

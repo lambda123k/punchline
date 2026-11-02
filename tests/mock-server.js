@@ -115,6 +115,13 @@ const rpc = {
     secret["said:" + p_code + ":" + r.round + ":" + p_player] = !!p_yes;
     return true;
   },
+  dil_send({ p_code, p_player, p_yes, p_bet, p_read }){
+    const r = db.rooms.find(x => x.code === p_code);
+    if (!r || r.phase !== "writing" || r.game !== "dilemme") return false;
+    if (!rpc.aveu_send({ p_code, p_player, p_yes, p_bet })) return false;
+    if (p_player !== r.judge){ const b = db.aveux_bets.find(x => x.room === p_code && x.round === r.round && x.player === p_player); if (b) b.read = p_read; }
+    return true;
+  },
   aveu_reveal({ p_code, p_round }){
     const r = db.rooms.find(x => x.code === p_code);
     if (!r || r.round !== p_round || r.phase !== "writing" || !["aveux", "dilemme"].includes(r.game)) return null;
@@ -123,9 +130,13 @@ const rpc = {
     const m = Math.min(...bs.map(b => Math.abs(b.bet * n - y * 100)));
     bs.forEach(b => {
       const p = db.players.find(x => x.id === b.player && x.room === p_code); const e = Math.abs(b.bet - y);
-      if (p) p.score += r.game === "dilemme" ? (Math.abs(b.bet * n - y * 100) === m ? 1 : 0) : e === 0 ? 2 : e === 1 ? 1 : 0;
+      if (p) p.score += r.game === "dilemme" ? (Math.abs(b.bet * n - y * 100) === m ? (b.bet === Math.round(y * 100 / n) ? 2 : 1) : 0) : e === 0 ? 2 : e === 1 ? 1 : 0;
       b.said = secret["said:" + p_code + ":" + p_round + ":" + b.player];
     });
+    if (r.game === "dilemme"){
+      const t = secret["said:" + p_code + ":" + p_round + ":" + r.judge];
+      if (t != null) bs.forEach(b => { if (b.player !== r.judge && b.read === t){ const p = db.players.find(x => x.id === b.player && x.room === p_code); if (p) p.score++; } });
+    }
     const old = { ...r }; Object.assign(r, { phase: "result", yes: y, updated_at: now() }); hook(old, r);
     return null;
   },

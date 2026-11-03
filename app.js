@@ -890,7 +890,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 36;
+const APP_VERSION = 37;
 const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
@@ -1100,11 +1100,11 @@ const views = {
     ${ui.creating ? `
     <div class="card stack pop">
       <h2>Nouvelle partie</h2>
-      ${vibeCards(ui.mode, true)}
+      ${ui.game === "loup" ? "" : `${vibeCards(ui.mode, true)}
       <span class="label">Points pour gagner</span>
       <div class="seg">${[3,5,7,10].map(n => `<button data-a="target" data-v="${n}" class="${ui.target === n ? "on" : ""}">${n}</button>`).join("")}</div>
       <span class="label">Temps pour répondre</span>
-      ${timerSeg(ui.timer)}
+      ${timerSeg(ui.timer)}`}
       <button class="btn" data-a="create">Créer la partie</button>
       <button class="ghost dark small" data-a="showCreate">Annuler</button>
     </div>` : `<button class="ghost" data-a="showCreate">Créer une partie</button>`}`}

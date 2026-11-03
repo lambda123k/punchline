@@ -99,7 +99,7 @@ async function autoplay(p){
 
   console.log("Partie en accéléré");
   const seen = new Set(); let end = false; const t0 = Date.now();
-  while (Date.now() - t0 < 180000){
+  while (Date.now() - t0 < 300000){
     const r = await room();
     const st = r.lg && r.lg.st; if (st) seen.add(st.t);
     if (st && st.t === "nuit") await shot(B, "nuit");

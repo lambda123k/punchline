@@ -497,7 +497,12 @@ body.loup .seg button.on{background:var(--hot);color:#2b1300;border-color:var(--
 body.loup .seg button:disabled{opacity:1}
 body.loup .ghost{color:#efe0bf;border-color:rgba(239,224,191,.35)}
 body.loup .mrow{color:#efe0bf;border-color:rgba(239,224,191,.16)}
-body.loup .sw{background:rgba(239,224,191,.25)}
+body.loup .sw{width:56px;height:32px;background:transparent;border:2px solid rgba(239,224,191,.3);transition:background .2s,box-shadow .2s,border-color .2s}
+body.loup .sw::after{top:4px;left:4px;width:20px;height:20px;background:rgba(239,224,191,.35);box-shadow:none;transition:left .2s,background .2s}
+body.loup .sw.on{background:#fff;border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.55)}
+body.loup .sw.on::after{left:28px;background:#1b120b}
+body.loup .lgsw .mrow[aria-checked="false"] b{opacity:.45}
+body.loup .lgsw .mrow[aria-checked="true"] b{color:#fff}
 .lic{width:22px;height:22px;flex-shrink:0;color:var(--hot)}
 .lic.big{width:70px;height:70px}
 .lgh{font-size:30px;line-height:1.05;margin:0;text-align:center}
@@ -585,11 +590,11 @@ body.loup .btn.on{background:#5fbf6a;box-shadow:0 5px 0 #33803c}
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=36"></script>
-<script src="qui.js?v=36"></script>
-<script src="aveux.js?v=36"></script>
-<script src="dilemme.js?v=36"></script>
-<script src="app.js?v=36"></script>
+<script src="cards.js?v=37"></script>
+<script src="qui.js?v=37"></script>
+<script src="aveux.js?v=37"></script>
+<script src="dilemme.js?v=37"></script>
+<script src="app.js?v=37"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

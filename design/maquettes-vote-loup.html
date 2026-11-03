@@ -1,0 +1,141 @@
+<title>Le cercle du vote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : trois maquettes côte à côte (une colonne sur téléphone), chacune l'écran de vote du Loup-garou avec 9 joueurs, ambiance « La veillée ». Thème sombre unique voulu. */
+:root{
+  --bg:#1b120b; --wood:#2a1b10; --ink:#efe0bf; --soft:rgba(239,224,191,.66); --line:rgba(239,224,191,.18);
+  --fire:#ff7a1a; --ember:#ffb35c; --fire-ink:#2b1300; --card:#efe0bf; --card-ink:#2b1d10; --dead:#5a4a3a;
+  --display:"Pirata One",Georgia,serif; --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(90% 40% at 50% 105%,rgba(255,122,26,.25) 0,transparent 60%) fixed,linear-gradient(180deg,#22160d,var(--bg)) fixed;background-color:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:22px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{max-width:1240px;margin:0 auto 18px;display:flex;flex-direction:column;gap:6px}
+.top h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,8vw,50px);line-height:1;margin:0;text-wrap:balance}
+.top p{margin:0;color:var(--soft);max-width:65ch}
+.screens{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.step{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--fire);margin-left:4px}
+.col>p{margin:0 4px;color:var(--soft);font-size:13px}
+.phone{border-radius:30px;border:2px solid var(--line);background:var(--wood);padding:16px 12px 18px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.h{font-family:var(--display);font-weight:400;font-size:28px;line-height:1;margin:0;text-align:center}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible{outline:3px solid var(--fire);outline-offset:3px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#16130f;font-weight:800;font-size:19px;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+.go{font-weight:800;font-size:17px;border:0;border-radius:14px;padding:13px;background:var(--fire);color:var(--fire-ink);box-shadow:0 5px 0 #a3460a}
+.go:disabled{background:transparent;color:rgba(239,224,191,.38);box-shadow:none;border:2px dashed rgba(239,224,191,.22)}
+.tally{display:flex;gap:2px;height:14px;align-items:flex-end}
+.tally i{width:3px;height:13px;border-radius:2px;background:var(--ember);transform:rotate(8deg)}
+.tally i:nth-child(5n){width:20px;height:3px;margin-left:-19px;transform:rotate(-28deg) translateY(-5px)}
+/* A : cercle autour du feu */
+.ring{position:relative;width:100%;max-width:330px;aspect-ratio:1;margin:0 auto}
+.fire{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 50% 62%,#fff3c4 0,#ffc15a 18%,#ff7a1a 42%,rgba(255,122,26,.25) 64%,transparent 72%);display:grid;place-items:center;text-align:center;animation:flick 2.4s infinite ease-in-out}
+.fire b{font-family:var(--display);font-weight:400;font-size:22px;color:var(--fire-ink);line-height:1;max-width:90%}
+@keyframes flick{0%,100%{filter:brightness(1);transform:translate(-50%,-50%) scale(1)}40%{filter:brightness(1.12);transform:translate(-50%,-50%) scale(1.04)}70%{filter:brightness(.94);transform:translate(-50%,-50%) scale(.98)}}
+.ring::before{content:"";position:absolute;inset:14%;border-radius:50%;border:1px dashed rgba(239,224,191,.14)}
+.seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;padding:0;width:70px;font-size:12px;font-weight:700}
+.seat .av{transition:box-shadow .2s,transform .2s}
+.seat.sel .av{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--fire),0 0 22px rgba(255,122,26,.8);transform:scale(1.08)}
+.seat.dead{cursor:default}.seat.dead .av{filter:grayscale(1) brightness(.5)}.seat.dead span{opacity:.5;text-decoration:line-through}
+.seat.me span{color:var(--ember)}
+/* B : les maisons du village */
+.houses{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 4px;padding-top:4px}
+.house{background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:700}
+.house svg{width:84px;height:76px;max-width:100%;overflow:visible}
+.house .roof{fill:#5b3a22}.house .wall{fill:#3a2616}.house .door{fill:#21150b}.house .win{fill:#171009}
+.house .let{font-family:var(--body);font-weight:800;font-size:15px;fill:var(--ink)}
+.house.sel .win{fill:#ffc15a;filter:drop-shadow(0 0 6px #ff7a1a)}.house.sel .wall{fill:#4a2f1a}.house.sel .roof{fill:var(--fire)}
+.house.dead{cursor:default;opacity:.45}.house.dead .roof{fill:#3a3029}
+.house.dead span{text-decoration:line-through}
+.house .sign{display:flex;align-items:center;gap:6px;min-height:14px}
+/* C : l'assemblée en arc + l'accusé */
+.arc{position:relative;width:100%;max-width:330px;aspect-ratio:1.1;margin:0 auto}
+.dock{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:128px;padding:12px 8px 10px;border-radius:14px;background:var(--card);color:var(--card-ink);text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.35);transition:transform .3s}
+.dock small{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+.dock b{display:block;font-family:var(--display);font-weight:400;font-size:24px;line-height:1.1}
+.dock.empty{background:transparent;color:var(--soft);border:2px dashed var(--line);box-shadow:none}
+.dock.empty b{font-size:18px}
+.legend{max-width:80ch;margin:22px auto 0;color:var(--soft);font-size:14px;display:flex;flex-direction:column;gap:6px}
+.legend b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="top">
+  <h1>Le cercle du vote</h1>
+  <p>Trois façons de montrer le village au moment de voter. Touche un joueur pour voter : les bâtons gravés comptent les voix déjà posées.</p>
+</div>
+
+<div class="screens">
+  <div class="col">
+    <span class="step">A · Autour du feu</span>
+    <p>Les joueurs assis en rond, dans l'ordre d'arrivée, comme autour de la table. Le nom choisi brûle au centre.</p>
+    <div class="phone"><h2 class="h">Qui éliminer ?</h2><div class="ring" id="ring"></div><button class="go" id="goA" disabled>Voter</button></div>
+  </div>
+  <div class="col">
+    <span class="step">B · Les maisons du village</span>
+    <p>Chaque joueur a sa maison. Celle que tu vises s'allume, celle d'un mort est en ruine.</p>
+    <div class="phone"><h2 class="h">Qui éliminer ?</h2><div class="houses" id="houses"></div><button class="go" id="goB" disabled>Voter</button></div>
+  </div>
+  <div class="col">
+    <span class="step">C · L'assemblée</span>
+    <p>Le village en arc de cercle, comme une assemblée sur la place. Celui que tu accuses est écrit sur la carte du bas.</p>
+    <div class="phone"><h2 class="h">Qui éliminer ?</h2><div class="arc" id="arc"></div><button class="go" id="goC" disabled>Voter</button></div>
+  </div>
+</div>
+
+<div class="legend">
+  <p><b>Dans les trois :</b> la même disposition sert à la nuit (victime des loups, voyante, sorcière), à l'élection du maire et au pari des morts, pas seulement au vote.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+const COLORS = ["#ff5a36","#ffc83d","#2fbf71","#b48cff","#4cc9f0","#ff8fb1","#f7f052","#7ee0c3","#ff9f43"];
+const NAMES = ["Naim","Léa","Tom","Inès","Yanis","Sarah","Hugo","Zoé","Malik"];
+const DEAD = new Set([3, 7]), ME = 0, MAYOR = 5;
+const votes = { 1: 2, 4: 1, 6: 3 };
+const tally = n => n ? `<span class="tally" aria-label="${n} voix">${"<i></i>".repeat(n)}</span>` : `<span class="tally"></span>`;
+const av = i => `<span class="av" style="--c:${COLORS[i]}">${NAMES[i][0]}</span>`;
+const crown = `<svg viewBox="0 0 16 12" width="18" height="14" aria-hidden="true"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="#ffb35c"/></svg>`;
+const sel = { a: null, b: null, c: null };
+function ring(){
+  const n = NAMES.length, r = 42;
+  document.getElementById("ring").innerHTML = `<div class="fire"><b>${sel.a == null ? "" : NAMES[sel.a] + " ?"}</b></div>` + NAMES.map((nm, i) => {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = 50 + r * Math.cos(a), y = 50 + r * Math.sin(a);
+    const cls = DEAD.has(i) ? "dead" : i === ME ? "me" : "";
+    return `<button class="seat ${cls} ${sel.a === i ? "sel" : ""}" style="left:${x}%;top:${y}%" data-g="a" data-i="${i}" ${DEAD.has(i) || i === ME ? "disabled" : ""} aria-pressed="${sel.a === i}">${i === MAYOR ? crown : ""}${av(i)}<span>${i === ME ? "Toi" : nm}</span>${tally(votes[i] || 0)}</button>`;
+  }).join("");
+  document.getElementById("goA").disabled = sel.a == null;
+}
+function houses(){
+  document.getElementById("houses").innerHTML = NAMES.map((nm, i) => {
+    const dead = DEAD.has(i);
+    const roof = dead ? `<path class="roof" d="M8 34 30 14 42 22 50 16 76 34z"/>` : `<path class="roof" d="M6 34 42 6 78 34z"/>`;
+    return `<button class="house ${dead ? "dead" : ""} ${sel.b === i ? "sel" : ""}" data-g="b" data-i="${i}" ${dead || i === ME ? "disabled" : ""} aria-pressed="${sel.b === i}">
+      <svg viewBox="0 0 84 76" aria-hidden="true">${roof}<rect class="wall" x="14" y="34" width="56" height="40"/><rect class="win" x="20" y="42" width="12" height="11"/><rect class="win" x="52" y="42" width="12" height="11"/><rect class="door" x="35" y="50" width="14" height="24" rx="2"/><circle cx="42" cy="24" r="10" fill="${COLORS[i]}"/><text class="let" x="42" y="29.5" text-anchor="middle" fill="#16130f" style="fill:#16130f">${nm[0]}</text>${i === MAYOR ? `<path d="M34 6 35 0l3 3 4-3 4 3 3-3 1 6z" fill="#ffb35c"/>` : ""}</svg>
+      <span>${i === ME ? "Toi" : nm}</span><span class="sign">${tally(votes[i] || 0)}</span></button>`;
+  }).join("");
+  document.getElementById("goB").disabled = sel.b == null;
+}
+function arc(){
+  const others = NAMES.map((_, i) => i), n = others.length;
+  const seats = others.map((i, k) => {
+    const a = Math.PI + k * Math.PI / (n - 1), x = 50 + 43 * Math.cos(a), y = 76 + 60 * Math.sin(a);
+    const cls = DEAD.has(i) ? "dead" : i === ME ? "me" : "";
+    return `<button class="seat ${cls} ${sel.c === i ? "sel" : ""}" style="left:${x}%;top:${y}%" data-g="c" data-i="${i}" ${DEAD.has(i) || i === ME ? "disabled" : ""} aria-pressed="${sel.c === i}">${i === MAYOR ? crown : ""}${av(i)}<span>${i === ME ? "Toi" : NAMES[i]}</span>${tally(votes[i] || 0)}</button>`;
+  }).join("");
+  const dock = sel.c == null ? `<div class="dock empty"><small>L'accusé</small><b>Personne</b></div>` : `<div class="dock"><small>L'accusé</small><b>${NAMES[sel.c]}</b></div>`;
+  document.getElementById("arc").innerHTML = seats + dock;
+  document.getElementById("goC").disabled = sel.c == null;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-g]"); if (!b || b.disabled) return;
+  const g = b.dataset.g, i = +b.dataset.i; sel[g] = sel[g] === i ? null : i;
+  ({ a: ring, b: houses, c: arc })[g]();
+});
+ring(); houses(); arc();
+})();
+</script>

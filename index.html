@@ -611,17 +611,38 @@ body.loup .btn:disabled{opacity:1;background:transparent;color:rgba(239,224,191,
 .lgrc .rc.vil .lic{color:#efe0bf}
 .lgrc .rc small{font-size:12px;font-weight:800;opacity:.8}
 @media (prefers-reduced-motion:reduce){.lgrc .rc{transition:none}}
+.lgarc{position:relative;width:100%;max-width:400px;margin:0 auto;aspect-ratio:1.02}
+.lgarc.two{aspect-ratio:.9}
+.lgarc.nodock{aspect-ratio:1.25}.lgarc.two.nodock{aspect-ratio:1.05}
+.lgarc .lgp{position:absolute;transform:translate(-50%,-50%);width:66px;padding:2px 0;gap:2px;background:none;border:0;font-size:12px;min-height:0;border-radius:12px}
+.lgarc.two .lgp{width:58px;font-size:11px}
+.lgarc .lgp .av{transition:box-shadow .2s,transform .2s}
+.lgarc .lgp.sel{background:none;border:0}
+.lgarc .lgp.sel .av{box-shadow:0 0 0 3px #1b120b,0 0 0 6px var(--hot),0 0 22px rgba(255,122,26,.8);transform:scale(1.08)}
+.lgarc .lgp.me .nm{color:var(--gold)}
+.lgarc .lgp .nm{width:100%;text-align:center}
+.lgarc .lgcrown{top:-12px}
+.lgarc .lgvotes{top:-6px;right:0}
+.lgdock{position:absolute;left:50%;bottom:2%;transform:translateX(-50%);min-width:132px;max-width:64%;padding:10px 12px 9px;border-radius:14px;background:var(--card);color:var(--ink);text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.35)}
+.lgdock small{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.65}
+.lgdock b{display:block;font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:24px;line-height:1.1;overflow-wrap:anywhere}
+.lgdock.empty{background:transparent;color:rgba(239,224,191,.6);border:2px dashed rgba(239,224,191,.2);box-shadow:none}
+.lgdock.empty b{font-size:18px}
+.lgtally{display:flex;gap:2px;height:14px;align-items:flex-end;justify-content:center}
+.lgtally i{width:3px;height:13px;border-radius:2px;background:var(--gold);transform:rotate(8deg)}
+.lgtally i:nth-child(5n){width:20px;height:3px;margin-left:-19px;transform:rotate(-28deg) translateY(-5px)}
+.lgpaw{position:absolute;left:-2px;top:6px;width:13px;height:13px;fill:#c9a27a;opacity:.32;transform:rotate(-20deg)}
 </style>
 </head>
 <body>
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=40"></script>
-<script src="qui.js?v=40"></script>
-<script src="aveux.js?v=40"></script>
-<script src="dilemme.js?v=40"></script>
-<script src="app.js?v=40"></script>
+<script src="cards.js?v=41"></script>
+<script src="qui.js?v=41"></script>
+<script src="aveux.js?v=41"></script>
+<script src="dilemme.js?v=41"></script>
+<script src="app.js?v=41"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

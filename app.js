@@ -890,7 +890,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 40;
+const APP_VERSION = 41;
 const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
@@ -1935,7 +1935,7 @@ const LG_ROLES = {
   sorciere:    ["Sorcière", "potion", "Une potion pour sauver, une pour tuer."],
   chasseur:    ["Chasseur", "hunter", "En mourant, tu emportes quelqu'un avec toi."],
   cupidon:     ["Cupidon", "heart", "La première nuit, tu lies deux amoureux."],
-  petitefille: ["Petite fille", "girl", "Pendant le tour des loups, tu espionnes leur cible."],
+  petitefille: ["Petite fille", "girl", "Tu peux entrouvrir les yeux la nuit. Le jour, tu remarques des traces dans le village."],
   voleur:      ["Voleur", "thief", "La première nuit, tu peux voler une carte du milieu."],
   salvateur:   ["Salvateur", "shield", "Chaque nuit, tu protèges un joueur, jamais deux fois le même."],
   idiot:       ["Idiot du village", "fool", "Si le village te vote, tu survis, mais tu ne votes plus."]
@@ -2115,6 +2115,13 @@ function morning(g, dort){
   void sav;
   const dead = kill(g, list);
   g.alive.forEach(id => { g.surv[id] = (g.surv[id] || 0) + 1; });
+  // petite fille : une trace de patte près d'un joueur, plus souvent un loup, mais pas toujours
+  const pf = holders(g, "petitefille")[0];
+  if (pf){
+    const w = g.alive.filter(id => id !== pf && g.roles[id] === "loup"), o = g.alive.filter(id => id !== pf && g.roles[id] !== "loup");
+    const from = w.length && (Math.random() < .6 || !o.length) ? w : o;
+    g.spy = from.length ? { n: g.n, id: pickOne(from) } : null;
+  }
   const clips = dead.length === 0 ? [pick(g, "personne")] : dead.length === 1 ? [pick(g, "matin"), pick(g, "mort")] : dead.length === 2 ? [pick(g, "deux")] : ["trois_morts"];
   if (g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin")) clips.push("chagrin");
   g.after = "day";
@@ -2397,16 +2404,30 @@ function lgMask(){
   return { dead: st.dead || [], idiot: st.saved ? st.target : null, mayor: st.t === "maire" ? st.mayor : null };
 }
 const lgSuspense = () => `<div class="lgsus pop" aria-live="polite"><span></span><span></span><span></span></div>`;
+// Le village en arc de cercle, comme une assemblée sur la place (maquette C choisie par Naim le 03/11) ; celui qu'on choisit est écrit sur la carte du bas
+const DOCK = { vote: "L'accusé", egalite: "L'accusé", loups: "La victime", voyante: "Sa carte", salvateur: "Protégé", sorciere: "Empoisonné", election: "Le maire", cupidon: "Les amoureux", chasseur: "Ta cible", successeur: "Le successeur" };
+const paw = `<svg class="lgpaw" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="5" ry="4.2"/><circle cx="5.5" cy="10" r="2.1"/><circle cx="9.5" cy="6.3" r="2.1"/><circle cx="14.5" cy="6.3" r="2.1"/><circle cx="18.5" cy="10" r="2.1"/></svg>`;
+const tallyMarks = n => n ? `<span class="lgtally" aria-label="${n} voix">${"<i></i>".repeat(n)}</span>` : "";
 function lgVillage(opts){
   opts = opts || {};
-  const g = LG(), ids = Object.keys(g.roles).sort((a, b) => (byId(a) || {}).seat - (byId(b) || {}).seat);
-  return `<div class="lggrid">${ids.map(id => {
-    const m = lgMask(), d = !m.dead.includes(id) && lgDead(id), can = opts.pick && opts.pick(id), sel = lgUi.sel.includes(id);
-    const marks = opts.marks ? opts.marks(id) : "";
-    const inner = `${g.mayor === id && m.mayor !== id ? crownIc : ""}${marks}${av(id)}<span class="nm">${meName(id)}</span>${d ? `<span class="rl">${roleNm(d.role)}</span>` : g.idiotOut === id && m.idiot !== id ? `<span class="rl">Idiot</span>` : opts.sub ? opts.sub(id) : ""}`;
-    return can ? `<button class="lgp ${sel ? "sel" : ""}" data-a="lgSel" data-v="${id}" aria-pressed="${sel}">${inner}</button>`
-      : `<div class="lgp ${d ? "gone" : ""} ${opts.dim && opts.dim(id) ? "dim" : ""}">${inner}</div>`;
-  }).join("")}</div>`;
+  const g = LG(), st = g.st, m = lgMask(), ids = Object.keys(g.roles).sort((a, b) => (byId(a) || {}).seat - (byId(b) || {}).seat);
+  const dock = opts.pick ? (opts.dock || DOCK[st.t] || "Ton choix") : null;
+  // petite fille : une trace discrète, le jour seulement, sur son téléphone
+  const spy = g.spy && g.spy.n === g.n && !NIGHTS.includes(st.t) && lgAlive(me.id) && g.roles[me.id] === "petitefille" ? g.spy.id : null;
+  const two = ids.length > 10, rows = two ? [ids.filter((_, i) => i % 2 === 0), ids.filter((_, i) => i % 2 === 1)] : [ids];
+  const geo = two ? [[45, 66, 79], [27, 40, 79]] : [[43, 62, 78]];
+  const seat = (id, x, y) => {
+    const d = !m.dead.includes(id) && lgDead(id), can = opts.pick && opts.pick(id), sel = lgUi.sel.includes(id);
+    const inner = `${g.mayor === id && m.mayor !== id ? crownIc : ""}${opts.marks ? opts.marks(id) : ""}${spy === id ? paw : ""}${av(id)}<span class="nm">${meName(id)}</span>${d ? `<span class="rl">${roleNm(d.role)}</span>` : g.idiotOut === id && m.idiot !== id ? `<span class="rl">Idiot</span>` : opts.sub ? opts.sub(id) : ""}${opts.tally ? tallyMarks(opts.tally(id)) : ""}`;
+    const pos = `style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"`;
+    return can ? `<button class="lgp ${sel ? "sel" : ""}" ${pos} data-a="lgSel" data-v="${id}" aria-pressed="${sel}">${inner}</button>`
+      : `<div class="lgp ${d ? "gone" : ""} ${opts.dim && opts.dim(id) ? "dim" : ""} ${id === me.id ? "me" : ""}" ${pos}>${inner}</div>`;
+  };
+  const seats = rows.map((row, r) => { const [rx, ry, cy] = geo[r], n = row.length;
+    return row.map((id, k) => { const a = Math.PI + (n === 1 ? .5 : k / (n - 1)) * Math.PI; return seat(id, 50 + rx * Math.cos(a), cy + ry * Math.sin(a)); }).join(""); }).join("");
+  const chosen = lgUi.sel.filter(id => g.roles[id]);
+  const card = dock ? `<div class="lgdock ${chosen.length ? "" : "empty"}"><small>${esc(dock)}</small><b>${chosen.length ? chosen.map(id => esc(nameOf(id))).join(" & ") : "Personne"}</b></div>` : "";
+  return `<div class="lgarc ${two ? "two" : ""} ${dock ? "" : "nodock"}">${seats}${card}</div>`;
 }
 const lgWait = (ids, k) => { const done = new Set(lgActsFor(k).map(a => a.player)); return `<div class="waitrow">${ids.map(id => `<span class="wv ${done.has(id) ? "ok" : ""}">${av(id, "sm")}</span>`).join("")}</div>`; };
 const lgSleep = (txt) => `<div class="lgsleep">${lgIc("moon", "big")}<p>${txt || "Ferme les yeux"}</p></div>`;
@@ -2416,7 +2437,7 @@ function lgBet(){
   const g = LG(); if (!lgDead(me.id) || !g.alive.length) return "";
   const k = "bet:" + g.deaths.length, mine = lgMine(k);
   if (mine) return `<div class="lgbet"><span class="label light">Ton pari sur le prochain mort</span><div class="lgbetme">${av(mine.v, "sm")}<b>${esc(nameOf(mine.v))}</b></div></div>`;
-  return `<div class="lgbet"><span class="label light">Qui sera le prochain mort ?</span>${lgVillage({ pick: id => lgAlive(id) })}
+  return `<div class="lgbet"><span class="label light">Qui sera le prochain mort ?</span>${lgVillage({ pick: id => lgAlive(id), dock: "Le prochain mort" })}
     <button class="btn" data-a="lgBet" ${lgUi.sel.length === 1 ? "" : "disabled"}>Parier</button></div>`;
 }
 function lgClock(){
@@ -2472,8 +2493,8 @@ const lgViews = {
     const fn = lgStep[st.t];
     let html = fn ? fn(g, st) : `${lgHead()}${wait("…")}`;
     // rappel du rôle de celui qui est réveillé
-    const r = g.roles[me.id], spy = st.t === "loups" && r === "petitefille" && lgAlive(me.id);
-    if (NIGHTS.includes(st.t) && st.t !== "nuit" && (myTurn(st) || spy) && !lgMine(st.k)){
+    const r = g.roles[me.id];
+    if (NIGHTS.includes(st.t) && st.t !== "nuit" && myTurn(st) && !lgMine(st.k)){
       const chip = st.t === "amoureux" ? `<div class="lgme">${lgIc("heart")}<span>Amoureux</span></div>` : `<div class="lgme">${roleIc(r)}<span>${roleNm(r)}</span></div>`;
       html = html.replace('<div class="lgnight">', '<div class="lgnight">' + chip);
     }
@@ -2526,10 +2547,6 @@ const lgStep = {
   },
   loups(g, st){
     const acts = lgActsFor(st.k);
-    if (lgAlive(me.id) && g.roles[me.id] === "petitefille"){
-      const t = tally(g, st.k, st.actors).top[0];
-      return `${lgHead()}${night(`<h2 class="lgh">Tu espionnes les loups</h2><div class="lgspy">${t ? `<span class="lgblur" style="--c:${avColor(t)}">${esc(initial(nameOf(t)))}</span><p>Ils visent quelqu'un…</p>` : `<span class="lgblur">?</span><p>Ils hésitent…</p>`}</div>`)}`;
-    }
     if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
     const marks = id => { const w = acts.filter(a => a.v === id).map(a => a.player); return w.length ? `<span class="lgvotes">${w.map(x => av(x, "xs")).join("")}</span>` : ""; };
     const mine = lgMine(st.k);
@@ -2591,9 +2608,10 @@ const lgStep = {
   execution(g, st){
     const counts = Object.entries(st.n || {}).sort((a, b) => b[1] - a[1]);
     const ds = g.deaths.filter(d => st.dead.includes(d.id));
-    return `${lgHead()}${counts.length ? `<div class="lgcount">${counts.map(([id, c]) => `<span>${av(id, "sm")}<b>${c}</b></span>`).join("")}</div>` : ""}
+    void counts;
+    return `${lgHead()}
       <div class="lgdawn stack">${!st.target ? `<h2 class="lgh">Personne n'est éliminé</h2>` : st.saved ? `<div class="lgdead pop saved">${av(st.target)}<div><b>${esc(nameOf(st.target))}</b><small>Idiot du village · épargné</small></div>${roleIc("idiot")}</div>` : ds.map(deadCard).join("")}</div>
-      ${lgVillage()}${lgBet()}${peekBtn()}${footer()}`;
+      ${lgVillage({ tally: id => (st.n || {})[id] || 0 })}${lgBet()}${peekBtn()}${footer()}`;
   },
   fin(g, st){
     const ids = Object.keys(g.roles), score = id => g.ev.filter(e => e.p === id).reduce((t, e) => t + e.pts, 0);

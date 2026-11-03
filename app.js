@@ -890,7 +890,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 39;
+const APP_VERSION = 40;
 const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
@@ -2446,7 +2446,7 @@ const lgViews = {
     <div class="lgset stack">
       <div class="seg">${[["full", "Partie complète"], ["deal", "Distribuer les cartes"]].map(([v, l]) => `<button data-a="lgMode" data-v="${v}" class="${c.mode === v ? "on" : ""}" ${lead ? "" : "disabled"}>${l}</button>`).join("")}</div>
       <div class="lghd"><span class="label light">Les cartes</span>${lead && !c.auto ? `<button class="link" data-a="lgAuto">Recommandé</button>` : ""}</div>
-      <div class="lgwolf">${roleIc("loup")}<b>Loups-garous</b>${lead ? `<div class="cnt"><button data-a="lgComp" data-v="loup:-1" aria-label="Un loup de moins">−</button><i>${c.comp.loup}</i><button data-a="lgComp" data-v="loup:1" aria-label="Un loup de plus">+</button></div>` : `<i class="n">${c.comp.loup}</i>`}</div>
+      <div class="lgwolf">${roleIc("loup")}<b>Loups</b>${lead ? `<div class="cnt"><button data-a="lgComp" data-v="loup:-1" aria-label="Un loup de moins">−</button><i>${c.comp.loup}</i><button data-a="lgComp" data-v="loup:1" aria-label="Un loup de plus">+</button></div>` : `<i class="n">${c.comp.loup}</i>`}</div>
       <div class="lgrc">${LG_SPECIALS.map(r => `<button class="rc ${c.comp[r] ? "on" : ""}" data-a="lgRole" data-v="${r}" aria-pressed="${!!c.comp[r]}" ${lead ? "" : "disabled"}>${roleIc(r)}<span>${roleNm(r === "idiot" ? "idiot" : r).replace(" du village", "")}</span></button>`).join("")}<div class="rc vil">${roleIc("villageois")}<span>Villageois</span><small>× ${Math.max(0, vill)}</small></div></div>
       ${lgMidOn(c) ? `<span class="label light">Au milieu, face cachée</span>
         <div class="lgmid">${c.mid.map((r, i) => `<span class="lgmc">${roleIc(r)}${roleNm(r)}${lead ? `<button class="x" data-a="lgMidDel" data-v="${i}" aria-label="Retirer">×</button>` : ""}</span>`).join("")}</div>

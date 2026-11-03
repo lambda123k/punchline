@@ -595,7 +595,9 @@ body.loup .btn:disabled{opacity:1;background:transparent;color:rgba(239,224,191,
 .lgwarn{margin:0;font-size:13px;color:#ffd2a8;text-align:center}
 @media (prefers-reduced-motion:reduce){.lgsus span{animation:none;opacity:1}}
 .lgwolf{display:flex;align-items:center;gap:12px;background:rgba(255,122,26,.12);border:1px solid rgba(255,122,26,.45);border-radius:16px;padding:10px 12px}
-.lgwolf b{flex:1;min-width:0;font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:24px;white-space:nowrap}
+.lgwolf b{flex:1;min-width:0;font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:clamp(19px,5.6vw,24px);line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+.lgwolf .cnt{flex-shrink:0;position:relative;z-index:1}
+.lgwolf .cnt button{background:rgba(27,18,11,.55)}
 .lgwolf .lic{width:34px;height:34px}
 .lgwolf .cnt button{width:40px;height:40px}.lgwolf .cnt i,.lgwolf .n{font-style:normal;font-weight:800;font-size:22px;min-width:1.4ch;text-align:center}
 .lgrc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -615,11 +617,11 @@ body.loup .btn:disabled{opacity:1;background:transparent;color:rgba(239,224,191,
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=39"></script>
-<script src="qui.js?v=39"></script>
-<script src="aveux.js?v=39"></script>
-<script src="dilemme.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="cards.js?v=40"></script>
+<script src="qui.js?v=40"></script>
+<script src="aveux.js?v=40"></script>
+<script src="dilemme.js?v=40"></script>
+<script src="app.js?v=40"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>

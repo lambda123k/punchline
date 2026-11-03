@@ -1,0 +1,151 @@
+<title>Réglages des rôles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Figtree:wght@400;600;700;800&display=swap">
+<style>
+/* Layout : trois maquettes côte à côte (une colonne sur téléphone), chacune un écran de salle d'attente du Loup-garou, ambiance « La veillée » déjà choisie. Thème sombre unique voulu. */
+:root{
+  --bg:#1b120b; --wood:#2a1b10; --ink:#efe0bf; --soft:rgba(239,224,191,.66); --line:rgba(239,224,191,.18);
+  --fire:#ff7a1a; --fire-ink:#2b1300; --card:#efe0bf; --card-ink:#2b1d10;
+  --display:"Pirata One",Georgia,serif; --body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(90% 40% at 50% 105%,rgba(255,122,26,.25) 0,transparent 60%) fixed,linear-gradient(180deg,#22160d,var(--bg)) fixed;background-color:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-block:22px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{max-width:1240px;margin:0 auto 18px;display:flex;flex-direction:column;gap:6px}
+.top h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,8vw,50px);line-height:1;margin:0;text-wrap:balance}
+.top p{margin:0;color:var(--soft);max-width:65ch}
+.screens{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:22px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.step{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--fire);margin-left:4px}
+.col>p{margin:0 4px;color:var(--soft);font-size:13px}
+.phone{border-radius:30px;border:2px solid var(--line);background:var(--wood);padding:16px 14px 18px;display:flex;flex-direction:column;gap:12px}
+.lbl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}
+.row{display:flex;justify-content:space-between;align-items:baseline}
+.link{background:none;border:0;color:#ffb35c;font:inherit;font-size:13px;font-weight:700;text-decoration:underline;cursor:pointer;padding:4px}
+.ic{width:24px;height:24px;flex-shrink:0;color:var(--fire)}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--fire);outline-offset:2px}
+.go{font-family:var(--body);font-weight:800;font-size:17px;border:0;border-radius:14px;padding:13px;background:var(--fire);color:var(--fire-ink);box-shadow:0 5px 0 #a3460a}
+.tot{font-size:13px;color:var(--soft);text-align:center;font-variant-numeric:tabular-nums}
+/* compteur des loups */
+.wolfbar{display:flex;align-items:center;gap:12px;background:rgba(255,122,26,.12);border:1px solid rgba(255,122,26,.45);border-radius:16px;padding:10px 12px}
+.wolfbar b{flex:1;font-family:var(--display);font-weight:400;font-size:24px}
+.wolfbar .ic{width:34px;height:34px}
+.cnt{display:flex;align-items:center;gap:8px}
+.cnt button{width:38px;height:38px;border-radius:50%;border:1px solid rgba(239,224,191,.35);background:transparent;color:var(--ink);font-weight:800;font-size:20px;line-height:1}
+.cnt i{font-style:normal;font-weight:800;font-size:22px;min-width:1.4ch;text-align:center;font-variant-numeric:tabular-nums}
+/* A : grille de cartes */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rc{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;border-radius:14px;border:2px dashed rgba(239,224,191,.22);background:transparent;color:rgba(239,224,191,.45);font-size:13px;font-weight:700;min-height:86px;transition:transform .15s,background .15s}
+.rc .ic{color:rgba(239,224,191,.35)}
+.rc.on{border:2px solid var(--card);background:var(--card);color:var(--card-ink);transform:rotate(-1.5deg);box-shadow:0 5px 0 rgba(0,0,0,.35)}
+.rc.on:nth-child(even){transform:rotate(1.5deg)}
+.rc.on .ic{color:var(--card-ink)}
+.rc.vil{border-style:solid;border-color:var(--line);cursor:default}
+.rc .n{font-size:12px;font-weight:800;opacity:.8}
+/* B : résumé + tiroir */
+.deck{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);color:var(--card-ink);border-radius:9px;padding:6px 10px 6px 8px;font-size:14px;font-weight:800}
+.chip .ic{width:18px;height:18px;color:var(--card-ink)}
+.chip:nth-child(odd){transform:rotate(-2deg)}.chip:nth-child(even){transform:rotate(1.5deg)}
+.edit{align-self:flex-start;background:rgba(239,224,191,.1);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
+.drawer{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.tog{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:var(--ink);padding:6px 2px;text-align:left}
+.tog b{flex:1;font-weight:700}
+.tog.off b,.tog.off .ic{opacity:.45}
+.sw{width:56px;height:32px;border-radius:999px;border:2px solid rgba(239,224,191,.3);position:relative;flex-shrink:0;transition:background .2s,box-shadow .2s}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:rgba(239,224,191,.35);transition:left .2s,background .2s}
+.tog.on .sw{background:#fff;border-color:#fff;box-shadow:0 0 14px rgba(255,255,255,.5)}
+.tog.on .sw::after{left:28px;background:var(--bg)}
+/* C : éventail */
+.fan{display:flex;gap:10px;overflow-x:auto;padding:8px 4px 14px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.fc{flex:0 0 96px;scroll-snap-align:center;aspect-ratio:2.5/3.6;max-width:100%;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:8px;text-align:center;font-size:13px;font-weight:800;background:repeating-linear-gradient(45deg,#2a1b10 0 8px,rgba(255,255,255,.05) 8px 16px);border:2px solid rgba(239,224,191,.2);color:rgba(239,224,191,.5);transition:transform .2s}
+.fc .ic{width:34px;height:34px;color:rgba(239,224,191,.4)}
+.fc.on{background:var(--card);color:var(--card-ink);border-color:var(--fire);transform:translateY(-8px);box-shadow:0 10px 18px rgba(0,0,0,.45)}
+.fc.on .ic{color:var(--card-ink)}
+.hand{display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+.mini{width:22px;height:32px;border-radius:5px;background:var(--card);display:grid;place-items:center}
+.mini .ic{width:14px;height:14px;color:var(--card-ink)}
+.mini.w{background:var(--fire)}.mini.w .ic{color:var(--fire-ink)}
+.legend{max-width:1240px;margin:22px auto 0;color:var(--soft);font-size:14px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
+.legend b{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="top">
+  <h1>Réglages des rôles</h1>
+  <p>Trois façons de choisir les cartes dans la salle d'attente. Les écrans répondent au doigt : touche les rôles pour sentir chaque version.</p>
+</div>
+
+<div class="screens">
+  <div class="col">
+    <span class="step">A · Grille de cartes</span>
+    <p>Une carte par rôle. Allumée = dans la partie. Seuls les loups ont un compteur.</p>
+    <div class="phone" id="pa"></div>
+  </div>
+  <div class="col">
+    <span class="step">B · Résumé, puis tiroir</span>
+    <p>On voit d'abord le paquet proposé. « Modifier » ouvre une liste d'interrupteurs.</p>
+    <div class="phone" id="pb"></div>
+  </div>
+  <div class="col">
+    <span class="step">C · Éventail de cartes</span>
+    <p>Les cartes défilent comme dans une main. Celles qui sortent du paquet sont dans la partie.</p>
+    <div class="phone" id="pc"></div>
+  </div>
+</div>
+
+<div class="legend">
+  <p><b>Partout pareil :</b> les villageois se calculent seuls (joueurs moins rôles), la composition recommandée reste un bouton, et les cartes du milieu apparaissent quand le voleur est allumé.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+const P = {
+  wolf:'<path d="M4 3l4 5h8l4-5v9l-2 5-6 4-6-4-2-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 1M15 12l-2 1M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  villager:'<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>',
+  potion:'<path d="M9 3h6M10 3v5L5 17a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 15h10" stroke="currentColor" stroke-width="1.8"/>',
+  hunter:'<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 21l8-8M3 21h4M3 21v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  girl:'<circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 7c0-3 2-4 4-4s4 1 4 4M7 21l1.5-6h7L17 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  thief:'<path d="M3 10c3-2 15-2 18 0v3c-3 2-15 2-18 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="11.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="11.5" r="1.4" fill="currentColor"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  fool:'<path d="M4 19h16M5 19 4 9l5 4 3-8 3 8 5-4-1 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="4" cy="7.5" r="1.6" fill="currentColor"/><circle cx="12" cy="3.6" r="1.6" fill="currentColor"/><circle cx="20" cy="7.5" r="1.6" fill="currentColor"/>'
+};
+const ic = n => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+const ROLES = [["voyante","Voyante","eye"],["sorciere","Sorcière","potion"],["chasseur","Chasseur","hunter"],["cupidon","Cupidon","heart"],["petitefille","Petite fille","girl"],["voleur","Voleur","thief"],["salvateur","Salvateur","shield"],["idiot","Idiot","fool"]];
+const N = 8;
+const st = { a:{ loup:2, on:new Set(["voyante","sorciere","chasseur","cupidon"]) }, b:{ loup:2, on:new Set(["voyante","sorciere","chasseur","cupidon"]), open:false }, c:{ loup:2, on:new Set(["voyante","sorciere","chasseur","cupidon"]) } };
+const vill = s => N - s.loup - s.on.size;
+const wolfBar = (k, s) => `<div class="wolfbar">${ic("wolf")}<b>Loups-garous</b><div class="cnt"><button data-k="${k}" data-w="-1" aria-label="Un loup de moins">−</button><i>${s.loup}</i><button data-k="${k}" data-w="1" aria-label="Un loup de plus">+</button></div></div>`;
+const go = s => { const v = vill(s); return `<p class="tot">${N} joueurs · ${s.loup} loups · ${s.on.size} rôles · ${Math.max(0, v)} villageois</p><button class="go">${v < 0 ? "Trop de rôles pour " + N + " joueurs" : "Lancer la partie"}</button>`; };
+function draw(){
+  const a = st.a, b = st.b, c = st.c;
+  document.getElementById("pa").innerHTML = `<div class="row"><span class="lbl">Les cartes</span><button class="link">Recommandé</button></div>${wolfBar("a", a)}
+    <div class="grid">${ROLES.map(([k, n, i]) => `<button class="rc ${a.on.has(k) ? "on" : ""}" data-k="a" data-r="${k}" aria-pressed="${a.on.has(k)}">${ic(i)}${n}</button>`).join("")}<div class="rc vil">${ic("villager")}Villageois<span class="n">× ${Math.max(0, vill(a))}</span></div></div>${go(a)}`;
+  const deck = [`<span class="chip">${ic("wolf")}${b.loup} Loups</span>`].concat([...b.on].map(k => { const r = ROLES.find(x => x[0] === k); return `<span class="chip">${ic(r[2])}${r[1]}</span>`; })).concat(vill(b) > 0 ? [`<span class="chip">${ic("villager")}${vill(b)} Villageois</span>`] : []);
+  document.getElementById("pb").innerHTML = `<span class="lbl">Le paquet</span><div class="deck">${deck.join("")}</div>
+    <button class="edit" data-k="b" data-open="1">${b.open ? "Fermer" : "Modifier les cartes"}</button>
+    ${b.open ? `<div class="drawer">${wolfBar("b", b)}${ROLES.map(([k, n, i]) => `<button class="tog ${b.on.has(k) ? "on" : "off"}" data-k="b" data-r="${k}" role="switch" aria-checked="${b.on.has(k)}">${ic(i)}<b>${n}</b><span class="sw"></span></button>`).join("")}</div>` : ""}${go(b)}`;
+  const hand = [];
+  for (let i = 0; i < c.loup; i++) hand.push(`<span class="mini w">${ic("wolf")}</span>`);
+  [...c.on].forEach(k => hand.push(`<span class="mini">${ic(ROLES.find(x => x[0] === k)[2])}</span>`));
+  for (let i = 0; i < Math.max(0, vill(c)); i++) hand.push(`<span class="mini">${ic("villager")}</span>`);
+  document.getElementById("pc").innerHTML = `<span class="lbl">Ta main de cartes</span>${wolfBar("c", c)}
+    <div class="fan">${ROLES.map(([k, n, i]) => `<button class="fc ${c.on.has(k) ? "on" : ""}" data-k="c" data-r="${k}" aria-pressed="${c.on.has(k)}">${ic(i)}${n}</button>`).join("")}</div>
+    <span class="lbl">Le paquet distribué</span><div class="hand">${hand.join("")}</div>${go(c)}`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t || !t.dataset.k) return;
+  const s = st[t.dataset.k];
+  if (t.dataset.w){ s.loup = Math.max(1, Math.min(6, s.loup + (+t.dataset.w))); }
+  else if (t.dataset.r){ s.on.has(t.dataset.r) ? s.on.delete(t.dataset.r) : s.on.add(t.dataset.r); }
+  else if (t.dataset.open){ s.open = !s.open; }
+  draw();
+});
+draw();
+})();
+</script>

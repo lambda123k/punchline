@@ -140,6 +140,19 @@ async function autoplay(p){
   await A.click("[data-a=lgEnd]");
   check(await until(A, async () => (await room()).phase === "lobby", "lobby"), "Terminer ramène à la salle d'attente");
 
+  console.log("Le téléphone de l'hôte s'éteint");
+  await A.click("[data-a=lgMode][data-v=full]");
+  await until(A, async () => (await room()).lg.cfg.mode === "full", "mode complet");
+  check(await A.locator("[data-a=lgTest]").count() === 1, "bouton Tester le son");
+  await A.click("[data-a=start]");
+  await until(A, async () => ((await room()).lg.st || {}).t === "carte", "cartes");
+  await A.close();
+  const k0 = (await room()).lg.st.k; let moved = 0; const t1 = Date.now();
+  while (Date.now() - t1 < 60000 && moved < 3){ for (const p of [B, C]) await autoplay(p); const k = (await room()).lg.st.k; if (k !== k0) moved++; await sleep(300); }
+  check(moved >= 1, "la partie avance sans le téléphone de l'hôte");
+  const sus = await admin("return db.rooms[0].lg.st.hold");
+  check(typeof sus === "number", "chaque étape a un temps de suspense");
+
   console.log("\n" + ok + " réussis, " + fail + " échoués");
   if (errors.length) console.log("Erreurs :\n" + [...new Set(errors)].slice(0, 15).join("\n"));
   await browser.close();

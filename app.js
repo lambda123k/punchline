@@ -487,7 +487,7 @@ function unsubscribe(){
 }
 
 let wakeLock = null;
-async function keepAwake(){ try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch(e){} }
+async function keepAwake(){ try { if ("wakeLock" in navigator){ wakeLock = await navigator.wakeLock.request("screen"); ui.noWake = false; } } catch(e){ ui.noWake = true; } }
 
 async function enterRoom(c, tv){
   code = c; ui.tv = !!tv;
@@ -890,7 +890,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 37;
+const APP_VERSION = 38;
 const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
@@ -2036,7 +2036,9 @@ function mk(g, t, o){
   const clips = (o.pre || []).filter(Boolean).concat(o.clips || []);
   const st = Object.assign({ t, k: t + "." + (g.seq = (g.seq || 0) + 1), at: serverNow(), clips, actors: [] }, o);
   delete st.pre;
-  st.min = lgMs(clipsMs(clips) + (o.extra || 0));
+  delete st.holdClips;
+  st.hold = lgMs(o.holdClips ? clipsMs(o.holdClips.filter(Boolean)) : (o.hold || 0));
+  st.min = Math.max(lgMs(clipsMs(clips) + (o.extra || 0)), st.hold + lgMs(1500));
   return st;
 }
 const label = g => g.st && ["nuit", "voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"].includes(g.st.t) ? "Nuit " + g.n : "Jour " + g.n;
@@ -2075,7 +2077,7 @@ function nextNight(g, cur){
     else if (r === "loups"){ actors = holders(g, "loup"); if (!actors.length) continue; }
     else { if (!callable(g, r)) continue; actors = holders(g, r); fake = !actors.length; }
     const clip = r === "voyante" ? pick(g, "voyante") : r === "loups" ? pick(g, "loups") : r === "sorciere" ? pick(g, "sorciere") : r;
-    const o = { pre: [dort], clips: [clip], actors, fake, extra: fake ? 5000 + Math.floor(Math.random() * 5000) : 600 };
+    const o = { pre: [dort], holdClips: [dort], clips: [clip], actors, fake, extra: fake ? 5000 + Math.floor(Math.random() * 5000) : 600 };
     if (r === "voleur") o.pick = Math.floor(Math.random() * Math.max(1, g.mid.length));
     if (r === "sorciere"){ o.victim = g.night.victim || null; o.pot = clone(g.pot); }
     if (r === "salvateur") o.not = g.prot;
@@ -2116,7 +2118,7 @@ function morning(g, dort){
   const clips = dead.length === 0 ? [pick(g, "personne")] : dead.length === 1 ? [pick(g, "matin"), pick(g, "mort")] : dead.length === 2 ? [pick(g, "deux")] : ["trois_morts"];
   if (g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin")) clips.push("chagrin");
   g.after = "day";
-  g.st = mk(g, "matin", { pre: [dort], clips, dead, extra: 6000 });
+  g.st = mk(g, "matin", { pre: [dort], holdClips: [dort].concat(clips.filter(c => c !== "chagrin")), clips, dead, extra: 6000 });
   return g;
 }
 function lgWinner(g){
@@ -2221,14 +2223,14 @@ function lgAdvance(g){
       const t = val(st.hunter);
       const dead = g.alive.includes(t) ? kill(g, [[t, "chasseur"]]) : [];
       if (dead.length) ev(g, st.hunter, g.roles[t] === "loup" ? 3 : 0, (g.roles[t] === "loup" ? "a emporté un loup (" : "a emporté " ) + nameOf(t) + (g.roles[t] === "loup" ? ")" : ""));
-      g.st = mk(g, "morts", { dead, clips: g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin") ? ["chagrin"] : [], extra: 6000 });
+      g.st = mk(g, "morts", { dead, clips: g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin") ? ["chagrin"] : [], hold: 1200, extra: 6000 });
       return g;
     }
     case "successeur": {
       if (need.length && !late) return null;
       const t = val(st.old);
       g.mayor = g.alive.includes(t) ? t : pickOne(g.alive);
-      g.st = mk(g, "maire", { mayor: g.mayor, extra: 5000 });
+      g.st = mk(g, "maire", { mayor: g.mayor, hold: 1500, extra: 5000 });
       return g;
     }
     case "election": {
@@ -2236,7 +2238,7 @@ function lgAdvance(g){
       const t = tally(g, k, g.alive);
       g.mayor = t.top.length ? pickOne(t.top) : pickOne(g.alive); g.mayorDone = true;
       if (g.roles[g.mayor] === "loup") ev(g, g.mayor, 2, "s'est fait élire maire");
-      g.st = mk(g, "maire", { mayor: g.mayor, votes: t.n, extra: 5500 });
+      g.st = mk(g, "maire", { mayor: g.mayor, votes: t.n, hold: 1800, extra: 5500 });
       return g;
     }
     case "debat": {
@@ -2276,22 +2278,26 @@ function execute(g, t, n){
   if (t && g.roles[t] === "idiot" && g.idiotOut !== t){ g.idiotOut = t; saved = true; ev(g, t, 2, "a survécu à son propre vote"); }
   else if (t) dead = kill(g, [[t, "vote"]]);
   const clips = t ? [pick(g, "vote")].concat(saved ? ["idiot"] : []).concat(g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin") ? ["chagrin"] : []) : [];
-  g.st = mk(g, "execution", { target: t, saved, dead, n: n || {}, clips, extra: 6500 });
+  g.st = mk(g, "execution", { target: t, saved, dead, n: n || {}, clips, holdClips: clips.slice(0, 1), hold: 1500, extra: 6500 });
   return g;
 }
 
 let lgBusy = false;
+const lgReady = {};
 async function lgEngine(){
-  if (!isLoup() || !isLeader() || lgBusy || room.phase !== "draw") return;
+  if (!isLoup() || ui.tv || lgBusy || room.phase !== "draw" || !byId(me.id)) return;
   const g0 = LG(); if (!g0 || !g0.st || g0.mode !== "full") return;
-  lgBots(g0);
+  const lead = isLeader();
+  if (lead) lgBots(g0);
   if (serverNow() - g0.st.at < g0.st.min) return;
   let g;
   try { g = lgAdvance(clone(g0)); } catch(e){ console.warn(e); return; }
   if (!g) return;
+  // Filet de sécurité : si le téléphone de l'hôte dort, n'importe quel téléphone fait avancer la partie après 3 s (la version empêche les doublons)
+  if (!lead){ const k = g0.gid + g0.st.k; if (!lgReady[k]){ lgReady[k] = Date.now(); return; } if (Date.now() - lgReady[k] < (lgFast() ? 600 : 3000)) return; }
   g.ver = (g0.ver || 0) + 1;
   lgBusy = true;
-  const r = room; local(() => { r.lg = g; });
+  const r = room; if (lead) local(() => { r.lg = g; });
   const { error } = await sb.from("rooms").update({ lg: g, updated_at: new Date().toISOString() }).eq("code", code).eq("lg->>ver", String(g0.ver));
   lgBusy = false;
   if (error) toast("Connexion perdue, réessaie.");
@@ -2355,7 +2361,20 @@ function lgSound(){
   }
 }
 document.addEventListener("pointerdown", lgUnlock, { passive: true });
-setInterval(() => { if (!isLoup()) return; lgSound(); lgClock(); lgEngine(); }, lgFast() ? 120 : 400);
+let lgHeldWas = null;
+setInterval(() => {
+  if (!isLoup()) return;
+  const st = room.phase === "draw" ? lgSt() : null, h = st ? st.k + ":" + lgHeld(st) : null;
+  if (h !== lgHeldWas){
+    const was = lgHeldWas; lgHeldWas = h;
+    if (st && was === st.k + ":true" && !lgHeld(st)){
+      lastHtml = ""; render();
+      if (NIGHTS.includes(st.t) && st.t !== "nuit" && myTurn(st)) buzz([80, 60, 80]);
+      if (!NIGHTS.includes(st.t)){ sfx.flip(); buzz(40); }
+    }
+  }
+  lgSound(); lgClock(); lgEngine();
+}, lgFast() ? 120 : 250);
 
 /* ---------- écrans ---------- */
 const lgUi = { sel: [], flip: false, peek: false, open: null, seen: null, thief: null, stage: null };
@@ -2369,13 +2388,22 @@ const roleCard = (r, cls) => `<div class="lgcard ${cls || ""}">${roleIc(r)}<b>${
 const flipCard = r => `<button class="lgflip ${lgUi.flip ? "on" : ""}" data-a="lgFlip" aria-label="${lgUi.flip ? "Cacher ma carte" : "Voir ma carte"}">
   <span class="face back">${lgIc("moon")}</span><span class="face front">${roleIc(r)}<b>${roleNm(r)}</b><small>${esc((LG_ROLES[r] || [])[2] || "")}</small></span></button>`;
 const crownIc = `<svg class="lgcrown" viewBox="0 0 16 12" aria-hidden="true"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="currentColor"/></svg>`;
+const NIGHTS = ["nuit", "voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"];
+const lgHeld = st => !!st && st.hold > 0 && serverNow() < st.at + st.hold;
+// pendant le suspense (voix pas finie), les nouveaux morts, l'idiot épargné et le nouveau maire restent cachés
+function lgMask(){
+  const st = lgSt();
+  if (!lgHeld(st) || NIGHTS.includes(st.t)) return { dead: [], idiot: null, mayor: null };
+  return { dead: st.dead || [], idiot: st.saved ? st.target : null, mayor: st.t === "maire" ? st.mayor : null };
+}
+const lgSuspense = () => `<div class="lgsus pop" aria-live="polite"><span></span><span></span><span></span></div>`;
 function lgVillage(opts){
   opts = opts || {};
   const g = LG(), ids = Object.keys(g.roles).sort((a, b) => (byId(a) || {}).seat - (byId(b) || {}).seat);
   return `<div class="lggrid">${ids.map(id => {
-    const d = lgDead(id), can = opts.pick && opts.pick(id), sel = lgUi.sel.includes(id);
+    const m = lgMask(), d = !m.dead.includes(id) && lgDead(id), can = opts.pick && opts.pick(id), sel = lgUi.sel.includes(id);
     const marks = opts.marks ? opts.marks(id) : "";
-    const inner = `${g.mayor === id ? crownIc : ""}${marks}${av(id)}<span class="nm">${meName(id)}</span>${d ? `<span class="rl">${roleNm(d.role)}</span>` : g.idiotOut === id ? `<span class="rl">Idiot</span>` : opts.sub ? opts.sub(id) : ""}`;
+    const inner = `${g.mayor === id && m.mayor !== id ? crownIc : ""}${marks}${av(id)}<span class="nm">${meName(id)}</span>${d ? `<span class="rl">${roleNm(d.role)}</span>` : g.idiotOut === id && m.idiot !== id ? `<span class="rl">Idiot</span>` : opts.sub ? opts.sub(id) : ""}`;
     return can ? `<button class="lgp ${sel ? "sel" : ""}" data-a="lgSel" data-v="${id}" aria-pressed="${sel}">${inner}</button>`
       : `<div class="lgp ${d ? "gone" : ""} ${opts.dim && opts.dim(id) ? "dim" : ""}">${inner}</div>`;
   }).join("")}</div>`;
@@ -2422,7 +2450,9 @@ const lgViews = {
       ${lgMidOn(c) ? `<span class="label light">Au milieu, face cachée</span>
         <div class="lgmid">${c.mid.map((r, i) => `<span class="lgmc">${roleIc(r)}${roleNm(r)}${lead ? `<button class="x" data-a="lgMidDel" data-v="${i}" aria-label="Retirer">×</button>` : ""}</span>`).join("")}</div>
         ${lead && c.mid.length < 3 ? `<div class="lgmidadd">${midAdd.map(r => `<button class="ghost small" data-a="lgMidAdd" data-v="${r}">+ ${roleNm(r)}</button>`).join("")}</div>` : ""}` : ""}
-      ${full ? `<span class="label light">Débat</span>
+      ${full ? `<button class="ghost small lgtest" data-a="lgTest">${ICON.sndOn}<span>Tester le son</span></button>
+        ${!("wakeLock" in navigator) || ui.noWake ? `<p class="lgwarn">Ton écran risque de se mettre en veille : coupe le verrouillage automatique pendant la partie.</p>` : ""}
+        <span class="label light">Débat</span>
         <div class="seg">${[[120, "2 min"], [180, "3 min"], [300, "5 min"], [0, "Libre"]].map(([v, l]) => `<button data-a="lgDebate" data-v="${v}" class="${c.debate === v ? "on" : ""}" ${lead ? "" : "disabled"}>${l}</button>`).join("")}</div>
         <div class="lgsw">${[["mayor", "Maire"], ["music", "Musique"]].map(([k, l]) => `<button class="mrow" data-a="lgToggle" data-v="${k}" role="switch" aria-checked="${!!c[k]}" ${lead ? "" : "disabled"}><span><b>${l}</b></span><span class="sw ${c[k] ? "on" : ""}"></span></button>`).join("")}</div>` : ""}
     </div>
@@ -2434,8 +2464,19 @@ const lgViews = {
     const g = LG(), st = g && g.st;
     if (!st) return `${lgHead()}${wait("Préparation")}`;
     if (!g.roles[me.id]) return `${lgHead()}<div class="qcenter">${lgIc("moon", "big")}${wait("Tu entres à la prochaine partie")}</div>${footer()}`;
+    if (lgHeld(st)){
+      if (NIGHTS.includes(st.t)) return `${lgHead()}${night(lgSleep())}`;
+      return `${lgHead()}${lgSuspense()}${lgVillage()}${footer()}`;
+    }
     const fn = lgStep[st.t];
-    return fn ? fn(g, st) : `${lgHead()}${wait("…")}`;
+    let html = fn ? fn(g, st) : `${lgHead()}${wait("…")}`;
+    // rappel du rôle de celui qui est réveillé
+    const r = g.roles[me.id], spy = st.t === "loups" && r === "petitefille" && lgAlive(me.id);
+    if (NIGHTS.includes(st.t) && st.t !== "nuit" && (myTurn(st) || spy) && !lgMine(st.k)){
+      const chip = st.t === "amoureux" ? `<div class="lgme">${lgIc("heart")}<span>Amoureux</span></div>` : `<div class="lgme">${roleIc(r)}<span>${roleNm(r)}</span></div>`;
+      html = html.replace('<div class="lgnight">', '<div class="lgnight">' + chip);
+    }
+    return html;
   }
 };
 const night = html => `<div class="lgnight">${html}</div>`;
@@ -2578,6 +2619,10 @@ Object.assign(actions, {
   async lgMidAdd(r){ const c = lgCfg(); if (c.mid.length < 3 && LG_ROLES[r]) c.mid = c.mid.concat([r]); await lgSaveCfg(c); },
   async lgMidDel(i){ const c = lgCfg(); c.mid = c.mid.filter((_, k) => k !== +i); await lgSaveCfg(c); },
   lgVoice(){ const on = !lgVoiceOn(); store.set("lgv:" + code, on); lgUnlock(); lgAudio.k = null; if (on && LG() && LG().st) lgAudio.k = LG().st.k; render(); },
+  lgTest(){
+    lgUnlock();
+    try { const a = lgAudio.test || (lgAudio.test = new Audio()); a.src = "loupgarou/voix/loups_dort.mp3"; a.currentTime = 0; const p = a.play(); if (p) p.catch(() => toast("Le son ne passe pas : monte le volume ou enlève le mode silencieux.")); } catch(e){}
+  },
   lgFlip(){ lgUi.flip = !lgUi.flip; buzz(12); render(); },
   lgPeek(){ lgUi.peek = !lgUi.peek; render(); },
   lgOpen(id){ lgUi.open = lgUi.open === id ? null : id; render(); },
@@ -2610,7 +2655,7 @@ async function lgLaunch(){
   busy = false; scheduleRefresh();
 }
 let lgLastK = null;
-function lgOnState(){ const st = lgSt(), k = st && st.k; if (k !== lgLastK){ const first = lgLastK === null; lgLastK = k; lgResetUi(); if (st && st.t === "carte") lgUi.flip = false; if (!first && st && room.phase === "draw" && (st.actors || []).includes(me.id) && st.t !== "carte" && st.t !== "vote" && st.t !== "election") buzz([80, 60, 80]); } }
+function lgOnState(){ const st = lgSt(), k = st && st.k; if (k !== lgLastK){ const first = lgLastK === null; lgLastK = k; lgResetUi(); if (st && st.t === "carte") lgUi.flip = false; if (!first && st && room.phase === "draw" && (st.actors || []).includes(me.id) && !st.hold && !["carte", "vote", "election", "debat"].includes(st.t)) buzz([80, 60, 80]); } }
 
 /* ---------- démarrage ---------- */
 (async function boot(){

@@ -38,7 +38,7 @@ const room = () => admin(`return db.rooms[0]`);
 
   console.log("Accueil et salle d'attente");
   await A.goto(BASE);
-  check(await A.locator(".gamecard").count() === 4, "quatre jeux sur l'écran d'accueil");
+  check(await A.locator(".gamecard").count() === 5, "cinq jeux sur l'écran d'accueil");
   check(await A.locator(".instbar").count() === 1, "le bandeau d'installation s'affiche dans le navigateur");
   await A.screenshot({ path: S + "/install-bar.png" });
   await A.click("[data-a=instClose]");
@@ -161,7 +161,7 @@ const room = () => admin(`return db.rooms[0]`);
 
   console.log("Changer de jeu depuis la fin");
   await admin(`db.rooms[0].phase = "end"; db.players.forEach(p => p.score = 2)`);
-  await until(A, () => A.locator(".mg").count().then(n => n === 3), "trois autres jeux");
+  await until(A, () => A.locator(".mg").count().then(n => n === 4), "quatre autres jeux");
   check(await A.locator(".mg[data-v=aveux]").count() === 0, "le jeu en cours n'est pas dans les raccourcis");
   await A.screenshot({ path: S + "/fin-changer-jeu.png", fullPage: true });
   await A.click(".mg[data-v=qui]");
@@ -172,7 +172,7 @@ const room = () => admin(`return db.rooms[0]`);
   console.log("Changer de jeu dans la salle d'attente");
   check(await B.locator("[data-a=swap]").count() === 0, "seul l'hôte voit « Changer de jeu »");
   await A.click("[data-a=swap]");
-  await until(A, () => A.locator(".mg[data-a=game]").count().then(n => n === 3), "choix ouvert");
+  await until(A, () => A.locator(".mg[data-a=game]").count().then(n => n === 4), "choix ouvert");
   await A.screenshot({ path: S + "/attente-changer-jeu.png", fullPage: true });
   await A.click(".mg[data-v=punchline]");
   check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "punchline"; }, "punchline"), "l'hôte passe à Punchline depuis la salle d'attente");

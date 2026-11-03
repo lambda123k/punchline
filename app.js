@@ -185,7 +185,7 @@ function fxOnScreen(){
   if (!room || (ui.tv && !ui.tvReady)){ fxPrev = null; return; }
   const prev = fxPrev; fxPrev = { phase: room.phase, round: room.round, code };
   if (!prev || prev.code !== code) return;
-  if (room.phase === "draw" && prev.round !== room.round) roundBanner(room.round);
+  if (room.phase === "draw" && prev.round !== room.round && !isLoup()) roundBanner(room.round);
   if (room.phase === "result" && prev.phase !== "result"){
     countdown(() => {
       if (isAveux()) return;   // les Aveux et le Dilemme enchaînent avec leur compteur (aveuxCount)
@@ -207,27 +207,29 @@ async function refresh(){
   // On ne charge que les tables du jeu en cours (avant : 7 requêtes à chaque fois)
   const g = room && room.code === c ? room.game : null, none = Promise.resolve({ data: null, error: "skip" });
   const pl = !g || g === "punchline";
-  const [r, p, a, v, x, k, b] = await Promise.all([
+  const [r, p, a, v, x, k, b, la] = await Promise.all([
     sb.from("rooms").select("*").eq("code", c).maybeSingle(),
     sb.from("players").select("*").eq("room", c).order("seat"),
     pl ? sb.from("answers").select("*").eq("room", c) : none,
     pl ? sb.from("votes").select("*").eq("room", c) : none,
     pl && (!room || ["result", "end"].includes(room.phase)) ? sb.from("reactions").select("round,answer,player").eq("room", c) : none,
     !g || g === "qui" ? sb.from("rankings").select("*").eq("room", c) : none,
-    !g || g === "aveux" || g === "dilemme" ? sb.from("aveux_bets").select("*").eq("room", c) : none
+    !g || g === "aveux" || g === "dilemme" ? sb.from("aveux_bets").select("*").eq("room", c) : none,
+    !g || g === "loup" ? sb.from("lg_actions").select("k,player,v").eq("room", c) : none
   ]);
   if (c !== code) return;
   if (!r.error && r.data && g && r.data.game !== g){ room = r.data; return refresh(); } // jeu changé : on recharge tout
   if (r.error || p.error){ return; } // réseau instable : le prochain passage réessaiera
   if (!r.data){ leaveLocal("La partie n'existe plus."); return; }
   const prev = room;
-  room = r.data; players = p.data || []; answers = a.error ? answers : (a.data || []); votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []); bets = b.error ? bets : (b.data || []);
+  room = r.data; players = p.data || []; answers = a.error ? answers : (a.data || []); votes = v.error ? votes : (v.data || []); reacts = x.error ? reacts : (x.data || []); rankings = k.error ? rankings : (k.data || []); bets = b.error ? bets : (b.data || []); lgActs = la.error ? lgActs : (la.data || []);
   if (!ui.tv && !byId(me.id)){ leaveLocal("Tu n'es plus dans la partie."); return; }
   if (!prev || prev.round !== room.round || prev.phase !== room.phase){
     ui.sel = null; ui.confirmLeave = false;
     if (!prev || prev.round !== room.round) resetRoundUi();
   }
   if (prev) soundsFor(prev, room);
+  if (isLoup()) lgOnState();
   if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
   render();
   autoActions();
@@ -293,7 +295,7 @@ const pickOne = arr => arr[Math.floor(Math.random() * arr.length)];
 
 function botActions(){
   // Seul le premier vrai joueur présent (l'hôte) fait jouer les robots
-  if (!isLeader() || !players.some(p => isBot(p.id))) return;
+  if (!isLeader() || !players.some(p => isBot(p.id)) || isLoup()) return;
   const r = room.round, c = code;
   const still = () => room && code === c && room.round === r;
   if (isAveux()){
@@ -380,6 +382,7 @@ const autoDone = new Set();
 async function autoActions(){
   if (!room || busy || ui.tv) return;
   botActions();
+  if (isLoup()) lgEngine();
   const r = room.round;
   // Le juge révèle dès que tous les joueurs présents ont écrit (l'hôte le fait si le juge est un robot)
   if (room.phase === "writing" && !isAveux() && (isJudge() || (isBot(room.judge) && isLeader()))){
@@ -469,6 +472,7 @@ function subscribe(c){
     .on("postgres_changes", { event: "*", schema: "public", table: "votes", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "rankings", filter: "room=eq." + c }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "aveux_bets", filter: "room=eq." + c }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "lg_actions", filter: "room=eq." + c }, scheduleRefresh)
     .on("broadcast", { event: "react" }, msg => { const p = msg && msg.payload; if (p) showReaction(p.e, p.n); })
     .subscribe(st => { live = st === "SUBSCRIBED"; });
   // filet de sécurité si le temps réel décroche : toutes les 3 s sans temps réel, toutes les 15 s sinon
@@ -497,7 +501,7 @@ async function enterRoom(c, tv){
 }
 function leaveLocal(msg){
   unsubscribe();
-  code = null; room = null; players = []; answers = []; votes = []; rankings = []; bets = [];
+  code = null; room = null; players = []; answers = []; votes = []; rankings = []; bets = []; lgActs = [];
   if (!ui.tv) store.del("room");
   ui.tv = false; ui.tvReady = false;
   ui.err = msg || ""; ui.confirmLeave = false; ui.editing = false; ui.draft = "";
@@ -772,6 +776,7 @@ const actions = {
   },
   async kick(id){ await sb.from("players").delete().eq("id", id).eq("room", code); scheduleRefresh(); },
   async start(){
+    if (isLoup()) return lgLaunch();
     const pool = players.filter(present);
     if (pool.length < MIN_PLAYERS) return;
     const j = pickOne(pool).id, nr = room.round + 1;
@@ -885,14 +890,15 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 35;
-const gameLogo = g => g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
-const GAME_IDS = ["punchline", "qui", "aveux", "dilemme"];
+const APP_VERSION = 36;
+const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
   ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],
   ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]],
   ["aveux", ["Une affirmation", "Chacun avoue en secret", "Pariez sur le nombre de oui"]],
-  ["dilemme", ["Rouge ou bleu", "Chacun choisit en secret", "Devine le % du groupe"]]
+  ["dilemme", ["Rouge ou bleu", "Chacun choisit en secret", "Devine le % du groupe"]],
+  ["loup", ["Un conteur, la nuit, les yeux fermés", "Chacun joue sur son téléphone", "Le village vote, les loups mentent"]]
 ];
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
@@ -940,7 +946,7 @@ function footer(){
   if (ui.confirmLeave){
     return `<div class="foot"><div class="row" style="width:100%"><button class="ghost small" data-a="cancelLeave">Rester</button><button class="btn small" data-a="leave">Quitter la partie</button></div></div>`;
   }
-  const skip = isLeader() && ["draw","writing","judging"].includes(room.phase) ? `<button class="link" data-a="skip">Passer la manche</button>` : "";
+  const skip = isLeader() && !isLoup() && ["draw","writing","judging"].includes(room.phase) ? `<button class="link" data-a="skip">Passer la manche</button>` : "";
   return `<div class="foot">${skip}<button class="link" data-a="askLeave">Quitter la partie</button></div>`;
 }
 
@@ -1113,6 +1119,7 @@ const views = {
       <section><h3>Le Verdict</h3><p>Chaque manche, un joueur devine. Les autres reçoivent une question secrète, par exemple « Qui de nous tient le moins bien l'alcool ? », et classent tout le monde sur le thermomètre, du plus au moins. Le devineur voit les classements et retrouve la question parmi 4 : 3 points du premier coup, 2 au deuxième, 1 au troisième. Ceux qui ont mis en premier le même joueur que le groupe gagnent 1 point.</p></section>
       <section><h3>Les Aveux</h3><p>Une affirmation s'affiche, par exemple « J'ai déjà couché le premier soir ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui dans le groupe. Personne ne sait qui a dit oui : on ne voit que le total. Pari exact : 2 points. À 1 près : 1 point.</p></section>
       <section><h3>Le Dilemme</h3><p>Un dilemme s'affiche : rouge ou bleu. Chacun choisit son côté en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche du vrai pourcentage gagne 1 point (tous les ex aequo aussi), 2 points s'il tombe pile. À chaque manche, un joueur est dans le viseur : les autres devinent aussi s'il a pris rouge ou bleu, 1 point si c'est juste. À la fin, on voit qui a pris quoi, et celui qui est seul dans son camp doit se défendre.</p></section>
+      <section><h3>Loup-garou</h3><p>L'hôte choisit les cartes (une composition est proposée selon le nombre de joueurs). Chacun découvre sa carte sur son téléphone. La nuit, tout le monde ferme les yeux : le conteur appelle chaque rôle, qui ouvre les yeux et agit sur son téléphone. Le matin, on découvre les morts et leur carte. Après la première nuit, le village élit un maire, qui tranche en cas d'égalité. Puis débat, et chacun vote sur son téléphone. Les morts ne parlent plus, mais parient sur le prochain mort. À la fin, chacun a un score selon ses coups : touche Détail pour les voir. Le son du conteur part du téléphone du créateur, chacun peut l'activer avec le haut-parleur. « Distribuer les cartes » donne juste un rôle à chacun, sans conteur.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -1146,6 +1153,7 @@ const views = {
   },
 
   lobby(){
+    if (isLoup()) return lgViews.lobby();
     const n = players.length, missing = Math.max(0, MIN_PLAYERS - players.filter(present).length);
     const lead = isLeader();
     return `${head()}
@@ -1302,7 +1310,7 @@ const views = {
 };
 
 /* ---------- « Qui de nous » ---------- */
-const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"], ["dilemme", "Le Dilemme"]];
+const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"], ["dilemme", "Le Dilemme"], ["loup", "Loup-garou"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
@@ -1347,7 +1355,7 @@ const customBlock = () => `<div class="stack custom">
 const vibeCards = (cur, can) => `<div class="vibe" role="group" aria-label="Ambiance">
   <button class="vb s ${cur === "soft" ? "on" : "off"}" data-a="vibe" data-v="soft" aria-pressed="${cur === "soft"}" ${can ? "" : "disabled"}><b>Soft</b><small>Avec la famille</small></button>
   <button class="vb t ${cur !== "soft" ? "on" : "off"}" data-a="vibe" data-v="mix" aria-pressed="${cur !== "soft"}" ${can ? "" : "disabled"}><b>Trash</b><small>Entre potes</small></button></div>`;
-const gameTo = g => g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : g === "dilemme" ? "au Dilemme" : "à Punchline";
+const gameTo = g => g === "loup" ? "au Loup-garou" : g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : g === "dilemme" ? "au Dilemme" : "à Punchline";
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
 // Pastille de couleur + initiale par joueur (couleur fixe selon l'ordre d'arrivée)
@@ -1827,13 +1835,19 @@ function morph(a, b){
 }
 function screenKey(){
   if (!room) return ["home", ui.page, ui.game, !!ui.menu, !!ui.tvAsk, !!ui.creating].join("|");
-  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round, lateMe()].join("|");
+  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round, lateMe(), isLoup() && lgSt() ? lgSt().k : ""].join("|");
 }
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
-  if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isDil() && dilTv[room.phase]) || (isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
+  const lgOn = isLoup() || (!room && ui.game === "loup" && ui.page === "home");
+  document.body.classList.toggle("loup", lgOn);
+  const lgs = isLoup() && room.phase === "draw" && lgSt();
+  document.body.classList.toggle("lgdark", !!lgs && ["nuit", "voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"].includes(lgs.t));
+  if (ui.tv && room && isLoup()) html = `${tvHead()}<div class="tvlobby"><div class="lgtvmsg">Le Loup-garou se joue sans grand écran : chacun garde son téléphone en main.</div></div>`;
+  else if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isDil() && dilTv[room.phase]) || (isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
   else if (lateMe()) html = views.late();
+  else if (isLoup() && room.phase === "draw") html = lgViews.draw();
   else { const v = !room ? "home" : room.phase; html = ((isDil() && dilViews[v]) || (isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (!room && !ui.tv && ui.page === "home") html += installBar();
   if (html === lastHtml) return;
@@ -1902,6 +1916,701 @@ document.addEventListener("keydown", ev => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && code){ ping().then(refresh); keepAwake(); }
 });
+
+/* ---------- Loup-garou (code interne « loup », 03/11/2026) ----------
+   Pas d'appareil central : chacun joue sur son téléphone. L'état de la partie est dans rooms.lg (jsonb),
+   les choix de chacun dans lg_actions (room, k, player, v). Le téléphone de l'hôte fait tourner le moteur
+   (lgEngine) : il attend la fin des voix et les actions, puis écrit l'étape suivante.
+   Le son (voix du conteur + musique) part du téléphone du créateur par défaut, chacun peut l'activer. */
+const isLoup = () => !!room && room.game === "loup";
+let lgActs = [];
+const LG_MIN = 4;
+const lgFast = () => { try { return !!localStorage.getItem("pl-lgfast"); } catch(e){ return false; } };
+const lgMs = ms => lgFast() ? Math.min(ms, 150) : ms;
+
+const LG_ROLES = {
+  loup:        ["Loup-garou", "wolf", "Chaque nuit, la meute dévore un villageois."],
+  villageois:  ["Villageois", "villager", "Trouve les loups et fais-les éliminer."],
+  voyante:     ["Voyante", "eye", "Chaque nuit, tu découvres la carte d'un joueur."],
+  sorciere:    ["Sorcière", "potion", "Une potion pour sauver, une pour tuer."],
+  chasseur:    ["Chasseur", "hunter", "En mourant, tu emportes quelqu'un avec toi."],
+  cupidon:     ["Cupidon", "heart", "La première nuit, tu lies deux amoureux."],
+  petitefille: ["Petite fille", "girl", "Pendant le tour des loups, tu espionnes leur cible."],
+  voleur:      ["Voleur", "thief", "La première nuit, tu peux voler une carte du milieu."],
+  salvateur:   ["Salvateur", "shield", "Chaque nuit, tu protèges un joueur, jamais deux fois le même."],
+  idiot:       ["Idiot du village", "fool", "Si le village te vote, tu survis, mais tu ne votes plus."]
+};
+const LG_SPECIALS = ["voyante", "sorciere", "chasseur", "cupidon", "petitefille", "voleur", "salvateur", "idiot"];
+const LG_ICON = {
+  wolf: `<path d="M4 3l4 5h8l4-5v9l-2 5-6 4-6-4-2-5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 1M15 12l-2 1M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+  villager: `<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1-4.5 4.5-7 8-7s7 2.5 8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+  eye: `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>`,
+  potion: `<path d="M9 3h6M10 3v5L5 17a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 15h10" stroke="currentColor" stroke-width="1.8"/>`,
+  hunter: `<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+  heart: `<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 21l8-8M3 21h4M3 21v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`,
+  girl: `<circle cx="12" cy="9" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 7c0-3 2-4 4-4s4 1 4 4M7 21l1.5-6h7L17 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`,
+  thief: `<path d="M3 10c3-2 15-2 18 0v3c-3 2-15 2-18 0z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="11.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="11.5" r="1.4" fill="currentColor"/>`,
+  shield: `<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`,
+  fool: `<path d="M4 19h16M5 19 4 9l5 4 3-8 3 8 5-4-1 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="4" cy="7.5" r="1.6" fill="currentColor"/><circle cx="12" cy="3.6" r="1.6" fill="currentColor"/><circle cx="20" cy="7.5" r="1.6" fill="currentColor"/>`,
+  moon: `<path d="M20 15A8 8 0 1 1 9 4a7 7 0 0 0 11 11z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`,
+  skull: `<path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9" cy="11" r="1.8" fill="currentColor"/><circle cx="15" cy="11" r="1.8" fill="currentColor"/><path d="M10 21v-3M14 21v-3" stroke="currentColor" stroke-width="1.8"/>`
+};
+const lgIc = (n, cls) => `<svg class="lic ${cls || ""}" viewBox="0 0 24 24" aria-hidden="true">${LG_ICON[n] || ""}</svg>`;
+const roleIc = (r, cls) => lgIc((LG_ROLES[r] || LG_ROLES.villageois)[1], cls);
+const roleNm = r => (LG_ROLES[r] || ["?"])[0];
+
+/* durées des voix enregistrées par Naim (ms), mesurées avec ffprobe */
+const LG_CLIP = { amoureux: 5146, amoureux_dort: 3082, chagrin: 4754, chasseur: 5878, cupidon: 6609, cupidon_dort: 1802, debat: 7549, debat2: 5878, debat3: 5564, debat_derniers: 3866, debat_fin: 2847, debat_fin2: 4049, deux_morts: 5146, deux_morts2: 6191, egalite: 3082, fin_amoureux: 8516, fin_loups: 8281, fin_village: 9326, idiot: 6922, intro: 26906, loups1: 6687, loups2: 7001, loups3: 6531, loups4: 6113, loups_dort: 3318, maire: 8908, maire_mort: 4676, matin: 6191, matin2: 5329, matin3: 4754, mort1: 5251, mort2: 4833, mort3: 6531, mort4: 5878, mort5: 4598, mort6: 4049, nuit1: 8281, nuit2: 9953, nuit3: 6687, nuit4: 7967, nuit5: 12042, nuit6: 5564, nuit7: 6766, nuit8: 7811, nuit_derniers: 7079, personne1: 5407, personne2: 5146, personne3: 5329, salvateur: 3004, salvateur_dort: 2038, sorciere: 9639, sorciere2: 7471, sorciere_dort: 1802, trois_morts: 7001, voleur: 7158, voleur_dort: 1724, vote: 4049, vote2: 4676, voyante1: 6348, voyante2: 6609, voyante3: 5329, voyante_dort: 3553 };
+const LG_VAR = {
+  nuit: ["nuit1", "nuit2", "nuit3", "nuit4", "nuit5", "nuit6", "nuit7", "nuit8"], voyante: ["voyante1", "voyante2", "voyante3"],
+  loups: ["loups1", "loups2", "loups3", "loups4"], sorciere: ["sorciere", "sorciere2"], matin: ["matin", "matin2", "matin3"],
+  mort: ["mort1", "mort2", "mort3", "mort4", "mort5", "mort6"], deux: ["deux_morts", "deux_morts2"], personne: ["personne1", "personne2", "personne3"],
+  debat: ["debat", "debat2", "debat3"], fin: ["debat_fin", "debat_fin2"], vote: ["vote", "vote2"]
+};
+const GAP = 450;
+const clipsMs = list => list.reduce((t, c) => t + (LG_CLIP[c] || 0) + GAP, 0);
+
+/* ---------- réglages de l'hôte ---------- */
+function lgRecommend(n){
+  return { loup: n <= 5 ? 1 : n <= 8 ? 2 : n <= 11 ? 3 : 4, voyante: 1, sorciere: n >= 5 ? 1 : 0, chasseur: n >= 6 ? 1 : 0,
+    cupidon: n >= 7 ? 1 : 0, petitefille: n >= 8 ? 1 : 0, salvateur: n >= 9 ? 1 : 0, idiot: n >= 10 ? 1 : 0, voleur: 0 };
+}
+const lgPool = () => players.filter(present).sort((a, b) => a.seat - b.seat);
+function lgCfg(){
+  const c = Object.assign({ mode: "full", auto: true, comp: null, mid: ["villageois", "loup"], debate: 180, mayor: true, music: true }, (room && room.lg && room.lg.cfg) || {});
+  if (c.auto || !c.comp) c.comp = lgRecommend(lgPool().length);
+  return c;
+}
+const lgVillagers = c => lgPool().length - Object.values(c.comp).reduce((t, v) => t + v, 0);
+const lgMidOn = c => (c.comp.voleur || 0) > 0;
+async function lgSaveCfg(c){
+  if (!room || !isLeader() || room.phase !== "lobby") return;
+  room.lg = Object.assign({}, room.lg || {}, { cfg: c }); render();
+  const { error } = await sb.from("rooms").update({ lg: room.lg }).eq("code", code).eq("phase", "lobby");
+  if (error) toast("Réglage pas enregistré, réessaie.");
+  scheduleRefresh();
+}
+function lgCfgError(c){
+  const n = lgPool().length;
+  if (n < LG_MIN) return `Encore ${LG_MIN - n} joueur${LG_MIN - n > 1 ? "s" : ""}`;
+  if ((c.comp.loup || 0) < 1) return "Il faut au moins un loup";
+  if (lgVillagers(c) < 0) return "Trop de rôles pour " + n + " joueurs";
+  if (lgMidOn(c) && !c.mid.length) return "Mets au moins une carte au milieu";
+  return "";
+}
+
+/* ---------- petits outils ---------- */
+const clone = o => JSON.parse(JSON.stringify(o));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const LG = () => (room && room.lg) || null;
+const lgSt = () => { const g = LG(); return g && g.st; };
+const lgKey = k => LG().gid + ":" + k;
+const lgActsFor = (k, g) => { g = g || LG(); const full = g.gid + ":" + k; return lgActs.filter(a => a.k === full && a.v != null); };
+const lgMine = k => lgActsFor(k).find(a => a.player === me.id);
+const lgRole = id => (LG().roles || {})[id];
+const lgAlive = id => (LG().alive || []).includes(id);
+const lgDead = id => (LG().deaths || []).find(d => d.id === id);
+const lgWolves = g => (g || LG()).alive.filter(id => g ? g.roles[id] === "loup" : lgRole(id) === "loup");
+const lgIsActor = id => { const st = lgSt(); return !!st && (st.actors || []).includes(id); };
+const lgPresent = id => isBot(id) || present(byId(id));
+async function lgAct(k, v, pid){
+  if (!LG()) return;
+  const full = lgKey(k), who = pid || me.id;
+  lgActs = lgActs.filter(a => !(a.k === full && a.player === who)).concat([{ k: full, player: who, v: String(v) }]);
+  if (!pid) render();
+  const { error } = await sb.from("lg_actions").upsert({ room: code, k: full, player: who, v: String(v), at: new Date().toISOString() }, { onConflict: "room,k,player" });
+  if (error && !pid) toast("Pas envoyé, réessaie.");
+  scheduleRefresh();
+}
+
+/* ---------- moteur (téléphone de l'hôte) ---------- */
+function pick(g, group){
+  const all = LG_VAR[group]; g.used = g.used || [];
+  let left = all.filter(c => !g.used.includes(c));
+  if (!left.length){ g.used = g.used.filter(c => !all.includes(c)); left = all; }
+  const c = pickOne(left); g.used.push(c); return c;
+}
+const DORT = { voleur: "voleur_dort", cupidon: "cupidon_dort", amoureux: "amoureux_dort", voyante: "voyante_dort", salvateur: "salvateur_dort", loups: "loups_dort", sorciere: "sorciere_dort" };
+function mk(g, t, o){
+  o = o || {};
+  const clips = (o.pre || []).filter(Boolean).concat(o.clips || []);
+  const st = Object.assign({ t, k: t + "." + (g.seq = (g.seq || 0) + 1), at: serverNow(), clips, actors: [] }, o);
+  delete st.pre;
+  st.min = lgMs(clipsMs(clips) + (o.extra || 0));
+  return st;
+}
+const label = g => g.st && ["nuit", "voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"].includes(g.st.t) ? "Nuit " + g.n : "Jour " + g.n;
+const ev = (g, p, pts, txt) => { if (p) g.ev.push({ p, pts, txt, w: label(g) }); };
+const holders = (g, r) => g.alive.filter(id => g.roles[id] === r);
+const knownDead = (g, r) => g.deaths.some(d => d.role === r);
+// rôle appelé si quelqu'un le tient, ou s'il est peut-être resté au milieu (appel « dans le vide » avec une attente au hasard)
+const callable = (g, r) => holders(g, r).length > 0 || ((g.mid0 || []).includes(r) && !knownDead(g, r) && !Object.values(g.roles).includes(r));
+
+function lgStart(){
+  const c = lgCfg(), pool = lgPool(), n = pool.length;
+  const deck = [];
+  Object.entries(c.comp).forEach(([r, k]) => { for (let i = 0; i < k; i++) deck.push(r); });
+  for (let i = 0; i < lgVillagers(c); i++) deck.push("villageois");
+  const ids = shuffle(pool.map(p => p.id)), cards = shuffle(deck), roles = {};
+  ids.forEach((id, i) => { roles[id] = cards[i]; });
+  const mid = lgMidOn(c) ? shuffle(c.mid) : [];
+  const g = { cfg: c, gid: uuid().slice(0, 8), mode: c.mode, roles, start: clone(roles), mid, mid0: mid.slice(), alive: ids.slice(), deaths: [], mayor: null, mayorDone: !c.mayor,
+    lovers: null, pot: { l: 1, d: 1 }, prot: null, idiotOut: null, ev: [], used: [], surv: {}, hit: {}, voteDays: 0, n: 0, q: [], night: {}, ver: 1, seq: 0 };
+  g.st = c.mode === "deal" ? mk(g, "deal") : mk(g, "carte", { clips: ["intro"], actors: ids.slice(), extra: 2000 });
+  return g;
+}
+function goNight(g){
+  g.n++; g.night = {};
+  const pre = g.st && g.st.t === "execution" ? [] : [];
+  g.st = mk(g, "nuit", { pre, clips: [g.alive.length <= 4 ? "nuit_derniers" : pick(g, "nuit")], extra: 2500 });
+  return g;
+}
+const NIGHT = ["voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"];
+function nextNight(g, cur){
+  const dort = DORT[cur];
+  for (const r of NIGHT.slice(NIGHT.indexOf(cur) + 1)){
+    if (["voleur", "cupidon", "amoureux"].includes(r) && g.n !== 1) continue;
+    let actors = [], fake = false;
+    if (r === "amoureux"){ if (!g.lovers) continue; actors = g.lovers.filter(id => g.alive.includes(id)); }
+    else if (r === "loups"){ actors = holders(g, "loup"); if (!actors.length) continue; }
+    else { if (!callable(g, r)) continue; actors = holders(g, r); fake = !actors.length; }
+    const clip = r === "voyante" ? pick(g, "voyante") : r === "loups" ? pick(g, "loups") : r === "sorciere" ? pick(g, "sorciere") : r;
+    const o = { pre: [dort], clips: [clip], actors, fake, extra: fake ? 5000 + Math.floor(Math.random() * 5000) : 600 };
+    if (r === "voleur") o.pick = Math.floor(Math.random() * Math.max(1, g.mid.length));
+    if (r === "sorciere"){ o.victim = g.night.victim || null; o.pot = clone(g.pot); }
+    if (r === "salvateur") o.not = g.prot;
+    g.st = mk(g, r, o);
+    return g;
+  }
+  return morning(g, dort);
+}
+function kill(g, list){
+  const before = g.deaths.length, batch = [];
+  const one = (id, how) => {
+    if (!id || !g.alive.includes(id)) return;
+    g.alive = g.alive.filter(x => x !== id);
+    g.deaths.push({ id, role: g.roles[id], how, w: label(g) });
+    batch.push(id);
+    if (g.roles[id] === "chasseur") g.q.push({ t: "chasseur", id });
+    if (g.mayor === id){ g.mayor = null; g.q.push({ t: "successeur", id }); }
+    if (g.lovers && g.lovers.includes(id)){ const o = g.lovers.find(x => x !== id); if (g.alive.includes(o)) one(o, "chagrin"); }
+  };
+  list.forEach(([id, how]) => one(id, how));
+  // paris des morts sur le prochain mort
+  if (batch.length) lgActsFor("bet:" + before, g).forEach(a => { if (batch.includes(a.v)) ev(g, a.player, 1, "a deviné le prochain mort (" + nameOf(a.v) + ")"); });
+  return batch;
+}
+function morning(g, dort){
+  const nt = g.night, list = [];
+  const sav = holders(g, "salvateur")[0] || g.deaths.concat([]).filter(d => d.role === "salvateur").map(d => d.id)[0];
+  if (nt.victim){
+    const prot = nt.prot === nt.victim;
+    if (prot) ev(g, nt.protBy, 2, "a protégé la victime des loups (" + nameOf(nt.victim) + ")");
+    if (nt.save) ev(g, nt.witch, 2, "a sauvé la victime des loups (" + nameOf(nt.victim) + ")");
+    if (!prot && !nt.save) list.push([nt.victim, "loups"]);
+  }
+  if (nt.poison){ list.push([nt.poison, "poison"]); ev(g, nt.witch, g.roles[nt.poison] === "loup" ? 3 : -2, (g.roles[nt.poison] === "loup" ? "a empoisonné un loup (" : "a empoisonné un innocent (") + nameOf(nt.poison) + ")"); }
+  void sav;
+  const dead = kill(g, list);
+  g.alive.forEach(id => { g.surv[id] = (g.surv[id] || 0) + 1; });
+  const clips = dead.length === 0 ? [pick(g, "personne")] : dead.length === 1 ? [pick(g, "matin"), pick(g, "mort")] : dead.length === 2 ? [pick(g, "deux")] : ["trois_morts"];
+  if (g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin")) clips.push("chagrin");
+  g.after = "day";
+  g.st = mk(g, "matin", { pre: [dort], clips, dead, extra: 6000 });
+  return g;
+}
+function lgWinner(g){
+  const al = g.alive, w = al.filter(id => g.roles[id] === "loup").length;
+  if (g.lovers && al.length === 2 && g.lovers.every(id => al.includes(id)) && (g.roles[g.lovers[0]] === "loup") !== (g.roles[g.lovers[1]] === "loup")) return "amoureux";
+  if (w === 0) return "village";
+  if (w === al.length) return "loups";
+  return null;
+}
+function finish(g, win){
+  const winners = Object.keys(g.roles).filter(id => win === "amoureux" ? (g.lovers || []).includes(id) : win === "loups" ? g.roles[id] === "loup" : g.roles[id] !== "loup");
+  winners.forEach(id => ev(g, id, 2, win === "amoureux" ? "a gagné avec son amour" : win === "loups" ? "a gagné avec la meute" : "a gagné avec le village"));
+  Object.entries(g.surv).forEach(([id, n]) => { if (n) g.ev.push({ p: id, pts: n, txt: "a survécu à " + n + " nuit" + (n > 1 ? "s" : ""), w: "" }); });
+  if (g.voteDays) Object.keys(g.roles).filter(id => g.roles[id] === "loup" && !(g.hit[id] > 0) && g.alive.includes(id)).forEach(id => g.ev.push({ p: id, pts: 3, txt: "n'a jamais reçu un seul vote", w: "" }));
+  g.win = win;
+  g.st = mk(g, "fin", { pre: [], clips: [win === "amoureux" ? "fin_amoureux" : win === "loups" ? "fin_loups" : "fin_village"], win, extra: 1000 });
+  return g;
+}
+function lgContinue(g){
+  while (g.q.length){
+    const x = g.q.shift();
+    if (x.t === "chasseur" && g.alive.length){ g.st = mk(g, "chasseur", { clips: ["chasseur"], actors: [x.id], hunter: x.id, extra: 800 }); return g; }
+    if (x.t === "successeur" && g.alive.length){ g.st = mk(g, "successeur", { clips: ["maire_mort"], actors: [x.id], old: x.id, extra: 800 }); return g; }
+  }
+  const win = lgWinner(g);
+  if (win) return finish(g, win);
+  if (g.after === "night") return goNight(g);
+  if (!g.mayorDone){ g.st = mk(g, "election", { clips: ["maire"], actors: g.alive.slice(), extra: 600 }); return g; }
+  g.st = mk(g, "debat", { clips: [g.alive.length <= 4 ? "debat_derniers" : pick(g, "debat")], dur: g.cfg.debate || 0 });
+  return g;
+}
+const voters = g => g.alive.filter(id => id !== g.idiotOut);
+function tally(g, k, pool){
+  const n = {}; lgActsFor(k, g).forEach(a => { if (pool.includes(a.player) && g.alive.includes(a.v)) n[a.v] = (n[a.v] || 0) + 1; });
+  const best = Math.max(0, ...Object.values(n));
+  return { n, top: best ? Object.keys(n).filter(id => n[id] === best) : [] };
+}
+function lgDefault(g, st){
+  // choix par défaut quand quelqu'un ne répond pas (parti, ou trop long)
+  const others = id => g.alive.filter(x => x !== id);
+  return id => st.t === "cupidon" ? shuffle(g.alive).slice(0, 2).join(",") : st.t === "voleur" ? "keep" : st.t === "sorciere" ? "{}" :
+    ["voyante", "salvateur"].includes(st.t) ? "x" : ["chasseur", "successeur"].includes(st.t) ? pickOne(others(id)) : st.t === "egalite" ? pickOne(st.tie) : "x";
+}
+const TIMEOUT = { carte: 150000, voleur: 75000, cupidon: 75000, amoureux: 20000, voyante: 75000, salvateur: 75000, loups: 120000, sorciere: 75000, election: 120000, vote: 120000, egalite: 60000, chasseur: 60000, successeur: 60000 };
+function lgAdvance(g){
+  const st = g.st, k = st.k, el = serverNow() - st.at;
+  const acts = lgActsFor(k, g), got = id => acts.find(a => a.player === id);
+  const late = el > (lgFast() ? (TIMEOUT[st.t] || 1e9) / 6 : (TIMEOUT[st.t] || 1e9));
+  const need = (st.actors || []).filter(id => lgPresent(id) && !got(id));
+  const val = id => { const a = got(id); return a ? a.v : lgDefault(g, st)(id); };
+  switch (st.t){
+    case "carte": if (need.length && !late) return null; return goNight(g);
+    case "nuit": return nextNight(g, "nuit");
+    case "voleur": {
+      if (need.length && !late) return null;
+      const id = st.actors[0];
+      if (id && val(id) === "steal" && g.mid.length){ const nw = g.mid[st.pick]; g.mid[st.pick] = g.roles[id]; g.roles[id] = nw; g.stole = { id, role: nw }; }
+      return nextNight(g, "voleur");
+    }
+    case "cupidon": {
+      if (need.length && !late) return null;
+      const id = st.actors[0];
+      if (id){ const pair = String(val(id)).split(",").filter(x => g.alive.includes(x)); g.lovers = pair.length === 2 && pair[0] !== pair[1] ? pair : shuffle(g.alive).slice(0, 2); }
+      return nextNight(g, "cupidon");
+    }
+    case "amoureux": if (need.length && !late) return null; return nextNight(g, "amoureux");
+    case "voyante": {
+      if (need.length && !late) return null;
+      const id = st.actors[0], t = id && val(id);
+      if (t && g.roles[t]){ g.night.seer = t; if (g.roles[t] === "loup") ev(g, id, 2, "a démasqué un loup (" + nameOf(t) + ")"); }
+      return nextNight(g, "voyante");
+    }
+    case "salvateur": {
+      if (need.length && !late) return null;
+      const id = st.actors[0], t = id && val(id);
+      g.prot = t && g.alive.includes(t) && t !== st.not ? t : null; g.night.prot = g.prot; g.night.protBy = id;
+      return nextNight(g, "salvateur");
+    }
+    case "loups": {
+      const wolves = st.actors.filter(id => g.alive.includes(id));
+      const picks = wolves.map(id => (got(id) || {}).v).filter(v => v && g.alive.includes(v));
+      const agreed = picks.length === wolves.filter(lgPresent).length && picks.length > 0 && picks.every(v => v === picks[0]);
+      if (!agreed && !late) return null;
+      const t = tally(g, k, wolves);
+      g.night.victim = agreed ? picks[0] : t.top.length ? pickOne(t.top) : null;
+      return nextNight(g, "loups");
+    }
+    case "sorciere": {
+      if (need.length && !late) return null;
+      const id = st.actors[0];
+      if (id){
+        let o = {}; try { o = JSON.parse(val(id)) || {}; } catch(e){}
+        if (o.s && g.pot.l && g.night.victim){ g.pot.l = 0; g.night.save = true; }
+        if (o.k && g.pot.d && g.alive.includes(o.k)){ g.pot.d = 0; g.night.poison = o.k; }
+        g.night.witch = id;
+      }
+      return nextNight(g, "sorciere");
+    }
+    case "matin": case "morts": case "maire": return lgContinue(g);
+    case "chasseur": {
+      if (need.length && !late) return null;
+      const t = val(st.hunter);
+      const dead = g.alive.includes(t) ? kill(g, [[t, "chasseur"]]) : [];
+      if (dead.length) ev(g, st.hunter, g.roles[t] === "loup" ? 3 : 0, (g.roles[t] === "loup" ? "a emporté un loup (" : "a emporté " ) + nameOf(t) + (g.roles[t] === "loup" ? ")" : ""));
+      g.st = mk(g, "morts", { dead, clips: g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin") ? ["chagrin"] : [], extra: 6000 });
+      return g;
+    }
+    case "successeur": {
+      if (need.length && !late) return null;
+      const t = val(st.old);
+      g.mayor = g.alive.includes(t) ? t : pickOne(g.alive);
+      g.st = mk(g, "maire", { mayor: g.mayor, extra: 5000 });
+      return g;
+    }
+    case "election": {
+      if (need.filter(id => g.alive.includes(id)).length && !late) return null;
+      const t = tally(g, k, g.alive);
+      g.mayor = t.top.length ? pickOne(t.top) : pickOne(g.alive); g.mayorDone = true;
+      if (g.roles[g.mayor] === "loup") ev(g, g.mayor, 2, "s'est fait élire maire");
+      g.st = mk(g, "maire", { mayor: g.mayor, votes: t.n, extra: 5500 });
+      return g;
+    }
+    case "debat": {
+      const go = lgActsFor(k, g).some(a => a.v === "go");
+      if (!go && (!st.dur || el < st.min + lgMs(st.dur * 1000))) return null;
+      g.st = mk(g, "vote", { clips: [pick(g, "fin")], actors: voters(g), extra: 600 });
+      return g;
+    }
+    case "vote": {
+      if (need.length && !late) return null;
+      const t = tally(g, k, st.actors);
+      g.voteDays++;
+      Object.entries(t.n).forEach(([id, c]) => { g.hit[id] = (g.hit[id] || 0) + c; });
+      g.day = { votes: lgActsFor(k, g).filter(a => st.actors.includes(a.player)).map(a => [a.player, a.v]), n: t.n };
+      if (t.top.length > 1 && g.mayor && g.alive.includes(g.mayor)){ g.st = mk(g, "egalite", { clips: ["egalite"], actors: [g.mayor], tie: t.top, n: t.n, extra: 600 }); return g; }
+      return execute(g, t.top.length === 1 ? t.top[0] : null, t.n);
+    }
+    case "egalite": {
+      if (need.length && !late) return null;
+      const t = st.tie.includes(val(g.mayor)) ? val(g.mayor) : pickOne(st.tie);
+      ev(g, g.mayor, g.roles[t] === "loup" ? 2 : -1, (g.roles[t] === "loup" ? "a tranché contre un loup (" : "a tranché contre un innocent (") + nameOf(t) + ")");
+      return execute(g, t, st.n);
+    }
+    case "execution": g.after = "night"; return lgContinue(g);
+    case "fin": case "deal": return null;
+  }
+  return null;
+}
+function execute(g, t, n){
+  (g.day.votes || []).forEach(([v, x]) => {
+    const vw = g.roles[v] === "loup", xw = g.roles[x] === "loup";
+    if (vw && xw && v !== x) ev(g, v, 3, "a voté contre son complice (" + nameOf(x) + ")");
+    else if (!vw && xw) ev(g, v, 1, "a voté contre un loup (" + nameOf(x) + ")");
+    else if (!vw && !xw && x === t) ev(g, v, -1, "a fait éliminer un innocent (" + nameOf(x) + ")");
+  });
+  let dead = [], saved = false;
+  if (t && g.roles[t] === "idiot" && g.idiotOut !== t){ g.idiotOut = t; saved = true; ev(g, t, 2, "a survécu à son propre vote"); }
+  else if (t) dead = kill(g, [[t, "vote"]]);
+  const clips = t ? [pick(g, "vote")].concat(saved ? ["idiot"] : []).concat(g.deaths.some(d => dead.includes(d.id) && d.how === "chagrin") ? ["chagrin"] : []) : [];
+  g.st = mk(g, "execution", { target: t, saved, dead, n: n || {}, clips, extra: 6500 });
+  return g;
+}
+
+let lgBusy = false;
+async function lgEngine(){
+  if (!isLoup() || !isLeader() || lgBusy || room.phase !== "draw") return;
+  const g0 = LG(); if (!g0 || !g0.st || g0.mode !== "full") return;
+  lgBots(g0);
+  if (serverNow() - g0.st.at < g0.st.min) return;
+  let g;
+  try { g = lgAdvance(clone(g0)); } catch(e){ console.warn(e); return; }
+  if (!g) return;
+  g.ver = (g0.ver || 0) + 1;
+  lgBusy = true;
+  const r = room; local(() => { r.lg = g; });
+  const { error } = await sb.from("rooms").update({ lg: g, updated_at: new Date().toISOString() }).eq("code", code).eq("lg->>ver", String(g0.ver));
+  lgBusy = false;
+  if (error) toast("Connexion perdue, réessaie.");
+  scheduleRefresh();
+}
+function lgBots(g){
+  const st = g.st; if (!st) return;
+  const bots = (st.actors || []).filter(isBot).filter(id => !lgActsFor(st.k, g).some(a => a.player === id));
+  const others = id => g.alive.filter(x => x !== id);
+  bots.forEach(id => botOnce(g.gid + st.k + id, rand(lgFast() ? 100 : 1500, lgFast() ? 300 : 4500), () => {
+    const cur = LG(); if (!cur || cur.st.k !== st.k) return;
+    let v = "ok";
+    if (st.t === "voleur") v = Math.random() < .5 ? "steal" : "keep";
+    else if (st.t === "cupidon") v = shuffle(g.alive).slice(0, 2).join(",");
+    else if (["voyante", "salvateur", "chasseur", "successeur", "election", "vote"].includes(st.t)) v = pickOne(others(id).filter(x => x !== st.not)) || "x";
+    else if (st.t === "loups"){ const ch = lgActsFor(st.k).map(a => a.v).find(Boolean); v = ch || pickOne(g.alive.filter(x => g.roles[x] !== "loup")) || "x"; }
+    else if (st.t === "sorciere") v = JSON.stringify({ s: st.victim && Math.random() < .5 ? 1 : 0 });
+    else if (st.t === "egalite") v = pickOne(st.tie);
+    return lgAct(st.k, v, id);
+  }));
+}
+
+/* ---------- son : voix du conteur et musique ---------- */
+const lgAudio = { voice: null, music: null, k: null, q: [], mus: null, unlocked: false };
+const lgVoiceOn = () => { if (!room) return false; const v = store.get("lgv:" + code); return v == null ? room.host === me.id : !!v; };
+function lgUnlock(){
+  if (lgAudio.unlocked || !isLoup()) return;
+  lgAudio.unlocked = true;
+  try {
+    lgAudio.voice = new Audio(); lgAudio.music = new Audio(); lgAudio.music.loop = true;
+    // l'iPhone ignore .volume : la musique passe par un gain Web Audio pour rester sous la voix
+    try { if (actx){ lgAudio.gain = actx.createGain(); actx.createMediaElementSource(lgAudio.music).connect(lgAudio.gain).connect(actx.destination); } } catch(e){ lgAudio.gain = null; }
+    [lgAudio.voice, lgAudio.music].forEach(a => { a.src = "loupgarou/voix/voleur_dort.mp3"; a.muted = true; const p = a.play(); if (p) p.then(() => { a.pause(); a.muted = false; }).catch(() => { a.muted = false; }); });
+  } catch(e){}
+}
+const MUSIC = { carte: "musique_nuit", nuit: "musique_nuit", voleur: "musique_nuit", cupidon: "musique_nuit", amoureux: "musique_nuit", voyante: "musique_nuit", salvateur: "musique_nuit", sorciere: "musique_nuit",
+  loups: "musique_loups", matin: "musique_matin", morts: "musique_matin", chasseur: "musique_matin", successeur: "musique_matin", maire: "musique_matin", election: "musique_matin",
+  debat: "musique_debat", vote: "musique_debat", egalite: "musique_debat", execution: "musique_debat", fin: "musique_fin" };
+function musVol(v){ if (lgAudio.gain) lgAudio.gain.gain.value = v; else if (lgAudio.music) lgAudio.music.volume = v; }
+function lgPlayNext(){
+  const a = lgAudio.voice; if (!a) return;
+  const c = lgAudio.q.shift();
+  if (!c){ musVol(.32); return; }
+  musVol(.12);
+  a.src = "loupgarou/voix/" + c + ".mp3"; a.onended = () => setTimeout(lgPlayNext, GAP); a.onerror = () => setTimeout(lgPlayNext, GAP);
+  const p = a.play(); if (p) p.catch(() => {});
+}
+function lgSound(){
+  const st = isLoup() && room.phase === "draw" ? lgSt() : null, on = st && lgVoiceOn() && !ui.tv;
+  if (!on){ if (lgAudio.voice) lgAudio.voice.pause(); if (lgAudio.music) lgAudio.music.pause(); lgAudio.k = null; lgAudio.mus = null; return; }
+  if (!lgAudio.unlocked) return;
+  if (st.k !== lgAudio.k){
+    lgAudio.k = st.k; lgAudio.q = [];
+    if (serverNow() - st.at < 5000 + (st.clips || []).length * 800) { lgAudio.q = (st.clips || []).slice(); lgPlayNext(); }
+  }
+  const want = LG() && LG().cfg && LG().cfg.music !== false ? MUSIC[st.t] : null;
+  if (want !== lgAudio.mus && lgAudio.music){
+    lgAudio.mus = want;
+    if (!want) lgAudio.music.pause();
+    else { lgAudio.music.src = "loupgarou/voix/" + want + ".mp3"; musVol(lgAudio.q.length ? .12 : .32); const p = lgAudio.music.play(); if (p) p.catch(() => {}); }
+  }
+}
+document.addEventListener("pointerdown", lgUnlock, { passive: true });
+setInterval(() => { if (!isLoup()) return; lgSound(); lgClock(); lgEngine(); }, lgFast() ? 120 : 400);
+
+/* ---------- écrans ---------- */
+const lgUi = { sel: [], flip: false, peek: false, open: null, seen: null, thief: null, stage: null };
+function lgResetUi(){ lgUi.sel = []; lgUi.seen = null; lgUi.thief = null; lgUi.stage = null; lgUi.witchSave = null; }
+const lgHead = () => {
+  const st = lgSt(), tag = !st || room.phase !== "draw" ? "" : st.t === "fin" ? "Fin de partie" : ["deal", "carte"].includes(st.t) ? "" : label(LG());
+  const on = lgVoiceOn();
+  return `<header><div class="hl"><div class="logo">Loup-<span>garou</span></div></div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${room.phase === "lobby" ? sndBtn() : `<button class="snd" data-a="lgVoice" aria-label="${on ? "Couper le conteur" : "Activer le conteur"}" title="${on ? "Conteur sur ce téléphone" : "Conteur coupé"}">${on ? ICON.sndOn : ICON.sndOff}</button>`}</div></header>`;
+};
+const roleCard = (r, cls) => `<div class="lgcard ${cls || ""}">${roleIc(r)}<b>${roleNm(r)}</b><small>${esc((LG_ROLES[r] || [])[2] || "")}</small></div>`;
+const flipCard = r => `<button class="lgflip ${lgUi.flip ? "on" : ""}" data-a="lgFlip" aria-label="${lgUi.flip ? "Cacher ma carte" : "Voir ma carte"}">
+  <span class="face back">${lgIc("moon")}</span><span class="face front">${roleIc(r)}<b>${roleNm(r)}</b><small>${esc((LG_ROLES[r] || [])[2] || "")}</small></span></button>`;
+const crownIc = `<svg class="lgcrown" viewBox="0 0 16 12" aria-hidden="true"><path d="M1 11 2 3l4 4 2-6 2 6 4-4 1 8z" fill="currentColor"/></svg>`;
+function lgVillage(opts){
+  opts = opts || {};
+  const g = LG(), ids = Object.keys(g.roles).sort((a, b) => (byId(a) || {}).seat - (byId(b) || {}).seat);
+  return `<div class="lggrid">${ids.map(id => {
+    const d = lgDead(id), can = opts.pick && opts.pick(id), sel = lgUi.sel.includes(id);
+    const marks = opts.marks ? opts.marks(id) : "";
+    const inner = `${g.mayor === id ? crownIc : ""}${marks}${av(id)}<span class="nm">${meName(id)}</span>${d ? `<span class="rl">${roleNm(d.role)}</span>` : g.idiotOut === id ? `<span class="rl">Idiot</span>` : opts.sub ? opts.sub(id) : ""}`;
+    return can ? `<button class="lgp ${sel ? "sel" : ""}" data-a="lgSel" data-v="${id}" aria-pressed="${sel}">${inner}</button>`
+      : `<div class="lgp ${d ? "gone" : ""} ${opts.dim && opts.dim(id) ? "dim" : ""}">${inner}</div>`;
+  }).join("")}</div>`;
+}
+const lgWait = (ids, k) => { const done = new Set(lgActsFor(k).map(a => a.player)); return `<div class="waitrow">${ids.map(id => `<span class="wv ${done.has(id) ? "ok" : ""}">${av(id, "sm")}</span>`).join("")}</div>`; };
+const lgSleep = (txt) => `<div class="lgsleep">${lgIc("moon", "big")}<p>${txt || "Ferme les yeux"}</p></div>`;
+const deadCard = d => `<div class="lgdead pop">${av(d.id)}<div><b>${esc(nameOf(d.id))}</b><small>${roleNm(d.role)}</small></div>${roleIc(d.role)}</div>`;
+const peekBtn = () => lgAlive(me.id) || lgDead(me.id) ? `<button class="lgpeek" data-a="lgPeek">${lgUi.peek ? "Cacher ma carte" : "Ma carte"}</button>${lgUi.peek ? roleCard(lgRole(me.id), "small pop") : ""}` : "";
+function lgBet(){
+  const g = LG(); if (!lgDead(me.id) || !g.alive.length) return "";
+  const k = "bet:" + g.deaths.length, mine = lgMine(k);
+  if (mine) return `<div class="lgbet"><span class="label light">Ton pari sur le prochain mort</span><div class="lgbetme">${av(mine.v, "sm")}<b>${esc(nameOf(mine.v))}</b></div></div>`;
+  return `<div class="lgbet"><span class="label light">Qui sera le prochain mort ?</span>${lgVillage({ pick: id => lgAlive(id) })}
+    <button class="btn" data-a="lgBet" ${lgUi.sel.length === 1 ? "" : "disabled"}>Parier</button></div>`;
+}
+function lgClock(){
+  const el = $("#lgclock"), st = lgSt(); if (!el || !st || st.t !== "debat" || !st.dur) return;
+  const left = Math.max(0, (st.at + st.min + lgMs(st.dur * 1000) - serverNow()) / 1000), sec = Math.ceil(left);
+  el.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+  el.classList.toggle("urgent", sec <= 10);
+}
+
+const lgViews = {
+  lobby(){
+    const lead = isLeader(), c = lgCfg(), err = lgCfgError(c), vill = lgVillagers(c);
+    const row = r => `<div class="lgrole ${c.comp[r] ? "" : "off"}">${roleIc(r)}<b>${roleNm(r)}</b>${lead ? `<div class="cnt"><button data-a="lgComp" data-v="${r}:-1" aria-label="Un ${roleNm(r)} de moins">−</button><i>${c.comp[r] || 0}</i><button data-a="lgComp" data-v="${r}:1" aria-label="Un ${roleNm(r)} de plus">+</button></div>` : `<i class="n">${c.comp[r] || 0}</i>`}</div>`;
+    const midAdd = ["villageois", "loup"].concat(LG_SPECIALS.filter(r => r !== "voleur" && !c.comp[r]));
+    const full = c.mode === "full";
+    return `${lgHead()}
+    <div class="stack center lobbygame">
+      <div class="biglogo"><div class="logo">Loup-<span>garou</span></div></div>
+      ${lead ? (ui.swap ? `<div class="nextgames">${GAMES.filter(g => g[0] !== room.game).map(g => `<button class="mg" data-a="game" data-v="${g[0]}">${gameLogo(g[0])}</button>`).join("")}</div>` : `<button class="swap" data-a="swap">Changer de jeu</button>`) : ""}
+    </div>
+    <div class="stack center">
+      <div class="codebig">${esc(code)}</div>
+      <div class="qr" id="qr" aria-label="QR code pour rejoindre la partie">${qrSvg(joinUrl(code))}</div>
+      <button class="ghost small" data-a="share">Partager le lien</button>
+    </div>
+    ${crowd(lead)}
+    <div class="lgset stack">
+      <div class="seg">${[["full", "Partie complète"], ["deal", "Distribuer les cartes"]].map(([v, l]) => `<button data-a="lgMode" data-v="${v}" class="${c.mode === v ? "on" : ""}" ${lead ? "" : "disabled"}>${l}</button>`).join("")}</div>
+      <div class="lghd"><span class="label light">Les cartes</span>${lead && !c.auto ? `<button class="link" data-a="lgAuto">Recommandé</button>` : ""}</div>
+      <div class="lgroles">${row("loup")}<div class="lgrole ${vill > 0 ? "" : "off"}">${roleIc("villageois")}<b>Villageois</b><i class="n">${Math.max(0, vill)}</i></div>${LG_SPECIALS.map(row).join("")}</div>
+      ${lgMidOn(c) ? `<span class="label light">Au milieu, face cachée</span>
+        <div class="lgmid">${c.mid.map((r, i) => `<span class="lgmc">${roleIc(r)}${roleNm(r)}${lead ? `<button class="x" data-a="lgMidDel" data-v="${i}" aria-label="Retirer">×</button>` : ""}</span>`).join("")}</div>
+        ${lead && c.mid.length < 3 ? `<div class="lgmidadd">${midAdd.map(r => `<button class="ghost small" data-a="lgMidAdd" data-v="${r}">+ ${roleNm(r)}</button>`).join("")}</div>` : ""}` : ""}
+      ${full ? `<span class="label light">Débat</span>
+        <div class="seg">${[[120, "2 min"], [180, "3 min"], [300, "5 min"], [0, "Libre"]].map(([v, l]) => `<button data-a="lgDebate" data-v="${v}" class="${c.debate === v ? "on" : ""}" ${lead ? "" : "disabled"}>${l}</button>`).join("")}</div>
+        <div class="lgsw">${[["mayor", "Maire"], ["music", "Musique"]].map(([k, l]) => `<button class="mrow" data-a="lgToggle" data-v="${k}" role="switch" aria-checked="${!!c[k]}" ${lead ? "" : "disabled"}><span><b>${l}</b></span><span class="sw ${c[k] ? "on" : ""}"></span></button>`).join("")}</div>` : ""}
+    </div>
+    ${lead ? `<button class="btn" data-a="start" ${err ? "disabled" : ""}>${err || "Lancer la partie"}</button><button class="ghost small" data-a="addBot">Ajouter un robot</button>`
+      : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
+    ${footer()}`;
+  },
+  draw(){
+    const g = LG(), st = g && g.st;
+    if (!st) return `${lgHead()}${wait("Préparation")}`;
+    if (!g.roles[me.id]) return `${lgHead()}<div class="qcenter">${lgIc("moon", "big")}${wait("Tu entres à la prochaine partie")}</div>${footer()}`;
+    const fn = lgStep[st.t];
+    return fn ? fn(g, st) : `${lgHead()}${wait("…")}`;
+  }
+};
+const night = html => `<div class="lgnight">${html}</div>`;
+const myTurn = st => st.actors.includes(me.id) && lgAlive(me.id);
+const lgStep = {
+  deal(g){
+    return `${lgHead()}<div class="lgcenter">${flipCard(g.roles[me.id])}</div>
+      ${lgVillage()}
+      ${isLeader() ? `<button class="btn" data-a="lgEnd">Terminer</button>` : ""}${footer()}`;
+  },
+  carte(g, st){
+    const done = !!lgMine(st.k);
+    return `${lgHead()}<div class="lgcenter">${flipCard(g.roles[me.id])}</div>
+      ${done ? wait("Les autres regardent leur carte") : `<button class="btn" data-a="lgOk">C'est noté</button>`}
+      ${lgWait(st.actors, st.k)}${footer()}`;
+  },
+  nuit(){ return `${lgHead()}${night(lgSleep())}`; },
+  voleur(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    if (lgMine(st.k)) return `${lgHead()}${night(`${roleCard(g.roles[me.id] === "voleur" && lgMine(st.k).v === "steal" ? g.mid[st.pick] : g.roles[me.id], "small")}${lgSleep("Rendors-toi")}`)}`;
+    if (lgUi.thief === "steal") return `${lgHead()}${night(`<h2 class="lgh">Ta nouvelle carte</h2>${roleCard(g.mid[st.pick], "pop")}<button class="btn" data-a="lgThief" data-v="steal">Compris</button>`)}`;
+    return `${lgHead()}${night(`<h2 class="lgh">Le voleur</h2><div class="lgmid big">${g.mid.map(() => `<span class="lgback">${lgIc("moon")}</span>`).join("")}</div>
+      <button class="btn" data-a="lgThiefDraw">Voler une carte au hasard</button><button class="ghost" data-a="lgThief" data-v="keep">Garder la mienne</button>`)}`;
+  },
+  cupidon(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    if (lgMine(st.k)) return `${lgHead()}${night(lgSleep("Rendors-toi"))}`;
+    return `${lgHead()}${night(`<h2 class="lgh">Choisis deux amoureux</h2>${lgVillage({ pick: id => lgAlive(id) })}<button class="btn" data-a="lgCupid" ${lgUi.sel.length === 2 ? "" : "disabled"}>Les lier</button>`)}`;
+  },
+  amoureux(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    const o = g.lovers.find(x => x !== me.id);
+    return `${lgHead()}${night(`<h2 class="lgh">Ton amour</h2><div class="qcenter">${lgIc("heart", "big love")}${av(o, "xl")}<div class="big-name">${esc(nameOf(o))}</div></div>
+      ${lgMine(st.k) ? lgSleep("Rendors-toi") : `<button class="btn" data-a="lgOk">Compris</button>`}`)}`;
+  },
+  voyante(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    const m = lgMine(st.k);
+    if (m) return `${lgHead()}${night(m.v !== "x" ? `<div class="qcenter">${av(m.v, "lg")}<div class="big-name">${esc(nameOf(m.v))}</div></div>${roleCard(g.roles[m.v], "pop")}${lgSleep("Rendors-toi")}` : lgSleep("Rendors-toi"))}`;
+    return `${lgHead()}${night(`<h2 class="lgh">Quelle carte veux-tu voir ?</h2>${lgVillage({ pick: id => lgAlive(id) && id !== me.id })}<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 ? "" : "disabled"}>Voir sa carte</button>`)}`;
+  },
+  salvateur(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    if (lgMine(st.k)) return `${lgHead()}${night(lgSleep("Rendors-toi"))}`;
+    return `${lgHead()}${night(`<h2 class="lgh">Qui protèges-tu ?</h2>${lgVillage({ pick: id => lgAlive(id) && id !== st.not, dim: id => id === st.not })}<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 ? "" : "disabled"}>Protéger</button>`)}`;
+  },
+  loups(g, st){
+    const acts = lgActsFor(st.k);
+    if (lgAlive(me.id) && g.roles[me.id] === "petitefille"){
+      const t = tally(g, st.k, st.actors).top[0];
+      return `${lgHead()}${night(`<h2 class="lgh">Tu espionnes les loups</h2><div class="lgspy">${t ? `<span class="lgblur" style="--c:${avColor(t)}">${esc(initial(nameOf(t)))}</span><p>Ils visent quelqu'un…</p>` : `<span class="lgblur">?</span><p>Ils hésitent…</p>`}</div>`)}`;
+    }
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    const marks = id => { const w = acts.filter(a => a.v === id).map(a => a.player); return w.length ? `<span class="lgvotes">${w.map(x => av(x, "xs")).join("")}</span>` : ""; };
+    const mine = lgMine(st.k);
+    return `${lgHead()}${night(`<h2 class="lgh">Choisissez votre victime</h2>
+      ${lgVillage({ pick: id => lgAlive(id) && g.roles[id] !== "loup", dim: id => g.roles[id] === "loup", marks, sub: id => g.roles[id] === "loup" ? `<span class="rl">Loup</span>` : "" })}
+      <button class="btn" data-a="lgWolf" ${lgUi.sel.length === 1 && (!mine || mine.v !== lgUi.sel[0]) ? "" : "disabled"}>${mine ? "Changer de victime" : "Dévorer"}</button>`)}`;
+  },
+  sorciere(g, st){
+    if (!myTurn(st)) return `${lgHead()}${night(lgSleep())}`;
+    if (lgMine(st.k)) return `${lgHead()}${night(lgSleep("Rendors-toi"))}`;
+    const v = st.victim, pot = st.pot;
+    if (lgUi.stage === "kill") return `${lgHead()}${night(`<h2 class="lgh">Qui empoisonnes-tu ?</h2>${lgVillage({ pick: id => lgAlive(id) && id !== me.id })}
+      <button class="btn" data-a="lgWitch" ${lgUi.sel.length === 1 ? "" : "disabled"}>Empoisonner</button><button class="ghost" data-a="lgWitchBack">Retour</button>`)}`;
+    return `${lgHead()}${night(`<h2 class="lgh">${v ? "Les loups ont attaqué" : "Personne n'a été attaqué"}</h2>
+      ${v ? `<div class="qcenter">${av(v, "xl")}<div class="big-name">${meName(v)}</div></div>` : ""}
+      ${v && pot.l ? `<button class="btn ${lgUi.witchSave ? "on" : ""}" data-a="lgWitchSave" aria-pressed="${!!lgUi.witchSave}">${lgUi.witchSave ? "Sauvé" : "Le sauver"}</button>` : ""}
+      ${pot.d ? `<button class="ghost" data-a="lgWitchKill">Empoisonner quelqu'un</button>` : ""}
+      <button class="${(v && pot.l) || pot.d ? "ghost" : "btn"}" data-a="lgWitch" data-v="none">${lgUi.witchSave ? "Valider" : "Ne rien faire"}</button>`)}`;
+  },
+  matin(g, st){
+    const ds = g.deaths.filter(d => st.dead.includes(d.id));
+    return `${lgHead()}<div class="lgdawn stack">${ds.length ? ds.map(deadCard).join("") : `<h2 class="lgh">Personne n'est mort</h2>`}</div>${lgVillage()}${lgBet()}${peekBtn()}${footer()}`;
+  },
+  morts(g, st){ return lgStep.matin(g, st); },
+  chasseur(g, st){
+    if (st.hunter === me.id) return `${lgHead()}<h2 class="lgh">Qui emportes-tu avec toi ?</h2>${lgVillage({ pick: id => lgAlive(id) })}<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 && !lgMine(st.k) ? "" : "disabled"}>Tirer</button>${footer()}`;
+    return `${lgHead()}<div class="qcenter">${av(st.hunter, "xl", "pulse")}<div class="big-name">${esc(nameOf(st.hunter))}</div>${wait("vise quelqu'un")}</div>${lgVillage()}${footer()}`;
+  },
+  successeur(g, st){
+    if (st.old === me.id) return `${lgHead()}<h2 class="lgh">Qui sera le nouveau maire ?</h2>${lgVillage({ pick: id => lgAlive(id) })}<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 && !lgMine(st.k) ? "" : "disabled"}>Passer l'écharpe</button>${footer()}`;
+    return `${lgHead()}<div class="qcenter">${av(st.old, "xl", "pulse")}<div class="big-name">${esc(nameOf(st.old))}</div>${wait("choisit son successeur")}</div>${lgVillage()}${footer()}`;
+  },
+  maire(g, st){
+    return `${lgHead()}<div class="qcenter">${crownIc.replace("lgcrown", "lgcrown big")}${av(st.mayor, "xl")}<div class="big-name">${meName(st.mayor)}</div><span class="rnd hotpill">Maire</span></div>${lgVillage()}${lgBet()}${peekBtn()}${footer()}`;
+  },
+  election(g, st){
+    const can = lgAlive(me.id), mine = lgMine(st.k);
+    return `${lgHead()}<h2 class="lgh">Élisez le maire</h2>${lgVillage({ pick: can && !mine ? (id => lgAlive(id)) : null })}
+      ${can ? (mine ? wait("A voté") : `<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 ? "" : "disabled"}>Voter</button>`) : ""}
+      ${lgWait(g.alive, st.k)}${lgBet()}${peekBtn()}${footer()}`;
+  },
+  debat(g, st){
+    return `${lgHead()}<div class="lgtimer">${st.dur ? `<b id="lgclock">${Math.floor(st.dur / 60)}:${String(st.dur % 60).padStart(2, "0")}</b>` : `<b>Débat</b>`}</div>
+      ${lgVillage()}
+      ${isLeader() ? `<button class="btn" data-a="lgGo">Passer au vote</button>` : ""}
+      ${lgBet()}${peekBtn()}${footer()}`;
+  },
+  vote(g, st){
+    const can = st.actors.includes(me.id), mine = lgMine(st.k);
+    return `${lgHead()}<h2 class="lgh">${can ? "Qui éliminer ?" : lgAlive(me.id) ? "Tu ne votes plus" : "Le village vote"}</h2>
+      ${lgVillage({ pick: can && !mine ? (id => lgAlive(id) && id !== me.id) : null })}
+      ${can ? (mine ? wait("A voté") : `<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 ? "" : "disabled"}>Voter</button>`) : ""}
+      ${lgWait(st.actors, st.k)}${lgBet()}${peekBtn()}${footer()}`;
+  },
+  egalite(g, st){
+    if (g.mayor === me.id) return `${lgHead()}<h2 class="lgh">Égalité : tranche</h2>${lgVillage({ pick: id => st.tie.includes(id), dim: id => !st.tie.includes(id) })}<button class="btn" data-a="lgPick" ${lgUi.sel.length === 1 && !lgMine(st.k) ? "" : "disabled"}>Éliminer</button>${footer()}`;
+    return `${lgHead()}<h2 class="lgh">Égalité</h2><div class="lgtie">${st.tie.map(id => `<span>${av(id, "lg")}<b>${esc(nameOf(id))}</b></span>`).join("")}</div>${wait(`${esc(nameOf(g.mayor))} tranche`)}${lgBet()}${footer()}`;
+  },
+  execution(g, st){
+    const counts = Object.entries(st.n || {}).sort((a, b) => b[1] - a[1]);
+    const ds = g.deaths.filter(d => st.dead.includes(d.id));
+    return `${lgHead()}${counts.length ? `<div class="lgcount">${counts.map(([id, c]) => `<span>${av(id, "sm")}<b>${c}</b></span>`).join("")}</div>` : ""}
+      <div class="lgdawn stack">${!st.target ? `<h2 class="lgh">Personne n'est éliminé</h2>` : st.saved ? `<div class="lgdead pop saved">${av(st.target)}<div><b>${esc(nameOf(st.target))}</b><small>Idiot du village · épargné</small></div>${roleIc("idiot")}</div>` : ds.map(deadCard).join("")}</div>
+      ${lgVillage()}${lgBet()}${peekBtn()}${footer()}`;
+  },
+  fin(g, st){
+    const ids = Object.keys(g.roles), score = id => g.ev.filter(e => e.p === id).reduce((t, e) => t + e.pts, 0);
+    const rank = ids.map(id => ({ id, s: score(id) })).sort((a, b) => b.s - a.s);
+    const title = st.win === "amoureux" ? "L'amour a gagné" : st.win === "loups" ? "Les loups ont gagné" : "Le village a gagné";
+    return `${lgHead()}<div class="wbanner">${title}</div>
+      <div class="lgrank">${rank.map((r, i) => { const open = lgUi.open === r.id, lines = g.ev.filter(e => e.p === r.id);
+        return `<div class="lgr ${open ? "open" : ""}"><div class="lgrl"><span class="pos">${i + 1}</span>${av(r.id, "sm")}<span class="nm">${meName(r.id)}<small>${roleNm(g.roles[r.id])}${g.start[r.id] !== g.roles[r.id] ? " (ex " + roleNm(g.start[r.id]) + ")" : ""}</small></span><b class="pts">${r.s}</b><button class="link" data-a="lgOpen" data-v="${r.id}">${open ? "Fermer" : "Détail"}</button></div>
+          ${open ? `<div class="lgdet">${lines.length ? lines.map(e => `<div><span>${e.w ? `<i>${esc(e.w)}</i> ` : ""}${esc(e.txt)}</span><b class="${e.pts < 0 ? "neg" : ""}">${e.pts > 0 ? "+" : ""}${e.pts}</b></div>`).join("") : `<div><span>Rien de spécial</span><b>0</b></div>`}</div>` : ""}</div>`; }).join("")}</div>
+      ${isLeader() ? `<button class="btn" data-a="restart" data-v="loup">Rejouer au Loup-garou</button>
+      <span class="label light" style="text-align:center">ou passer à</span>
+      <div class="nextgames">${GAMES.filter(x => x[0] !== "loup").map(x => `<button class="mg" data-a="restart" data-v="${x[0]}">${gameLogo(x[0])}</button>`).join("")}</div>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
+      <button class="ghost" data-a="leave">Quitter</button>`;
+  }
+};
+
+/* ---------- actions des joueurs ---------- */
+Object.assign(actions, {
+  async lgComp(v){ const [r, d] = String(v).split(":"), c = lgCfg(); c.comp = Object.assign({}, c.comp); c.comp[r] = Math.max(r === "loup" ? 1 : 0, Math.min(r === "loup" ? 6 : 1, (c.comp[r] || 0) + (+d))); c.auto = false; await lgSaveCfg(c); },
+  async lgAuto(){ const c = lgCfg(); c.auto = true; c.comp = null; await lgSaveCfg(c); },
+  async lgMode(v){ const c = lgCfg(); c.mode = v === "deal" ? "deal" : "full"; await lgSaveCfg(c); },
+  async lgDebate(v){ const c = lgCfg(); c.debate = +v; await lgSaveCfg(c); },
+  async lgToggle(k){ const c = lgCfg(); if (k === "mayor" || k === "music") c[k] = !c[k]; await lgSaveCfg(c); },
+  async lgMidAdd(r){ const c = lgCfg(); if (c.mid.length < 3 && LG_ROLES[r]) c.mid = c.mid.concat([r]); await lgSaveCfg(c); },
+  async lgMidDel(i){ const c = lgCfg(); c.mid = c.mid.filter((_, k) => k !== +i); await lgSaveCfg(c); },
+  lgVoice(){ const on = !lgVoiceOn(); store.set("lgv:" + code, on); lgUnlock(); lgAudio.k = null; if (on && LG() && LG().st) lgAudio.k = LG().st.k; render(); },
+  lgFlip(){ lgUi.flip = !lgUi.flip; buzz(12); render(); },
+  lgPeek(){ lgUi.peek = !lgUi.peek; render(); },
+  lgOpen(id){ lgUi.open = lgUi.open === id ? null : id; render(); },
+  lgSel(id){
+    const st = lgSt(), max = st && st.t === "cupidon" ? 2 : 1, i = lgUi.sel.indexOf(id);
+    if (i >= 0) lgUi.sel.splice(i, 1); else { lgUi.sel.push(id); if (lgUi.sel.length > max) lgUi.sel.shift(); }
+    buzz(10); render();
+  },
+  async lgOk(){ await lgAct(lgSt().k, "ok"); },
+  async lgPick(){ if (lgUi.sel.length !== 1) return; const v = lgUi.sel[0]; lgUi.sel = []; await lgAct(lgSt().k, v); },
+  async lgWolf(){ if (lgUi.sel.length !== 1) return; await lgAct(lgSt().k, lgUi.sel[0]); },
+  async lgCupid(){ if (lgUi.sel.length !== 2) return; const v = lgUi.sel.join(","); lgUi.sel = []; await lgAct(lgSt().k, v); },
+  lgThiefDraw(){ lgUi.thief = "steal"; buzz(20); render(); },
+  async lgThief(v){ await lgAct(lgSt().k, v === "steal" ? "steal" : "keep"); },
+  lgWitchSave(){ lgUi.witchSave = !lgUi.witchSave; render(); },
+  lgWitchKill(){ lgUi.stage = "kill"; lgUi.sel = []; render(); },
+  lgWitchBack(){ lgUi.stage = null; lgUi.sel = []; render(); },
+  async lgWitch(v){ const o = { s: lgUi.witchSave ? 1 : 0, k: v === "none" ? null : lgUi.sel[0] || null }; lgUi.sel = []; await lgAct(lgSt().k, JSON.stringify(o)); },
+  async lgBet(){ if (lgUi.sel.length !== 1) return; const v = lgUi.sel[0]; lgUi.sel = []; await lgAct("bet:" + LG().deaths.length, v); },
+  async lgGo(){ await lgAct(lgSt().k, "go"); },
+  async lgEnd(){ if (isLeader()) await rpc("restart_room", { p_code: code, p_game: "loup" }); }
+});
+async function lgLaunch(){
+  const c = lgCfg(); if (lgCfgError(c)) return;
+  const g = lgStart(), nr = room.round + 1;
+  lgUi.flip = false; lgUi.peek = false; lgUi.open = null; lgResetUi();
+  local(() => { Object.assign(room, { phase: "draw", round: nr, lg: g }); });
+  busy = true;
+  await sb.from("rooms").update({ phase: "draw", round: nr, start_round: nr, started_at: new Date().toISOString(), judge: null, card: null, lg: g, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
+  busy = false; scheduleRefresh();
+}
+let lgLastK = null;
+function lgOnState(){ const st = lgSt(), k = st && st.k; if (k !== lgLastK){ const first = lgLastK === null; lgLastK = k; lgResetUi(); if (st && st.t === "carte") lgUi.flip = false; if (!first && st && room.phase === "draw" && (st.actors || []).includes(me.id) && st.t !== "carte" && st.t !== "vote" && st.t !== "election") buzz([80, 60, 80]); } }
 
 /* ---------- démarrage ---------- */
 (async function boot(){

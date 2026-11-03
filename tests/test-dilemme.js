@@ -39,7 +39,7 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
 
   console.log("Accueil et salle d'attente");
   await A.goto(BASE);
-  check(await A.locator(".gamecard").count() === 4, "quatre jeux sur l'écran d'accueil");
+  check(await A.locator(".gamecard").count() === 5, "cinq jeux sur l'écran d'accueil");
   await A.click("[data-a=instClose]").catch(() => {});
   await A.screenshot({ path: S + "/dilemme-home.png", fullPage: true });
   await A.click("[data-a=pickGame][data-v=dilemme]"); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");
@@ -138,7 +138,7 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
 
   console.log("Changer de jeu depuis la fin");
   await admin(`db.rooms[0].phase = "end"; db.players.forEach(p => p.score = 2)`);
-  check(await until(A, () => A.locator(".mg").count().then(n => n === 3), "trois autres jeux"), "les trois autres jeux sont proposés");
+  check(await until(A, () => A.locator(".mg").count().then(n => n === 4), "quatre autres jeux"), "les quatre autres jeux sont proposés");
   await A.screenshot({ path: S + "/dilemme-fin.png", fullPage: true });
   await A.click(".mg[data-v=aveux]");
   check(await until(A, async () => { const r = await room(); return r.phase === "lobby" && r.game === "aveux"; }, "aveux"), "passer aux Aveux depuis le Dilemme");

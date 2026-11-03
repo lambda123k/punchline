@@ -1,31 +1,34 @@
 // Faux backend Supabase pour tester Punchline en local (reproduit les fonctions SQL)
 const http = require("http"), fs = require("fs"), path = require("path"), crypto = require("crypto");
 const ROOT = process.argv[2], PORT = +process.argv[3] || 8787;
-const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [], rankings: [], aveux_bets: [] };
+const db = { rooms: [], players: [], answers: [], votes: [], card_ratings: [], reactions: [], rankings: [], aveux_bets: [], lg_actions: [] };
 const secret = {}; // nombre de oui par manche, jamais lisible depuis l'appli (comme aveux_secret)
 let version = 0, broadcasts = [];
 const now = () => new Date().toISOString();
 const isBot = id => String(id).startsWith("b07b07b0-");
 const present = p => isBot(p.id) || Date.now() - Date.parse(p.last_seen) < 45000;
-const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"], aveux_bets: ["room", "round", "player"] };
+const keys = { rooms: ["code"], players: ["id"], answers: ["id"], votes: ["id"], card_ratings: ["card", "player"], reactions: ["id"], rankings: ["id"], aveux_bets: ["room", "round", "player"], lg_actions: ["room", "k", "player"] };
 const defaults = {
-  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], yes: null, aused: [], custom: [], cused: [], created_at: now(), updated_at: now() }),
+  rooms: () => ({ phase: "lobby", round: 0, judge: null, card: null, used: [], target: 5, mode: "mix", winner: null, fav: null, start_round: 1, started_at: null, writing_at: null, timer: 0, deadline: null, revealed: 0, game: "punchline", options: null, guess: null, qused: [], wrong: [], yes: null, aused: [], custom: [], cused: [], lg: null, created_at: now(), updated_at: now() }),
   players: () => ({ photo: null, ghost: false, score: 0, seat: 0, joined_at: now(), last_seen: now() }),
   answers: () => ({ id: crypto.randomUUID(), created_at: now(), won: false, fav: false, judge: null, secs: null, late: false }),
   reactions: () => ({ id: crypto.randomUUID(), created_at: now() }),
   votes: () => ({ id: crypto.randomUUID(), created_at: now() }),
   card_ratings: () => ({ updated_at: now() }),
   rankings: () => ({ id: crypto.randomUUID(), created_at: now() }),
-  aveux_bets: () => ({ created_at: now(), said: null })
+  aveux_bets: () => ({ created_at: now(), said: null }),
+  lg_actions: () => ({ at: now() })
 };
 function hook(oldR, r){
   if (r.phase === "writing" && (oldR.phase !== "writing" || r.card !== oldR.card)){ r.deadline = r.timer > 0 ? new Date(Date.now() + r.timer * 1000).toISOString() : null; r.writing_at = now(); }
   else if (r.phase !== "writing") r.deadline = null;
   if (r.phase === "judging" && oldR.phase !== "judging") r.revealed = 0;
+  if (r.phase === "lobby" && oldR.phase !== "lobby"){ if (r.lg) r.lg = { cfg: r.lg.cfg }; db.lg_actions.filter(a => a.room === r.code).forEach(a => { a.v = null; }); }
   if (r.phase === "lobby" && oldR.phase !== "lobby") db.aveux_bets.filter(b => b.room === r.code).forEach(b => { b.said = null; });
 }
 function match(row, filters){
-  return filters.every(([op, col, val]) => op === "eq" ? String(row[col]) === String(val) : op === "in" ? val.map(String).includes(String(row[col])) : true);
+  const get = (row, col) => { if (!col.includes("->>")) return row[col]; const [a, b] = col.split("->>"); const o = row[a]; return o == null || o[b] == null ? null : o[b]; };
+  return filters.every(([op, col, val]) => op === "eq" ? String(get(row, col)) === String(val) : op === "in" ? val.map(String).includes(String(row[col])) : true);
 }
 function view(table){
   if (table !== "card_scores") return db[table];
@@ -148,7 +151,7 @@ const rpc = {
   restart_room({ p_code, p_game }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux","dilemme"].includes(p_game)) r.game = p_game; hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux","dilemme","loup"].includes(p_game)) r.game = p_game; hook(old, r);
     return null;
   }
 };

@@ -890,7 +890,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 38;
+const APP_VERSION = 39;
 const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
 const GAME_CARDS = [
@@ -2446,7 +2446,8 @@ const lgViews = {
     <div class="lgset stack">
       <div class="seg">${[["full", "Partie complète"], ["deal", "Distribuer les cartes"]].map(([v, l]) => `<button data-a="lgMode" data-v="${v}" class="${c.mode === v ? "on" : ""}" ${lead ? "" : "disabled"}>${l}</button>`).join("")}</div>
       <div class="lghd"><span class="label light">Les cartes</span>${lead && !c.auto ? `<button class="link" data-a="lgAuto">Recommandé</button>` : ""}</div>
-      <div class="lgroles">${row("loup")}<div class="lgrole ${vill > 0 ? "" : "off"}">${roleIc("villageois")}<b>Villageois</b><i class="n">${Math.max(0, vill)}</i></div>${LG_SPECIALS.map(row).join("")}</div>
+      <div class="lgwolf">${roleIc("loup")}<b>Loups-garous</b>${lead ? `<div class="cnt"><button data-a="lgComp" data-v="loup:-1" aria-label="Un loup de moins">−</button><i>${c.comp.loup}</i><button data-a="lgComp" data-v="loup:1" aria-label="Un loup de plus">+</button></div>` : `<i class="n">${c.comp.loup}</i>`}</div>
+      <div class="lgrc">${LG_SPECIALS.map(r => `<button class="rc ${c.comp[r] ? "on" : ""}" data-a="lgRole" data-v="${r}" aria-pressed="${!!c.comp[r]}" ${lead ? "" : "disabled"}>${roleIc(r)}<span>${roleNm(r === "idiot" ? "idiot" : r).replace(" du village", "")}</span></button>`).join("")}<div class="rc vil">${roleIc("villageois")}<span>Villageois</span><small>× ${Math.max(0, vill)}</small></div></div>
       ${lgMidOn(c) ? `<span class="label light">Au milieu, face cachée</span>
         <div class="lgmid">${c.mid.map((r, i) => `<span class="lgmc">${roleIc(r)}${roleNm(r)}${lead ? `<button class="x" data-a="lgMidDel" data-v="${i}" aria-label="Retirer">×</button>` : ""}</span>`).join("")}</div>
         ${lead && c.mid.length < 3 ? `<div class="lgmidadd">${midAdd.map(r => `<button class="ghost small" data-a="lgMidAdd" data-v="${r}">+ ${roleNm(r)}</button>`).join("")}</div>` : ""}` : ""}
@@ -2611,6 +2612,7 @@ const lgStep = {
 
 /* ---------- actions des joueurs ---------- */
 Object.assign(actions, {
+  async lgRole(r){ if (!LG_SPECIALS.includes(r)) return; const c = lgCfg(); c.comp = Object.assign({}, c.comp); c.comp[r] = c.comp[r] ? 0 : 1; c.auto = false; buzz(12); await lgSaveCfg(c); },
   async lgComp(v){ const [r, d] = String(v).split(":"), c = lgCfg(); c.comp = Object.assign({}, c.comp); c.comp[r] = Math.max(r === "loup" ? 1 : 0, Math.min(r === "loup" ? 6 : 1, (c.comp[r] || 0) + (+d))); c.auto = false; await lgSaveCfg(c); },
   async lgAuto(){ const c = lgCfg(); c.auto = true; c.comp = null; await lgSaveCfg(c); },
   async lgMode(v){ const c = lgCfg(); c.mode = v === "deal" ? "deal" : "full"; await lgSaveCfg(c); },

@@ -70,12 +70,12 @@ async function autoplay(p){
   check(await hasText(A, "Encore 1 joueur"), "il faut 4 joueurs");
   for (let i = 0; i < 3; i++){ await A.click("[data-a=addBot]"); await sleep(300); }
   await until(A, async () => (await A.locator(".crowd .cp:not(.empty)").count()) === 6, "6 joueurs");
-  check(await until(A, async () => (await A.locator(".lgrole").first().innerText()).includes("2"), "2 loups"), "composition recommandée : 2 loups pour 6");
-  await A.click("[data-a=lgComp][data-v='cupidon:1']");
+  check(await until(A, async () => (await A.locator(".lgwolf").innerText()).includes("2"), "2 loups"), "composition recommandée : 2 loups pour 6");
+  await A.click("[data-a=lgRole][data-v=cupidon]");
   await until(A, async () => !(await txt(A)).includes("Lancer") || true, "");
-  await A.click("[data-a=lgComp][data-v='voleur:1']");
+  await A.click("[data-a=lgRole][data-v=voleur]");
   check(await hasText(A, "Trop de rôles"), "trop de rôles : bouton bloqué");
-  await A.click("[data-a=lgComp][data-v='chasseur:-1']");
+  await A.click("[data-a=lgRole][data-v=chasseur]");
   check(await hasText(A, "Au milieu"), "le voleur fait apparaître les cartes du milieu");
   await A.click("[data-a=lgMidAdd][data-v=petitefille]");
   await until(A, async () => (await A.locator(".lgmc").count()) === 3, "3 cartes au milieu");

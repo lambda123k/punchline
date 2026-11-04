@@ -39,7 +39,7 @@ async function slide(p, v){ await p.locator("#dslide").evaluate((el, v) => { el.
 
   console.log("Accueil et salle d'attente");
   await A.goto(BASE);
-  check(await A.locator(".gamecard").count() === 5, "cinq jeux sur l'écran d'accueil");
+  check(await A.locator(".gamecard").count() === 6, "six jeux sur l'écran d'accueil");
   await A.click("[data-a=instClose]").catch(() => {});
   await A.screenshot({ path: S + "/dilemme-home.png", fullPage: true });
   await A.click("[data-a=pickGame][data-v=dilemme]"); await A.fill("#name", "Naim"); await A.click("text=Créer une partie"); await A.click("text=Créer la partie");

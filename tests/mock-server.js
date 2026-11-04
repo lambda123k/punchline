@@ -151,7 +151,7 @@ const rpc = {
   restart_room({ p_code, p_game }){
     db.players.filter(p => p.room === p_code).forEach(p => { p.score = 0; p.ghost = false; });
     const r = db.rooms.find(x => x.code === p_code); const old = { ...r };
-    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux","dilemme","loup"].includes(p_game)) r.game = p_game; hook(old, r);
+    Object.assign(r, { phase: "lobby", judge: null, card: null, winner: null, fav: null, used: [], options: null, guess: null, wrong: [], yes: null, aused: [], custom: [], cused: [], updated_at: now() }); if (["punchline","qui","aveux","dilemme","loup","bomb"].includes(p_game)) r.game = p_game; hook(old, r);
     return null;
   }
 };

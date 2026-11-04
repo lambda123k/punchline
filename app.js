@@ -185,7 +185,7 @@ function fxOnScreen(){
   if (!room || (ui.tv && !ui.tvReady)){ fxPrev = null; return; }
   const prev = fxPrev; fxPrev = { phase: room.phase, round: room.round, code };
   if (!prev || prev.code !== code) return;
-  if (room.phase === "draw" && prev.round !== room.round && !isLoup()) roundBanner(room.round);
+  if (room.phase === "draw" && prev.round !== room.round && !isLoup() && !isBomb()) roundBanner(room.round);
   if (room.phase === "result" && prev.phase !== "result"){
     countdown(() => {
       if (isAveux()) return;   // les Aveux et le Dilemme enchaînent avec leur compteur (aveuxCount)
@@ -215,7 +215,7 @@ async function refresh(){
     pl && (!room || ["result", "end"].includes(room.phase)) ? sb.from("reactions").select("round,answer,player").eq("room", c) : none,
     !g || g === "qui" ? sb.from("rankings").select("*").eq("room", c) : none,
     !g || g === "aveux" || g === "dilemme" ? sb.from("aveux_bets").select("*").eq("room", c) : none,
-    !g || g === "loup" ? sb.from("lg_actions").select("k,player,v").eq("room", c) : none
+    !g || g === "loup" || g === "bomb" ? sb.from("lg_actions").select("k,player,v").eq("room", c) : none
   ]);
   if (c !== code) return;
   if (!r.error && r.data && g && r.data.game !== g){ room = r.data; return refresh(); } // jeu changé : on recharge tout
@@ -230,6 +230,7 @@ async function refresh(){
   }
   if (prev) soundsFor(prev, room);
   if (isLoup()) lgOnState();
+  if (isBomb()) tbOnState();
   if (room.phase === "end" && (!prev || prev.phase !== "end" || !gameRatings.loaded)) loadGameRatings();
   render();
   autoActions();
@@ -295,7 +296,7 @@ const pickOne = arr => arr[Math.floor(Math.random() * arr.length)];
 
 function botActions(){
   // Seul le premier vrai joueur présent (l'hôte) fait jouer les robots
-  if (!isLeader() || !players.some(p => isBot(p.id)) || isLoup()) return;
+  if (!isLeader() || !players.some(p => isBot(p.id)) || isLoup() || isBomb()) return;
   const r = room.round, c = code;
   const still = () => room && code === c && room.round === r;
   if (isAveux()){
@@ -383,6 +384,7 @@ async function autoActions(){
   if (!room || busy || ui.tv) return;
   botActions();
   if (isLoup()) lgEngine();
+  if (isBomb()) { tbEngine(); return; }
   const r = room.round;
   // Le juge révèle dès que tous les joueurs présents ont écrit (l'hôte le fait si le juge est un robot)
   if (room.phase === "writing" && !isAveux() && (isJudge() || (isBot(room.judge) && isLeader()))){
@@ -777,6 +779,7 @@ const actions = {
   async kick(id){ await sb.from("players").delete().eq("id", id).eq("room", code); scheduleRefresh(); },
   async start(){
     if (isLoup()) return lgLaunch();
+    if (isBomb()) return tbLaunch();
     const pool = players.filter(present);
     if (pool.length < MIN_PLAYERS) return;
     const j = pickOne(pool).id, nr = room.round + 1;
@@ -890,15 +893,16 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 41;
-const gameLogo = g => g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
-const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup"];
+const APP_VERSION = 42;
+const gameLogo = g => g === "bomb" ? `<div class="logo tbf">Time <span>Bomb</span></div>` : g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
+const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup", "bomb"];
 const GAME_CARDS = [
   ["punchline", ["Une carte à trous", "Chacun écrit sa chute", "Le juge choisit la meilleure"]],
   ["qui", ["Une question secrète", "Tout le monde est classé", "Le devineur retrouve la question"]],
   ["aveux", ["Une affirmation", "Chacun avoue en secret", "Pariez sur le nombre de oui"]],
   ["dilemme", ["Rouge ou bleu", "Chacun choisit en secret", "Devine le % du groupe"]],
-  ["loup", ["Un conteur, la nuit, les yeux fermés", "Chacun joue sur son téléphone", "Le village vote, les loups mentent"]]
+  ["loup", ["Un conteur, la nuit, les yeux fermés", "Chacun joue sur son téléphone", "Le village vote, les loups mentent"]],
+  ["bomb", ["Sherlock contre Moriarty", "Chacun cache ses câbles", "Coupe le bon, pas la bombe"]]
 ];
 const errBox = () => ui.err ? `<div class="err" role="alert">${esc(ui.err)}</div>` : "";
 const wait = txt => `<div class="wait"><span>${txt}</span><span class="dots" aria-hidden="true"><span></span><span></span><span></span></span></div>`;
@@ -946,7 +950,7 @@ function footer(){
   if (ui.confirmLeave){
     return `<div class="foot"><div class="row" style="width:100%"><button class="ghost small" data-a="cancelLeave">Rester</button><button class="btn small" data-a="leave">Quitter la partie</button></div></div>`;
   }
-  const skip = isLeader() && !isLoup() && ["draw","writing","judging"].includes(room.phase) ? `<button class="link" data-a="skip">Passer la manche</button>` : "";
+  const skip = isLeader() && !isLoup() && !isBomb() && ["draw","writing","judging"].includes(room.phase) ? `<button class="link" data-a="skip">Passer la manche</button>` : "";
   return `<div class="foot">${skip}<button class="link" data-a="askLeave">Quitter la partie</button></div>`;
 }
 
@@ -1100,7 +1104,7 @@ const views = {
     ${ui.creating ? `
     <div class="card stack pop">
       <h2>Nouvelle partie</h2>
-      ${ui.game === "loup" ? "" : `${vibeCards(ui.mode, true)}
+      ${ui.game === "loup" || ui.game === "bomb" ? "" : `${vibeCards(ui.mode, true)}
       <span class="label">Points pour gagner</span>
       <div class="seg">${[3,5,7,10].map(n => `<button data-a="target" data-v="${n}" class="${ui.target === n ? "on" : ""}">${n}</button>`).join("")}</div>
       <span class="label">Temps pour répondre</span>
@@ -1120,6 +1124,7 @@ const views = {
       <section><h3>Les Aveux</h3><p>Une affirmation s'affiche, par exemple « J'ai déjà couché le premier soir ». Chacun répond oui ou non en secret, puis parie sur le nombre de oui dans le groupe. Personne ne sait qui a dit oui : on ne voit que le total. Pari exact : 2 points. À 1 près : 1 point.</p></section>
       <section><h3>Le Dilemme</h3><p>Un dilemme s'affiche : rouge ou bleu. Chacun choisit son côté en secret, puis devine au curseur quel pourcentage du groupe a pris bleu. Le plus proche du vrai pourcentage gagne 1 point (tous les ex aequo aussi), 2 points s'il tombe pile. À chaque manche, un joueur est dans le viseur : les autres devinent aussi s'il a pris rouge ou bleu, 1 point si c'est juste. À la fin, on voit qui a pris quoi, et celui qui est seul dans son camp doit se défendre.</p></section>
       <section><h3>Loup-garou</h3><p>L'hôte choisit les cartes (une composition est proposée selon le nombre de joueurs). Chacun découvre sa carte sur son téléphone. La nuit, tout le monde ferme les yeux : le conteur appelle chaque rôle, qui ouvre les yeux et agit sur son téléphone. Le matin, on découvre les morts et leur carte. Après la première nuit, le village élit un maire, qui tranche en cas d'égalité. Puis débat, et chacun vote sur son téléphone. Les morts ne parlent plus, mais parient sur le prochain mort. À la fin, chacun a un score selon ses coups : touche Détail pour les voir. Le son du conteur part du téléphone du créateur, chacun peut l'activer avec le haut-parleur. « Distribuer les cartes » donne juste un rôle à chacun, sans conteur.</p></section>
+      <section><h3>Time Bomb</h3><p>De 4 à 8 joueurs. Chacun reçoit en secret un rôle : Sherlock ou Moriarty (même les Moriarty ne se connaissent pas). Chacun reçoit aussi des câbles : neutres, de désamorçage (autant que de joueurs) et une seule bombe. On regarde les siens, puis on annonce combien on a de désamorçages et si on a la bombe, en disant la vérité ou pas. Celui qui a la pince coupe un câble chez un autre joueur, puis la pince passe au joueur coupé. Après autant de coupes que de joueurs, on redistribue les câbles restants, un de moins chacun. Sherlock gagne s'il trouve tous les désamorçages, Moriarty gagne si la bombe est coupée ou si les 4 manches passent.</p></section>
       <section><h3>Grand écran</h3><p>Sur une télé ou un ordi, ouvre ${esc(shortUrl())}, puis Paramètres, Afficher sur un grand écran, et tape le code. L'écran montre le jeu à tout le monde mais ne joue pas.</p></section>
     </div>
     <button class="ghost" data-a="home">Retour</button>`;
@@ -1154,6 +1159,7 @@ const views = {
 
   lobby(){
     if (isLoup()) return lgViews.lobby();
+    if (isBomb()) return tbViews.lobby();
     const n = players.length, missing = Math.max(0, MIN_PLAYERS - players.filter(present).length);
     const lead = isLeader();
     return `${head()}
@@ -1310,7 +1316,7 @@ const views = {
 };
 
 /* ---------- « Qui de nous » ---------- */
-const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"], ["dilemme", "Le Dilemme"], ["loup", "Loup-garou"]];
+const GAMES = [["punchline", "Punchline"], ["qui", "Le Verdict"], ["aveux", "Les Aveux"], ["dilemme", "Le Dilemme"], ["loup", "Loup-garou"], ["bomb", "Time Bomb"]];
 const GAME_RULE = {
   punchline: "Une carte à trous, chacun écrit sa réponse, le juge choisit la meilleure.",
   qui: "Une question secrète, tout le monde est classé, le devineur retrouve la question : 3, 2 ou 1 point selon l'essai. +1 pour ceux qui pensent comme le groupe."
@@ -1355,7 +1361,7 @@ const customBlock = () => `<div class="stack custom">
 const vibeCards = (cur, can) => `<div class="vibe" role="group" aria-label="Ambiance">
   <button class="vb s ${cur === "soft" ? "on" : "off"}" data-a="vibe" data-v="soft" aria-pressed="${cur === "soft"}" ${can ? "" : "disabled"}><b>Soft</b><small>Avec la famille</small></button>
   <button class="vb t ${cur !== "soft" ? "on" : "off"}" data-a="vibe" data-v="mix" aria-pressed="${cur !== "soft"}" ${can ? "" : "disabled"}><b>Trash</b><small>Entre potes</small></button></div>`;
-const gameTo = g => g === "loup" ? "au Loup-garou" : g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : g === "dilemme" ? "au Dilemme" : "à Punchline";
+const gameTo = g => g === "bomb" ? "à Time Bomb" : g === "loup" ? "au Loup-garou" : g === "qui" ? "au Verdict" : g === "aveux" ? "aux Aveux" : g === "dilemme" ? "au Dilemme" : "à Punchline";
 const gameLabel = () => (GAMES.find(g => g[0] === (room && room.game)) || GAMES[0])[1];
 const short = n => { n = String(n || ""); return n.length > 9 ? n.slice(0, 8) + "." : n; };
 // Pastille de couleur + initiale par joueur (couleur fixe selon l'ordre d'arrivée)
@@ -1835,19 +1841,22 @@ function morph(a, b){
 }
 function screenKey(){
   if (!room) return ["home", ui.page, ui.game, !!ui.menu, !!ui.tvAsk, !!ui.creating].join("|");
-  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round, lateMe(), isLoup() && lgSt() ? lgSt().k : ""].join("|");
+  return [ui.tv ? "tv" + ui.tvReady : "ph", room.game, room.phase, room.round, lateMe(), isLoup() && lgSt() ? lgSt().k : "", isBomb() ? tbKey() : ""].join("|");
 }
 function render(){
   document.body.classList.toggle("tv", !!(ui.tv && room));
   let html;
   const lgOn = isLoup() || (!room && ui.game === "loup" && ui.page === "home");
   document.body.classList.toggle("loup", lgOn);
+  document.body.classList.toggle("bomb", isBomb() || (!room && ui.game === "bomb" && ui.page === "home"));
   const lgs = isLoup() && room.phase === "draw" && lgSt();
   document.body.classList.toggle("lgdark", !!lgs && ["nuit", "voleur", "cupidon", "amoureux", "voyante", "salvateur", "loups", "sorciere"].includes(lgs.t));
-  if (ui.tv && room && isLoup()) html = `${tvHead()}<div class="tvlobby"><div class="lgtvmsg">Le Loup-garou se joue sans grand écran : chacun garde son téléphone en main.</div></div>`;
+  if (ui.tv && room && isBomb()) html = `${tvHead()}<div class="tvlobby"><div class="lgtvmsg">Time Bomb se joue sans grand écran : chacun garde ses câbles sur son téléphone.</div></div>`;
+  else if (ui.tv && room && isLoup()) html = `${tvHead()}<div class="tvlobby"><div class="lgtvmsg">Le Loup-garou se joue sans grand écran : chacun garde son téléphone en main.</div></div>`;
   else if (ui.tv && room) html = !ui.tvReady ? tvViews.start() : ((isDil() && dilTv[room.phase]) || (isAveux() && aveuxTv[room.phase]) || (isQui() && quiTv[room.phase]) || tvViews[room.phase] || tvViews.lobby)();
   else if (lateMe()) html = views.late();
   else if (isLoup() && room.phase === "draw") html = lgViews.draw();
+  else if (isBomb() && room.phase === "draw") html = tbViews.draw();
   else { const v = !room ? "home" : room.phase; html = ((isDil() && dilViews[v]) || (isAveux() && aveuxViews[v]) || (isQui() && quiViews[v]) || views[v] || views.home)(); }
   if (!room && !ui.tv && ui.page === "home") html += installBar();
   if (html === lastHtml) return;
@@ -2676,6 +2685,321 @@ async function lgLaunch(){
 }
 let lgLastK = null;
 function lgOnState(){ const st = lgSt(), k = st && st.k; if (k !== lgLastK){ const first = lgLastK === null; lgLastK = k; lgResetUi(); if (st && st.t === "carte") lgUi.flip = false; if (!first && st && room.phase === "draw" && (st.actors || []).includes(me.id) && !st.hold && !["carte", "vote", "election", "debat"].includes(st.t)) buzz([80, 60, 80]); } }
+
+/* ---------- Time Bomb (code interne « bomb », 04/11/2026) ----------
+   Fidèle au jeu d'origine : Sherlock (désamorcer) contre Moriarty (faire sauter). Rôles secrets, même entre Moriarty.
+   5 câbles par joueur à la 1re manche (n désamorçages, 1 bombe, le reste neutre), puis 4, 3, 2 : 4 manches,
+   n coupes par manche. Celui qui a la pince coupe un câble chez un autre, la pince passe au joueur coupé.
+   Tout l'état est dans rooms.lg (jsonb, avec tb: 1), les annonces et « C'est noté » dans lg_actions.
+   Celui qui a la pince écrit lui-même sa coupe ; le reste avance sur le téléphone de l'hôte (les autres en secours après 3 s). */
+const isBomb = () => !!room && room.game === "bomb";
+const TB_MIN = 4, TB_MAX = 8;
+const TB_ROLES = { 4: [3, 2], 5: [3, 2], 6: [4, 2], 7: [5, 3], 8: [5, 3] };
+const TB = () => (room && room.lg && room.lg.tb) ? room.lg : null;
+const tbSt = () => { const g = TB(); return g && g.st; };
+const tbPool = () => players.filter(present).sort((a, b) => a.seat - b.seat);
+const tbCutsIn = (g, r) => g.cuts.filter(c => c.r === r).length;
+const tbLeft = (g, id) => (g.hands[id] || []).filter(c => !c.o);
+const tbCount = (g, id) => { const h = tbLeft(g, id); return { d: h.filter(c => c.c === "d").length, s: h.filter(c => c.c === "s").length, b: h.filter(c => c.c === "b").length }; };
+const tbClaim = id => { const g = TB(); const a = g && lgActsFor("say:" + g.round, g).find(x => x.player === id); if (!a) return null; const [d, b] = a.v.split(","); return { d: +d || 0, b: b === "1" }; };
+
+/* ---------- icônes ---------- */
+const TB_IC = {
+  sherlock: `<circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5 21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M7.5 8.5a3 3 0 0 1 3-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`,
+  moriarty: `<path d="M7 4h10v12H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7 12h10" stroke="currentColor" stroke-width="2"/><path d="M3 16.5c3 2.5 15 2.5 18 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  pliers: `<circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.2 16 16 3M15.8 16 8 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`,
+  wire: `<path d="M3 12c3-6 6 6 9 0s6 6 9 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>`,
+  bomb: `<circle cx="11" cy="14" r="7" fill="currentColor"/><path d="M15 8l2-2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M17.5 5.5c1-1.5 2.5-1.5 3.5-.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.5" cy="11.5" r="1.6" fill="rgba(255,255,255,.55)"/>`
+};
+const tbIc = (n, cls) => `<svg class="tic ${cls || ""}" viewBox="0 0 24 24" aria-hidden="true">${TB_IC[n] || ""}</svg>`;
+const TB_CARD = { s: ["Neutre", "wire"], d: ["Désamorçage", "wire"], b: ["La bombe", "bomb"] };
+const TB_ROLE = { s: ["Sherlock", "sherlock", "Trouve tous les câbles de désamorçage"], m: ["Moriarty", "moriarty", "Fais couper la bombe, ou tiens jusqu'à la fin"] };
+// une carte câble : dos (laiton et motif) ou face
+const wireCard = (c, cls, attrs) => c ? `<span class="tbc f${c} ${cls || ""}" ${attrs || ""}>${tbIc(TB_CARD[c][1])}<small>${TB_CARD[c][0]}</small></span>`
+  : `<span class="tbc back ${cls || ""}" ${attrs || ""}><i></i></span>`;
+// la bombe : la mèche raccourcit à chaque manche, l'étincelle au bout
+const FUSE = [[61, 22], [66, 11], [79, 7], [89, 14], [99, 6]];
+function tbBomb(round, live){
+  const k = Math.max(1, 5 - round), pts = FUSE.slice(0, k + 1), end = pts[pts.length - 1];
+  return `<svg class="tbbomb" viewBox="0 0 110 110" aria-hidden="true">
+    <defs><radialGradient id="tbg" cx="35%" cy="35%" r="70%"><stop offset="0" stop-color="#4a4f5c"/><stop offset=".55" stop-color="#1d2029"/><stop offset="1" stop-color="#07080b"/></radialGradient></defs>
+    <circle cx="48" cy="66" r="36" fill="url(#tbg)"/><path d="M27 52a24 24 0 0 1 16-14" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="5" stroke-linecap="round"/>
+    <rect x="51" y="20" width="16" height="13" rx="3" transform="rotate(35 59 26)" fill="#8f7434"/>
+    <polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="#c9b28a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    ${live ? `<g transform="translate(${end[0]} ${end[1]})"><g class="spark"><circle r="6" fill="#ffcf5a" opacity=".35"/><circle r="3.2" fill="#fff2b0"/><path d="M0-8V-4M0 4V8M-8 0H-4M4 0H8M-5.5-5.5-3-3M3 3 5.5 5.5M-5.5 5.5-3 3M3-3 5.5-5.5" stroke="#ffcf5a" stroke-width="1.6" stroke-linecap="round"/></g></g>` : ""}
+  </svg>`;
+}
+
+/* ---------- partie ---------- */
+function tbStart(){
+  const ids = tbPool().map(p => p.id), n = ids.length, [s, m] = TB_ROLES[n];
+  const roleDeck = shuffle(Array(s).fill("s").concat(Array(m).fill("m"))).slice(0, n), roles = {};
+  ids.forEach((id, i) => roles[id] = roleDeck[i]);
+  const deck = Array(n).fill("d").concat(["b"]).concat(Array(4 * n - 1).fill("s"));
+  const g = { tb: 1, gid: Math.random().toString(36).slice(2, 8), ver: 1, n, ids, roles, hands: {}, round: 1, holder: pickOne(ids), cuts: [], found: 0, cfg: (room.lg || {}).cfg || null };
+  tbDeal(g, deck);
+  g.st = { t: "carte", k: "carte", at: serverNow() };
+  return g;
+}
+function tbDeal(g, cards){
+  const per = 6 - g.round, deck = shuffle(cards);
+  g.ids.forEach((id, i) => { g.hands[id] = deck.slice(i * per, (i + 1) * per).map(c => ({ c, o: 0 })); });
+}
+function tbNextRound(g){
+  const rest = []; g.ids.forEach(id => tbLeft(g, id).forEach(c => rest.push(c.c)));
+  g.round += 1; tbDeal(g, rest);
+  g.st = { t: "annonce", k: "say:" + g.round, at: serverNow() };
+  return g;
+}
+async function tbWrite(g0, g){
+  g.ver = (g0.ver || 0) + 1;
+  const r = room; local(() => { r.lg = g; });
+  tbOnState();
+  const { error } = await sb.from("rooms").update({ lg: g, updated_at: new Date().toISOString() }).eq("code", code).eq("lg->>ver", String(g0.ver));
+  if (error) toast("Connexion perdue, réessaie.");
+  scheduleRefresh();
+}
+async function tbCut(from, i, by){
+  const g0 = TB(), st = g0 && g0.st; by = by || me.id;
+  if (!st || st.t !== "coupe" || g0.holder !== by || from === by) return;
+  const h = g0.hands[from], card = h && h[i];
+  if (!card || card.o) return;
+  const g = clone(g0);
+  g.hands[from][i].o = 1;
+  g.cuts.push({ r: g.round, by, from, i, c: card.c, at: serverNow() });
+  if (card.c === "d") g.found += 1;
+  g.holder = from;
+  if (card.c === "b") g.st = { t: "fin", k: "fin", at: serverNow(), win: "m", why: "bomb" };
+  else if (g.found >= g.n) g.st = { t: "fin", k: "fin", at: serverNow(), win: "s", why: "defused" };
+  else if (tbCutsIn(g, g.round) >= g.n) g.st = g.round >= 4 ? { t: "fin", k: "fin", at: serverNow(), win: "m", why: "time" } : { t: "pause", k: "pause:" + g.round, at: serverNow() };
+  else g.st = Object.assign({}, g.st, { at: serverNow() });
+  await tbWrite(g0, g);
+}
+
+/* ---------- moteur ---------- */
+let tbBusy = false;
+const tbReady = {};
+const tbIn = (g, id) => g.ids.includes(id) && (isBot(id) || present(byId(id)));
+async function tbEngine(){
+  if (!isBomb() || ui.tv || tbBusy || room.phase !== "draw" || !byId(me.id)) return;
+  const g0 = TB(); if (!g0 || !g0.st) return;
+  const lead = isLeader(), st = g0.st;
+  if (lead) tbBots(g0);
+  let next = null;
+  const waitAll = k => g0.ids.filter(id => tbIn(g0, id)).every(id => lgActsFor(k, g0).some(a => a.player === id));
+  if (st.t === "carte" && waitAll("carte")) next = g => { g.st = { t: "annonce", k: "say:" + g.round, at: serverNow() }; return g; };
+  else if (st.t === "annonce" && waitAll(st.k)) next = g => { g.st = { t: "coupe", k: "cut:" + g.round, at: serverNow() }; return g; };
+  else if (st.t === "pause" && serverNow() - st.at > 3800) next = tbNextRound;
+  else if (st.t === "coupe" && !tbIn(g0, g0.holder) && serverNow() - st.at > 8000){
+    // celui qui a la pince est parti : elle passe au joueur suivant encore là
+    const order = g0.ids, i = order.indexOf(g0.holder), nxt = order.slice(i + 1).concat(order.slice(0, i)).find(id => tbIn(g0, id));
+    if (nxt) next = g => { g.holder = nxt; g.st = Object.assign({}, g.st, { at: serverNow() }); return g; };
+  }
+  if (!next) return;
+  if (!lead){ const k = g0.gid + st.k + g0.ver; if (!tbReady[k]){ tbReady[k] = Date.now(); return; } if (Date.now() - tbReady[k] < 3000) return; }
+  tbBusy = true;
+  try { await tbWrite(g0, next(clone(g0))); } finally { tbBusy = false; }
+}
+function tbBots(g){
+  const st = g.st, bots = g.ids.filter(isBot);
+  if (st.t === "carte" || st.t === "annonce") bots.filter(id => !lgActsFor(st.k, g).some(a => a.player === id)).forEach(id => botOnce(g.gid + st.k + id, rand(600, 2200), () => {
+    const cur = TB(); if (!cur || cur.st.k !== st.k) return;
+    if (st.t === "carte") return lgAct("carte", "ok", id);
+    const c = tbCount(cur, id), liar = cur.roles[id] === "m" && Math.random() < .5;
+    const d = liar ? Math.max(0, Math.min(tbLeft(cur, id).length, c.d + (Math.random() < .5 ? 1 : -1))) : c.d;
+    return lgAct(st.k, d + "," + (liar ? 0 : c.b), id);
+  }));
+  if (st.t === "coupe" && isBot(g.holder)) botOnce(g.gid + "cut" + g.cuts.length, rand(1800, 3200), () => {
+    const cur = TB(); if (!cur || cur.st.t !== "coupe" || cur.cuts.length !== g.cuts.length) return;
+    const opts = []; cur.ids.filter(id => id !== cur.holder).forEach(id => cur.hands[id].forEach((c, i) => { if (!c.o) opts.push([id, i]); }));
+    const o = pickOne(opts); if (o) return tbCut(o[0], o[1], cur.holder);
+  });
+}
+
+/* ---------- la coupe : suspense, tic-tac, révélation (sur tous les téléphones) ---------- */
+const tbUi = { sel: null, hand: false, role: false, flip: false, say: null, sayB: false };
+let tbSeen = null, tbAnimUntil = 0, tbLastRound = null, tbLastGid = null;
+function tbOnState(){
+  const g = TB(); if (!g) return;
+  if (g.gid !== tbLastGid){ tbLastGid = g.gid; tbSeen = g.cuts.length; tbLastRound = g.round; Object.assign(tbUi, { sel: null, hand: false, role: false, flip: false, say: null, sayB: false }); return; }
+  if (g.cuts.length > tbSeen){ const c = g.cuts[g.cuts.length - 1]; tbSeen = g.cuts.length; tbUi.sel = null; if (serverNow() - c.at < 6000) tbAnim(c); else render(); }
+  if (g.round !== tbLastRound){ tbLastRound = g.round; tbUi.say = null; tbUi.sayB = false; tbUi.hand = false; if (!calm()) setTimeout(() => roundBanner(g.round), 200); }
+}
+function tbNoise(dur, vol){
+  play(() => {
+    const len = Math.floor(actx.sampleRate * dur), buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+    const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    f.type = "lowpass"; f.frequency.value = 900; g.gain.value = vol || .6;
+    s.buffer = buf; s.connect(f).connect(g).connect(actx.destination); s.start();
+  });
+}
+const tbSfx = {
+  tick(){ play(() => tone(1500, 0, .035, "square", .05)); },
+  snip(){ buzz(30); play(() => { tone(2400, 0, .03, "square", .09); tone(1200, .02, .05, "square", .07); }); },
+  safe(){ play(() => tone(180, 0, .18, "triangle", .14)); },
+  defuse(){ buzz([40, 50, 40]); play(() => { [660, 880, 1320].forEach((f, i) => tone(f, i * .08, .35, "sine", .14)); }); },
+  boom(){ buzz([400, 80, 300]); tbNoise(1.6, .9); play(() => { tone(60, 0, 1.2, "sawtooth", .25); tone(40, .1, 1.4, "sine", .3); }); }
+};
+function tbAnim(c){
+  const fast = calm(), T = fast ? 500 : 1700, END = c.c === "b" ? (fast ? 1600 : 3800) : (fast ? 1300 : 3100);
+  tbAnimUntil = Date.now() + END + 100;
+  const el = document.createElement("div"); el.className = "tbcut";
+  const who = c.by === me.id ? "Tu coupes" : esc(nameOf(c.by)) + " coupe", whom = c.from === me.id ? "chez toi" : "chez " + esc(nameOf(c.from));
+  el.innerHTML = `<div class="tbcw"><p>${who} <b>${whom}</b></p><div class="tbcard shake">${wireCard(null, "big")}</div>${tbIc("pliers", "plz")}</div>`;
+  fxLayer().appendChild(el);
+  if (!fast) [0, 420, 760, 1020, 1220, 1380, 1500, 1600].forEach(t => setTimeout(tbSfx.tick, t));
+  setTimeout(() => {
+    tbSfx.snip();
+    const card = el.querySelector(".tbcard"); if (!card) return;
+    card.classList.remove("shake"); card.innerHTML = wireCard(c.c, "big pop");
+    el.classList.add("r" + c.c);
+    const label = c.c === "b" ? "BOUM" : c.c === "d" ? "Désamorcé" : "Rien";
+    card.insertAdjacentHTML("afterend", `<div class="tbres pop">${label}</div>`);
+    setTimeout(() => c.c === "b" ? tbSfx.boom() : c.c === "d" ? tbSfx.defuse() : tbSfx.safe(), 60);
+  }, T);
+  setTimeout(() => { el.classList.add("out"); setTimeout(() => { el.remove(); lastHtml = ""; render(); }, 300); }, END);
+}
+const tbFinShown = () => { const st = tbSt(); return !!st && st.t === "fin" && Date.now() >= tbAnimUntil; };
+const tbKey = () => { const g = TB(), st = g && g.st; return st ? [g.gid, st.t === "coupe" ? "table" : st.t === "fin" ? (tbFinShown() ? "fin" : "table") : st.t, g.round].join(":") : ""; };
+setInterval(() => { if (!isBomb()) return; if (tbSt() && tbSt().t === "fin" && tbFinShown() && lastKey !== screenKey()){ lastHtml = ""; render(); } tbEngine(); }, 300);
+
+/* ---------- écrans ---------- */
+const tbHead = () => {
+  const g = TB(), st = g && g.st, tag = room.phase !== "draw" || !st ? "" : st.t === "fin" ? "Fin de partie" : st.t === "carte" ? "" : `Manche ${g.round} / 4`;
+  return `<header><div class="hl">${gameLogo("bomb")}</div><div class="hr">${tag ? `<div class="tag">${tag}</div>` : ""}${sndBtn()}</div></header>`;
+};
+const roleFace = (r, cls) => `<div class="tbrole r${r} ${cls || ""}">${tbIc(TB_ROLE[r][1], "big")}<b>${TB_ROLE[r][0]}</b><small>${TB_ROLE[r][2]}</small></div>`;
+function tbBoard(g){
+  const done = tbCutsIn(g, g.round), live = !["fin"].includes(g.st.t) || !tbFinShown();
+  return `<div class="tbboard">
+    ${tbBomb(g.round, live && g.st.t !== "fin")}
+    <div class="tbstat">
+      <span class="label light">Désamorcés</span>
+      <div class="tbfound" aria-label="${g.found} sur ${g.n}">${Array.from({ length: g.n }, (_, i) => `<i class="${i < g.found ? "on" : ""}">${tbIc("wire")}</i>`).join("")}</div>
+      <span class="label light">Coupes de la manche</span>
+      <div class="tbcuts" aria-label="${done} sur ${g.n}">${Array.from({ length: g.n }, (_, i) => `<i class="${i < done ? "on" : ""}"></i>`).join("")}</div>
+      <div class="tbrounds">${[1, 2, 3, 4].map(r => `<span class="${r < g.round ? "past" : r === g.round ? "now" : ""}">${r}</span>`).join("")}</div>
+    </div></div>`;
+}
+function tbSeats(g, canCut){
+  return `<div class="tbseats">${g.ids.map(id => {
+    const h = g.hands[id] || [], cl = tbClaim(id), hold = g.holder === id && g.st.t !== "fin";
+    const claim = g.st.t === "carte" ? "" : cl ? `<span class="tbclaim"><span class="tcd">${tbIc("wire")}${cl.d}</span>${cl.b ? `<span class="tcb">${tbIc("bomb")}</span>` : ""}</span>` : `<span class="tbclaim wait">…</span>`;
+    const cards = h.map((c, i) => {
+      if (c.o) return wireCard(c.c, "sm open");
+      const can = canCut && id !== me.id, sel = tbUi.sel && tbUi.sel[0] === id && tbUi.sel[1] === i;
+      return can ? `<button class="tbc back sm ${sel ? "sel" : ""}" data-a="tbSel" data-v="${id}:${i}" aria-label="Câble ${i + 1} de ${esc(nameOf(id))}" aria-pressed="${sel}"><i></i></button>` : wireCard(null, "sm");
+    }).join("");
+    return `<div class="tbseat ${id === me.id ? "me" : ""} ${hold ? "hold" : ""} ${tbIn(g, id) ? "" : "away"}">
+      <div class="tbwho">${av(id, "sm")}<span class="nm">${meName(id)}</span>${claim}${hold ? `<span class="tbpl" title="A la pince">${tbIc("pliers")}</span>` : ""}</div>
+      <div class="tbhandrow">${cards}</div></div>`;
+  }).join("")}</div>`;
+}
+function tbMine(g, open){
+  const c = tbCount(g, me.id), total = c.d + c.s + c.b;
+  const body = open ? `<div class="tbmine pop">${c.b ? wireCard("b", "md") : ""}${Array.from({ length: c.d }, () => wireCard("d", "md")).join("")}${Array.from({ length: c.s }, () => wireCard("s", "md")).join("")}</div>
+    <div class="tbsum">${c.d} désamorçage${c.d > 1 ? "s" : ""}${c.b ? " · la bombe" : ""} · ${c.s} neutre${c.s > 1 ? "s" : ""}</div>` : "";
+  void total;
+  return body;
+}
+const tbToggles = () => `<div class="row tbtg"><button class="ghost small" data-a="tbHand" aria-pressed="${tbUi.hand}">${tbUi.hand ? "Cacher mes câbles" : "Mes câbles"}</button><button class="ghost small" data-a="tbRole" aria-pressed="${tbUi.role}">${tbUi.role ? "Cacher mon rôle" : "Mon rôle"}</button></div>`;
+
+const tbViews = {
+  lobby(){
+    const lead = isLeader(), n = tbPool().length;
+    const err = n < TB_MIN ? `Encore ${TB_MIN - n} joueur${TB_MIN - n > 1 ? "s" : ""}` : n > TB_MAX ? `${TB_MAX} joueurs maximum` : "";
+    return `${tbHead()}
+    <div class="stack center lobbygame">
+      <div class="biglogo">${gameLogo("bomb")}</div>
+      ${lead ? (ui.swap ? `<div class="nextgames">${GAMES.filter(g => g[0] !== room.game).map(g => `<button class="mg" data-a="game" data-v="${g[0]}">${gameLogo(g[0])}</button>`).join("")}</div>` : `<button class="swap" data-a="swap">Changer de jeu</button>`) : ""}
+    </div>
+    <div class="stack center">
+      <div class="codebig">${esc(code)}</div>
+      <div class="qr" id="qr" aria-label="QR code pour rejoindre la partie">${qrSvg(joinUrl(code))}</div>
+      <button class="ghost small" data-a="share">Partager le lien</button>
+    </div>
+    ${crowd(lead)}
+    ${n >= TB_MIN && n <= TB_MAX ? `<div class="tbteams"><span class="rs">${tbIc("sherlock")}${TB_ROLES[n][0]}</span><span class="rm">${tbIc("moriarty")}${TB_ROLES[n][1]}</span>${TB_ROLES[n][0] + TB_ROLES[n][1] > n ? `<small>une carte écartée</small>` : ""}</div>` : ""}
+    ${lead ? `<button class="btn" data-a="start" ${err ? "disabled" : ""}>${err || "Lancer la partie"}</button><button class="ghost small" data-a="addBot">Ajouter un robot</button>`
+      : wait(`${esc(nameOf(leader() && leader().id))} va lancer la partie`)}
+    ${footer()}`;
+  },
+  draw(){
+    const g = TB(), st = g && g.st;
+    if (!st) return `${tbHead()}${wait("Préparation")}`;
+    if (!g.roles[me.id]) return `${tbHead()}<div class="qcenter">${tbBomb(1, true)}${wait("Tu entres à la prochaine partie")}</div>${footer()}`;
+    const fn = st.t === "fin" && !tbFinShown() ? tbStep.coupe : tbStep[st.t];
+    return fn ? fn(g, st) : `${tbHead()}${wait("…")}`;
+  }
+};
+const tbStep = {
+  carte(g, st){
+    const r = g.roles[me.id], done = lgActsFor("carte", g).some(a => a.player === me.id);
+    return `${tbHead()}<div class="tbcenter"><button class="tbflip ${tbUi.flip ? "on" : ""}" data-a="tbFlip" aria-label="${tbUi.flip ? "Cacher mon rôle" : "Voir mon rôle"}">
+      <span class="face back">${tbBomb(1, false)}</span><span class="face front">${roleFace(r, "inner")}</span></button></div>
+      ${done ? wait("Les autres découvrent leur rôle") : `<button class="btn" data-a="tbOk" ${tbUi.flip ? "" : "disabled"}>C'est noté</button>`}
+      ${lgWait(g.ids, "carte")}${footer()}`;
+  },
+  annonce(g, st){
+    const mine = tbClaim(me.id), left = tbLeft(g, me.id).length;
+    if (tbUi.say == null) tbUi.say = 0;
+    const form = mine ? wait("Les autres annoncent") : `<div class="tbsay card">
+      <span class="label">Ton annonce</span>
+      <div class="tbstep"><button data-a="tbSay" data-v="-1" aria-label="Un de moins" ${tbUi.say <= 0 ? "disabled" : ""}>−</button><span class="tcd">${tbIc("wire")}<b>${tbUi.say}</b></span><button data-a="tbSay" data-v="1" aria-label="Un de plus" ${tbUi.say >= left ? "disabled" : ""}>+</button></div>
+      <button class="tbbombtg ${tbUi.sayB ? "on" : ""}" data-a="tbSayB" aria-pressed="${tbUi.sayB}">${tbIc("bomb")}<span>J'ai la bombe</span></button>
+      <button class="btn" data-a="tbSend">Annoncer</button></div>`;
+    return `${tbHead()}${tbBoard(g)}
+      <div class="tbmyhand">${tbMine(g, true)}</div>
+      ${form}
+      ${tbSeats(g, false)}
+      ${tbUi.role ? roleFace(g.roles[me.id], "small pop") : ""}<div class="row tbtg"><button class="ghost small" data-a="tbRole">${tbUi.role ? "Cacher mon rôle" : "Mon rôle"}</button></div>${footer()}`;
+  },
+  coupe(g, st){
+    const mine = g.holder === me.id && st.t === "coupe", sel = tbUi.sel;
+    const top = st.t === "pause" ? `<div class="tbturn">Fin de la manche</div>` : mine ? `<div class="tbturn me">${tbIc("pliers")}<span>À toi de couper</span></div>`
+      : `<div class="tbturn">${av(g.holder, "xs")}<span>${esc(nameOf(g.holder))} a la pince</span></div>`;
+    return `${tbHead()}${tbBoard(g)}${top}
+      ${tbSeats(g, mine)}
+      ${mine ? `<button class="btn tbgo" data-a="tbCut" ${sel ? "" : "disabled"}>${sel ? "Couper ce câble" : "Choisis un câble chez un autre"}</button>` : ""}
+      ${tbUi.hand ? tbMine(g, true) : ""}${tbUi.role ? roleFace(g.roles[me.id], "small pop") : ""}
+      ${tbToggles()}${footer()}`;
+  },
+  pause(g, st){ return tbStep.coupe(g, st); },
+  fin(g, st){
+    const win = st.win, title = win === "s" ? "Sherlock a gagné" : "Moriarty a gagné";
+    const why = st.why === "bomb" ? "La bombe a sauté" : st.why === "time" ? "Le temps est écoulé" : "Bombe désamorcée";
+    const camp = r => `<div class="tbcamp r${r} ${win === r ? "won" : ""}"><div class="tbch">${tbIc(TB_ROLE[r][1])}<b>${TB_ROLE[r][0]}</b></div>${g.ids.filter(id => g.roles[id] === r).map(id => `<span class="tbcp">${av(id, "sm")}<span>${meName(id)}</span></span>`).join("")}</div>`;
+    return `${tbHead()}<div class="tbend ${win === "s" ? "s" : "m"}">${win === "s" ? tbIc("wire", "huge") : tbIc("bomb", "huge")}<p>${why}</p></div>
+      <div class="wbanner">${title}</div>
+      <div class="tbcamps">${camp("s")}${camp("m")}</div>
+      ${isLeader() ? `<button class="btn" data-a="restart" data-v="bomb">Rejouer à Time Bomb</button>
+      <span class="label light" style="text-align:center">ou passer à</span>
+      <div class="nextgames">${GAMES.filter(x => x[0] !== "bomb").map(x => `<button class="mg" data-a="restart" data-v="${x[0]}">${gameLogo(x[0])}</button>`).join("")}</div>` : wait(`${esc(nameOf(leader() && leader().id))} peut relancer une partie`)}
+      <button class="ghost" data-a="leave">Quitter</button>`;
+  }
+};
+
+Object.assign(actions, {
+  tbFlip(){ tbUi.flip = !tbUi.flip; buzz(12); if (tbUi.flip) sfx.flip(); render(); },
+  async tbOk(){ await lgAct("carte", "ok"); },
+  tbHand(){ tbUi.hand = !tbUi.hand; render(); },
+  tbRole(){ tbUi.role = !tbUi.role; render(); },
+  tbSay(v){ const g = TB(); tbUi.say = Math.max(0, Math.min(tbLeft(g, me.id).length, (tbUi.say || 0) + (+v))); buzz(8); render(); },
+  tbSayB(){ tbUi.sayB = !tbUi.sayB; buzz(10); render(); },
+  async tbSend(){ const g = TB(); if (!g || g.st.t !== "annonce") return; await lgAct(g.st.k, (tbUi.say || 0) + "," + (tbUi.sayB ? 1 : 0)); },
+  tbSel(v){ const [id, i] = String(v).split(":"); const same = tbUi.sel && tbUi.sel[0] === id && tbUi.sel[1] === +i; tbUi.sel = same ? null : [id, +i]; buzz(10); sfx.pop(); render(); },
+  async tbCut(){ if (!tbUi.sel) return; const [id, i] = tbUi.sel; tbUi.sel = null; await tbCut(id, i); }
+});
+async function tbLaunch(){
+  const n = tbPool().length; if (n < TB_MIN || n > TB_MAX) return;
+  const g = tbStart(), nr = room.round + 1;
+  local(() => { Object.assign(room, { phase: "draw", round: nr, lg: g }); });
+  tbOnState();
+  busy = true;
+  await sb.from("rooms").update({ phase: "draw", round: nr, start_round: nr, started_at: new Date().toISOString(), judge: null, card: null, lg: g, updated_at: new Date().toISOString() }).eq("code", code).eq("phase", "lobby");
+  busy = false; scheduleRefresh();
+}
 
 /* ---------- démarrage ---------- */
 (async function boot(){

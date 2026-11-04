@@ -38,7 +38,7 @@ const room = () => admin(`return db.rooms[0]`);
 
   console.log("Accueil et salle d'attente");
   await A.goto(BASE);
-  check(await A.locator(".gamecard").count() === 5, "cinq jeux sur l'écran d'accueil");
+  check(await A.locator(".gamecard").count() === 6, "six jeux sur l'écran d'accueil");
   check(await A.locator(".instbar").count() === 1, "le bandeau d'installation s'affiche dans le navigateur");
   await A.screenshot({ path: S + "/install-bar.png" });
   await A.click("[data-a=instClose]");

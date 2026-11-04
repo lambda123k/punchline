@@ -57,7 +57,7 @@ async function autoplay(p){
 
   console.log("Accueil et réglages");
   await A.goto(BASE);
-  check(await A.locator(".gamecard").count() === 5, "cinq jeux sur l'écran d'accueil");
+  check(await A.locator(".gamecard").count() === 6, "six jeux sur l'écran d'accueil");
   await A.click("[data-a=instClose]").catch(() => {});
   await A.click("[data-a=pickGame][data-v=loup]");
   check(await A.evaluate(() => document.body.classList.contains("loup")), "ambiance veillée dès l'accueil du Loup-garou");

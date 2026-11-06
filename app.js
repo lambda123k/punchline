@@ -893,7 +893,7 @@ function head(){
 // Nom de l'appli qui réunit les jeux, choisi par Naim le 27/10
 const APP_NAME = "Dawa";
 // À monter avec le ?v=N de index.html : affiché en bas des Paramètres pour vérifier qu'un téléphone a la dernière version
-const APP_VERSION = 42;
+const APP_VERSION = 43;
 const gameLogo = g => g === "bomb" ? `<div class="logo tbf">Time <span>Bomb</span></div>` : g === "loup" ? `<div class="logo lgf">Loup-<span>garou</span></div>` : g === "qui" ? `<div class="logo">Le <span>Verdict</span></div>` : g === "aveux" ? `<div class="logo">Les <span>Aveux</span></div>` : g === "dilemme" ? `<div class="logo">Le <span>Dilemme</span></div>` : `<div class="logo">Punch<span>line</span></div>`;
 const GAME_IDS = ["punchline", "qui", "aveux", "dilemme", "loup", "bomb"];
 const GAME_CARDS = [
@@ -2712,11 +2712,8 @@ const TB_IC = {
   bomb: `<circle cx="11" cy="14" r="7" fill="currentColor"/><path d="M15 8l2-2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M17.5 5.5c1-1.5 2.5-1.5 3.5-.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8.5" cy="11.5" r="1.6" fill="rgba(255,255,255,.55)"/>`
 };
 const tbIc = (n, cls) => `<svg class="tic ${cls || ""}" viewBox="0 0 24 24" aria-hidden="true">${TB_IC[n] || ""}</svg>`;
-const TB_CARD = { s: ["Neutre", "wire"], d: ["Désamorçage", "wire"], b: ["La bombe", "bomb"] };
 const TB_ROLE = { s: ["Sherlock", "sherlock", "Trouve tous les câbles de désamorçage"], m: ["Moriarty", "moriarty", "Fais couper la bombe, ou tiens jusqu'à la fin"] };
 // une carte câble : dos (laiton et motif) ou face
-const wireCard = (c, cls, attrs) => c ? `<span class="tbc f${c} ${cls || ""}" ${attrs || ""}>${tbIc(TB_CARD[c][1])}<small>${TB_CARD[c][0]}</small></span>`
-  : `<span class="tbc back ${cls || ""}" ${attrs || ""}><i></i></span>`;
 // la bombe : la mèche raccourcit à chaque manche, l'étincelle au bout
 const FUSE = [[61, 22], [66, 11], [79, 7], [89, 14], [99, 6]];
 function tbBomb(round, live){
@@ -2817,13 +2814,13 @@ function tbBots(g){
 }
 
 /* ---------- la coupe : suspense, tic-tac, révélation (sur tous les téléphones) ---------- */
-const tbUi = { sel: null, hand: false, role: false, flip: false, say: null, sayB: false };
+const tbUi = { sel: null, hand: false, role: false, flip: false, say: null, sayB: false, rewire: 0 };
 let tbSeen = null, tbAnimUntil = 0, tbLastRound = null, tbLastGid = null;
 function tbOnState(){
   const g = TB(); if (!g) return;
   if (g.gid !== tbLastGid){ tbLastGid = g.gid; tbSeen = g.cuts.length; tbLastRound = g.round; Object.assign(tbUi, { sel: null, hand: false, role: false, flip: false, say: null, sayB: false }); return; }
   if (g.cuts.length > tbSeen){ const c = g.cuts[g.cuts.length - 1]; tbSeen = g.cuts.length; tbUi.sel = null; if (serverNow() - c.at < 6000) tbAnim(c); else render(); }
-  if (g.round !== tbLastRound){ tbLastRound = g.round; tbUi.say = null; tbUi.sayB = false; tbUi.hand = false; if (!calm()) setTimeout(() => roundBanner(g.round), 200); }
+  if (g.round !== tbLastRound){ tbLastRound = g.round; tbUi.say = null; tbUi.sayB = false; tbUi.hand = false; tbUi.rewire = Date.now() + 2200; if (!calm()){ setTimeout(() => roundBanner(g.round), 200); tbSfx.rewire(); } }
 }
 function tbNoise(dur, vol){
   play(() => {
@@ -2836,6 +2833,7 @@ function tbNoise(dur, vol){
 }
 const tbSfx = {
   tick(){ play(() => tone(1500, 0, .035, "square", .05)); },
+  rewire(){ play(() => { [0, .12, .2, .34, .45].forEach((t, i) => tone(2600 + i * 300, t + .9, .025, "square", .05)); }); },
   snip(){ buzz(30); play(() => { tone(2400, 0, .03, "square", .09); tone(1200, .02, .05, "square", .07); }); },
   safe(){ play(() => tone(180, 0, .18, "triangle", .14)); },
   defuse(){ buzz([40, 50, 40]); play(() => { [660, 880, 1320].forEach((f, i) => tone(f, i * .08, .35, "sine", .14)); }); },
@@ -2846,13 +2844,20 @@ function tbAnim(c){
   tbAnimUntil = Date.now() + END + 100;
   const el = document.createElement("div"); el.className = "tbcut";
   const who = c.by === me.id ? "Tu coupes" : esc(nameOf(c.by)) + " coupe", whom = c.from === me.id ? "chez toi" : "chez " + esc(nameOf(c.from));
-  el.innerHTML = `<div class="tbcw"><p>${who} <b>${whom}</b></p><div class="tbcard shake">${wireCard(null, "big")}</div>${tbIc("pliers", "plz")}</div>`;
+  const col = TB_COL[c.c];
+  el.innerHTML = `<div class="tbcw"><p>${who} <b>${whom}</b></p>
+    <div class="tbbig shake"><svg viewBox="0 0 200 250" aria-hidden="true">
+      <rect x="40" y="6" width="120" height="22" rx="6" fill="#8f7434"/><rect x="48" y="12" width="104" height="5" rx="2.5" fill="#c9a24a"/>
+      <g class="top"><path d="M100 28C86 60 114 92 100 124" class="bsh"/><path d="M100 112 100 126" stroke="${col}" stroke-width="9" stroke-linecap="round" class="end"/></g>
+      <g class="bot"><path d="M100 124C86 156 114 188 100 222" class="bsh"/><path d="M100 122 100 136" stroke="${col}" stroke-width="9" stroke-linecap="round" class="end"/><rect x="90" y="218" width="20" height="24" rx="5" fill="#8f7434"/></g>
+      <g class="plz2"><path d="M196 124 112 112M196 124 112 136" stroke="#c9a24a" stroke-width="12" stroke-linecap="round" class="jaw"/><path d="M196 124 270 104M196 124 270 144" stroke="#e8433d" stroke-width="16" stroke-linecap="round"/><circle cx="196" cy="124" r="9" fill="#8f7434"/></g>
+    </svg></div></div>`;
   fxLayer().appendChild(el);
   if (!fast) [0, 420, 760, 1020, 1220, 1380, 1500, 1600].forEach(t => setTimeout(tbSfx.tick, t));
   setTimeout(() => {
     tbSfx.snip();
-    const card = el.querySelector(".tbcard"); if (!card) return;
-    card.classList.remove("shake"); card.innerHTML = wireCard(c.c, "big pop");
+    const card = el.querySelector(".tbbig"); if (!card) return;
+    card.classList.remove("shake"); card.classList.add("snap");
     el.classList.add("r" + c.c);
     const label = c.c === "b" ? "BOUM" : c.c === "d" ? "Désamorcé" : "Rien";
     card.insertAdjacentHTML("afterend", `<div class="tbres pop">${label}</div>`);
@@ -2882,23 +2887,41 @@ function tbBoard(g){
       <div class="tbrounds">${[1, 2, 3, 4].map(r => `<span class="${r < g.round ? "past" : r === g.round ? "now" : ""}">${r}</span>`).join("")}</div>
     </div></div>`;
 }
+/* Les fils (06/11, demande de Naim : plus de cartes). Chaque joueur a une barrette en laiton d'où pendent ses fils,
+   tous gris tant qu'ils ne sont pas coupés. On coupe en glissant le doigt en travers d'un fil (tbSwipe) ;
+   toucher un fil le choisit, puis « Couper ce fil » (secours, clavier, lecteur d'écran). */
+const TB_COL = { s: "#d7cfbd", d: "#3f8cff", b: "#e8433d" };
+const tbWx = (n, i) => 150 + (i - (n - 1) / 2) * 52;
+function tbRack(id, wires, o){
+  o = o || {};
+  const n = wires.length, cut = !!o.cut, rw = o.rewire ? "rewire" : "";
+  const ws = wires.map((w, i) => {
+    const x = tbWx(n, i), sel = o.sel === i, col = TB_COL[w.c];
+    if (w.o) return `<g class="wcut"><path d="M${x} 12C${x - 6} 22 ${x + 5} 28 ${x} 33" stroke="#8a8f9c" class="sh"/><path d="M${x} 31 ${x} 38" stroke="${col}" class="core"/>
+      <path d="M${x + 2} 48C${x + 9} 54 ${x - 1} 60 ${x + 4} 64" stroke="#8a8f9c" class="sh drop"/><path d="M${x + 1} 43 ${x + 2} 49" stroke="${col}" class="core drop"/><rect x="${x - 1}" y="63" width="10" height="11" rx="2.5" fill="#8f7434" class="drop" transform="rotate(18 ${x + 4} 68)"/></g>`;
+    const live = o.open ? col : "#8a8f9c";
+    return `<g class="w ${sel ? "sel" : ""}" style="--d:${i * 70}ms"><path d="M${x} 12C${x - 7} 30 ${x + 7} 46 ${x} 62" stroke="${live}" class="sh"/><rect x="${x - 5}" y="60" width="10" height="11" rx="2.5" fill="#8f7434"/></g>`;
+  }).join("");
+  const btns = cut ? wires.map((w, i) => w.o ? "" : `<button class="tbwb ${o.sel === i ? "on" : ""}" style="left:${(tbWx(n, i) - 22) / 3}%" data-a="tbSel" data-v="${id}:${i}" aria-label="Fil ${i + 1} de ${esc(nameOf(id))}" aria-pressed="${o.sel === i}"></button>`).join("") : "";
+  return `<div class="tbrack ${cut ? "cut" : ""} ${rw}" ${cut ? `data-cut="${id}" data-n="${n}"` : ""}><svg viewBox="0 0 300 76" aria-hidden="true">
+    <rect x="${tbWx(n, 0) - 22}" y="2" width="${(n - 1) * 52 + 44}" height="12" rx="4" fill="#8f7434"/><rect x="${tbWx(n, 0) - 18}" y="5" width="${(n - 1) * 52 + 36}" height="3" rx="1.5" fill="#c9a24a"/>
+    ${ws}</svg>${btns}</div>`;
+}
 function tbSeats(g, canCut){
   return `<div class="tbseats">${g.ids.map(id => {
     const h = g.hands[id] || [], cl = tbClaim(id), hold = g.holder === id && g.st.t !== "fin";
     const claim = g.st.t === "carte" ? "" : cl ? `<span class="tbclaim"><span class="tcd">${tbIc("wire")}${cl.d}</span>${cl.b ? `<span class="tcb">${tbIc("bomb")}</span>` : ""}</span>` : `<span class="tbclaim wait">…</span>`;
-    const cards = h.map((c, i) => {
-      if (c.o) return wireCard(c.c, "sm open");
-      const can = canCut && id !== me.id, sel = tbUi.sel && tbUi.sel[0] === id && tbUi.sel[1] === i;
-      return can ? `<button class="tbc back sm ${sel ? "sel" : ""}" data-a="tbSel" data-v="${id}:${i}" aria-label="Câble ${i + 1} de ${esc(nameOf(id))}" aria-pressed="${sel}"><i></i></button>` : wireCard(null, "sm");
-    }).join("");
+    const can = canCut && id !== me.id, sel = tbUi.sel && tbUi.sel[0] === id ? tbUi.sel[1] : -1;
+    const cards = tbRack(id, h, { cut: can, sel, rewire: Date.now() < tbUi.rewire });
     return `<div class="tbseat ${id === me.id ? "me" : ""} ${hold ? "hold" : ""} ${tbIn(g, id) ? "" : "away"}">
       <div class="tbwho">${av(id, "sm")}<span class="nm">${meName(id)}</span>${claim}${hold ? `<span class="tbpl" title="A la pince">${tbIc("pliers")}</span>` : ""}</div>
-      <div class="tbhandrow">${cards}</div></div>`;
+      ${cards}</div>`;
   }).join("")}</div>`;
 }
 function tbMine(g, open){
   const c = tbCount(g, me.id), total = c.d + c.s + c.b;
-  const body = open ? `<div class="tbmine pop">${c.b ? wireCard("b", "md") : ""}${Array.from({ length: c.d }, () => wireCard("d", "md")).join("")}${Array.from({ length: c.s }, () => wireCard("s", "md")).join("")}</div>
+  const sorted = [].concat(Array(c.b).fill("b"), Array(c.d).fill("d"), Array(c.s).fill("s")).map(x => ({ c: x, o: 0 }));
+  const body = open ? `<div class="tbmine pop">${tbRack(me.id, sorted, { open: true })}</div>
     <div class="tbsum">${c.d} désamorçage${c.d > 1 ? "s" : ""}${c.b ? " · la bombe" : ""} · ${c.s} neutre${c.s > 1 ? "s" : ""}</div>` : "";
   void total;
   return body;
@@ -2961,7 +2984,7 @@ const tbStep = {
       : `<div class="tbturn">${av(g.holder, "xs")}<span>${esc(nameOf(g.holder))} a la pince</span></div>`;
     return `${tbHead()}${tbBoard(g)}${top}
       ${tbSeats(g, mine)}
-      ${mine ? `<button class="btn tbgo" data-a="tbCut" ${sel ? "" : "disabled"}>${sel ? "Couper ce câble" : "Choisis un câble chez un autre"}</button>` : ""}
+      ${mine ? `<button class="btn tbgo" data-a="tbCut" ${sel ? "" : "disabled"}>${sel ? "Couper ce fil" : "Glisse le doigt sur un fil"}</button>` : ""}
       ${tbUi.hand ? tbMine(g, true) : ""}${tbUi.role ? roleFace(g.roles[me.id], "small pop") : ""}
       ${tbToggles()}${footer()}`;
   },
@@ -2988,9 +3011,31 @@ Object.assign(actions, {
   tbSay(v){ const g = TB(); tbUi.say = Math.max(0, Math.min(tbLeft(g, me.id).length, (tbUi.say || 0) + (+v))); buzz(8); render(); },
   tbSayB(){ tbUi.sayB = !tbUi.sayB; buzz(10); render(); },
   async tbSend(){ const g = TB(); if (!g || g.st.t !== "annonce") return; await lgAct(g.st.k, (tbUi.say || 0) + "," + (tbUi.sayB ? 1 : 0)); },
-  tbSel(v){ const [id, i] = String(v).split(":"); const same = tbUi.sel && tbUi.sel[0] === id && tbUi.sel[1] === +i; tbUi.sel = same ? null : [id, +i]; buzz(10); sfx.pop(); render(); },
+  tbSel(v){ if (Date.now() - tbSwiped < 600) return; const [id, i] = String(v).split(":"); const same = tbUi.sel && tbUi.sel[0] === id && tbUi.sel[1] === +i; tbUi.sel = same ? null : [id, +i]; buzz(10); sfx.pop(); render(); },
   async tbCut(){ if (!tbUi.sel) return; const [id, i] = tbUi.sel; tbUi.sel = null; await tbCut(id, i); }
 });
+/* couper en glissant : le doigt traverse un fil de gauche à droite ou l'inverse */
+let tbSw = null, tbSwiped = 0;
+const tbPt = (el, e) => { const r = el.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 300, (e.clientY - r.top) / r.height * 76]; };
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest && e.target.closest(".tbrack.cut");
+  tbSw = el ? { el, id: el.dataset.cut, p: tbPt(el, e) } : null;
+}, { passive: true });
+document.addEventListener("pointermove", e => {
+  if (!tbSw) return;
+  const g = TB(); if (!g || !g.st || g.st.t !== "coupe" || g.holder !== me.id){ tbSw = null; return; }
+  const p = tbPt(tbSw.el, e), q = tbSw.p, h = g.hands[tbSw.id] || [];
+  if (Math.abs(p[0] - q[0]) < 2){ tbSw.p = p; return; }
+  if (p[1] < -6 || p[1] > 86){ tbSw = null; return; }
+  const i = h.findIndex((w, k) => !w.o && (q[0] - tbWx(h.length, k)) * (p[0] - tbWx(h.length, k)) <= 0);
+  tbSw.p = p;
+  if (i < 0) return;
+  const id = tbSw.id; tbSw = null; tbSwiped = Date.now(); tbUi.sel = null;
+  buzz(25); tbCut(id, i);
+}, { passive: true });
+document.addEventListener("pointerup", () => { tbSw = null; }, { passive: true });
+document.addEventListener("pointercancel", () => { tbSw = null; }, { passive: true });
+
 async function tbLaunch(){
   const n = tbPool().length; if (n < TB_MIN || n > TB_MAX) return;
   const g = tbStart(), nr = room.round + 1;

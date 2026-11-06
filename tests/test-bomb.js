@@ -35,14 +35,28 @@ const shots = new Set();
 async function shot(p, name){ if (shots.has(name)) return; shots.add(name); await p.screenshot({ path: S + "/bomb-" + name + ".png", fullPage: true }); }
 
 
+let swiped = null;
+const tbCutsIn2 = g => g.cuts.filter(c => c.r === g.round).length;
 async function autoplay(p){
   if (await p.locator(".tbcut").count()) return;
   const c = async s => { const l = p.locator(s); if (await l.count()){ await l.first().click({ timeout: 1500 }).catch(() => {}); return true; } return false; };
   if (await p.locator(".tbflip:not(.on)").count()){ await c(".tbflip"); return; }
   if (await c("[data-a=tbOk]:not([disabled])")) return;
   if (await p.locator("[data-a=tbSend]").count()){ if (Math.random() < .5) await c("[data-a=tbSay][data-v='1']:not([disabled])"); await c("[data-a=tbSend]"); return; }
-  if (await p.locator("button.tbc.back").count()){
-    if (!(await p.locator("button.tbc.sel").count())) await c("button.tbc.back");
+  if (await p.locator(".tbwb").count()){
+    if (!swiped && await p.locator(".tbrack.cut").count()){
+      // une vraie coupe au doigt : glisser en travers du 1er fil
+      const box = await p.locator(".tbrack.cut").first().boundingBox();
+      const before = (await room()).lg.cuts.length;
+      await p.mouse.move(box.x + box.width * 0.05, box.y + box.height * 0.6);
+      await p.mouse.down();
+      for (let k = 1; k <= 12; k++) await p.mouse.move(box.x + box.width * (0.05 + k * 0.06), box.y + box.height * 0.6);
+      await p.mouse.up();
+      await sleep(400);
+      swiped = (await room()).lg.cuts.length === before + 1 ? "ok" : "rate";
+      return;
+    }
+    if (!(await p.locator(".tbwb.on").count())) await c(".tbwb");
     await c("[data-a=tbCut]:not([disabled])");
   }
 }
@@ -90,7 +104,7 @@ async function autoplay(p){
   await until(A, async () => ((await room()).lg.st || {}).t === "annonce", "annonce");
   await A.waitForSelector("[data-a=tbSend]");
   await shot(A, "annonce");
-  check(await A.locator(".tbmyhand .tbc").count() === 5, "pendant l'annonce, on voit ses 5 câbles");
+  check(await A.locator(".tbmyhand .tbrack .w").count() === 5, "pendant l'annonce, on voit ses 5 fils");
   if (process.env.DBG){ await A.click("[data-a=tbSend]"); await sleep(1500); console.log(await admin("return db.lg_actions.map(a=>a.k+' '+a.player.slice(0,4)+' '+a.v)")); console.log(errors); }
 
   console.log("Partie complète");
@@ -100,12 +114,15 @@ async function autoplay(p){
     if (g) seenRounds.add(g.round);
     if (g && g.round === 2 && r2ok === null && st.t === "annonce") r2ok = Object.values(g.hands).every(h => h.length === 4);
     if (st && st.t === "coupe" && !shotCut){ for (const [, p] of humans) if (await p.locator("[data-a=tbCut]").count()){ await shot(p, "coupe"); shotCut = true; break; } }
-    if (!shots.has("anim")) for (const [, p] of humans) if (await p.locator(".tbcut .tbres").count()){ await shot(p, "anim"); break; }
+    if (!shots.has("anim")) for (const [, p] of humans) if (await p.locator(".tbcut .tbres").count()){ await sleep(500); await shot(p, "anim"); break; }
+    if (!shots.has("suspense")) for (const [, p] of humans) if (await p.locator(".tbbig.shake").count()){ await sleep(900); await shot(p, "suspense"); break; }
+    if (g && g.round === 2 && st.t === "coupe" && tbCutsIn2(g) >= 2 && !shots.has("milieu")) for (const [, p] of humans) if (!(await p.locator(".tbcut").count())){ await shot(p, "milieu"); break; }
     if (st && st.t === "fin"){ end = true; break; }
     for (const [, p] of humans) await autoplay(p);
     await sleep(150);
   }
   check(end, "la partie va jusqu'au bout");
+  check(swiped === "ok", "couper un fil en glissant le doigt");
   const gf = (await room()).lg;
   console.log("  manches vues : " + [...seenRounds].join(", ") + " · fin : " + gf.st.win + " / " + gf.st.why + " · coupes : " + gf.cuts.length);
   if (r2ok !== null) check(r2ok, "manche 2 : 4 câbles chacun");

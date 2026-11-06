@@ -745,17 +745,53 @@ button.tbc.back:active{transform:scale(.95)}
 @keyframes tbboom{0%{background:#fff}}
 @keyframes tbquake{0%,100%{transform:none}10%{transform:translate(-10px,6px)}20%{transform:translate(9px,-8px)}30%{transform:translate(-8px,-4px)}40%{transform:translate(7px,8px)}50%{transform:translate(-5px,3px)}60%{transform:translate(4px,-5px)}80%{transform:translate(-2px,2px)}}
 @media (prefers-reduced-motion:reduce){.tbcard.shake,.tbcut.rb .tbcw,.tbturn.me,.tbpl .tic,.tbbomb .spark{animation:none}}
+
+/* Time Bomb : les fils (06/11) */
+.tbrack{position:relative}
+.tbrack svg{display:block;width:100%;height:auto}
+.tbrack.cut{touch-action:pan-y}
+.tbrack .sh{fill:none;stroke-width:6;stroke-linecap:round}
+.tbrack .core{stroke-width:6;stroke-linecap:round}
+.tbrack .drop{opacity:.45}
+.tbrack .w.sel .sh{stroke:#ece3cf;filter:drop-shadow(0 0 4px rgba(232,67,61,.9))}
+.tbrack.cut .w .sh{animation:tbsway 2.4s ease-in-out infinite;animation-delay:var(--d);transform-origin:50% 12px;transform-box:view-box}
+@keyframes tbsway{50%{transform:skewX(2.5deg)}}
+.tbwb{position:absolute;top:14%;height:86%;width:14.67%;padding:0;background:transparent;border:0;border-radius:10px;touch-action:pan-y}
+.tbwb.on{background:rgba(232,67,61,.12)}
+.tbrack.rewire .w .sh{stroke-dasharray:60;stroke-dashoffset:60;animation:tbplug .7s ease-out forwards;animation-delay:calc(var(--d) + .25s)}
+.tbrack.rewire .w rect{opacity:0;animation:tbin2 .2s forwards;animation-delay:calc(var(--d) + .85s)}
+@keyframes tbplug{to{stroke-dashoffset:0}}
+@keyframes tbin2{to{opacity:1}}
+.tbmine .tbrack{max-width:300px;margin:0 auto;width:100%}
+.tbbig{width:200px;margin-right:60px}.tbbig svg{display:block;width:100%;overflow:visible}
+.tbbig .bsh{fill:none;stroke:#8a8f9c;stroke-width:14;stroke-linecap:round}
+.tbbig .end{opacity:0}
+.tbbig.shake{animation:tbshake .5s ease-in-out infinite}
+.tbbig .plz2{animation:tbplz 1.7s ease-in forwards}
+.tbbig .jaw{transform-origin:196px 124px;transform-box:view-box}
+.tbbig.shake .jaw{animation:tbjawA 1.7s ease-in forwards}
+@keyframes tbplz{0%{transform:translateX(80px);opacity:0}25%{opacity:1}100%{transform:translateX(0)}}
+@keyframes tbjawA{0%,70%{transform:scaleY(1.9)}100%{transform:scaleY(.15)}}
+@keyframes tbjawB{0%,70%{transform:rotate(9deg)}100%{transform:rotate(0)}}
+.tbbig.snap .end{opacity:1}
+.tbbig.snap .top{animation:tbtop .5s ease-out forwards}
+.tbbig.snap .bot{animation:tbfall 1s cubic-bezier(.5,0,.8,.4) forwards}
+.tbbig.snap .plz2{opacity:0;transition:opacity .3s .2s}
+@keyframes tbtop{to{transform:translate(-6px,-14px) rotate(-4deg)}}
+@keyframes tbfall{to{transform:translate(14px,120px) rotate(14deg);opacity:0}}
+.tbcut.rd .end,.tbcut.rb .end{filter:drop-shadow(0 0 10px currentColor)}
+@media (prefers-reduced-motion:reduce){.tbrack.cut .w .sh,.tbbig.shake,.tbrack.rewire .w .sh,.tbrack.rewire .w rect{animation:none;stroke-dashoffset:0;opacity:1}}
 </style>
 </head>
 <body>
 <div class="app" id="app"><header><div class="logo">Punch<span>line</span></div></header><p class="lead">Chargement…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="cards.js?v=42"></script>
-<script src="qui.js?v=42"></script>
-<script src="aveux.js?v=42"></script>
-<script src="dilemme.js?v=42"></script>
-<script src="app.js?v=42"></script>
+<script src="cards.js?v=43"></script>
+<script src="qui.js?v=43"></script>
+<script src="aveux.js?v=43"></script>
+<script src="dilemme.js?v=43"></script>
+<script src="app.js?v=43"></script>
 <script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </body>
 </html>
